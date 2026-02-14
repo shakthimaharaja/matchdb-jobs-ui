@@ -1,0 +1,360 @@
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
+
+export interface Job {
+  id: string;
+  title: string;
+  description: string;
+  vendor_id: string;
+  vendor_email: string;
+  location: string;
+  job_type: string;
+  salary_min: number | null;
+  salary_max: number | null;
+  skills_required: string[];
+  is_active: boolean;
+  application_count?: number;
+  created_at: string;
+  recruiter_name?: string;
+  recruiter_phone?: string;
+  pay_per_hour?: number | null;
+  experience_required?: number;
+  match_percentage?: number;
+  match_breakdown?: {
+    skills: number;
+    type: number;
+    experience: number;
+  };
+}
+
+export interface CandidateProfile {
+  id?: string;
+  candidate_id?: string;
+  name: string;
+  email: string;
+  phone: string;
+  current_company: string;
+  current_role: string;
+  preferred_job_type: string;
+  expected_hourly_rate: number | null;
+  experience_years: number;
+  skills: string[];
+  location: string;
+  bio: string;
+}
+
+export interface CandidateProfileMatch {
+  id: string;
+  candidate_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  current_company: string;
+  current_role: string;
+  preferred_job_type: string;
+  expected_hourly_rate: number | null;
+  experience_years: number;
+  location: string;
+  match_percentage: number;
+  matched_job_id?: string;
+  matched_job_title?: string;
+  match_breakdown?: {
+    skills: number;
+    type: number;
+    experience: number;
+  };
+}
+
+interface JobsState {
+  jobs: Job[];
+  vendorJobs: Job[];
+  candidateMatches: Job[];
+  vendorCandidateMatches: CandidateProfileMatch[];
+  profile: CandidateProfile | null;
+  loading: boolean;
+  profileLoading: boolean;
+  pokeLoading: boolean;
+  error: string | null;
+  profileError: string | null;
+  pokeError: string | null;
+  pokeSuccessMessage: string | null;
+}
+
+const initialState: JobsState = {
+  jobs: [],
+  vendorJobs: [],
+  candidateMatches: [],
+  vendorCandidateMatches: [],
+  profile: null,
+  loading: false,
+  profileLoading: false,
+  pokeLoading: false,
+  error: null,
+  profileError: null,
+  pokeError: null,
+  pokeSuccessMessage: null,
+};
+
+const getAxiosConfig = (token: string | null) => ({
+  headers: token ? { Authorization: `Bearer ${token}` } : {},
+});
+
+export const fetchVendorJobs = createAsyncThunk(
+  "jobs/fetchVendor",
+  async (token: string | null, { rejectWithValue }) => {
+    try {
+      const res = await axios.get("/api/jobs/vendor", getAxiosConfig(token));
+      return res.data as Job[];
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to fetch vendor jobs",
+      );
+    }
+  },
+);
+
+export const fetchCandidateMatches = createAsyncThunk(
+  "jobs/fetchCandidateMatches",
+  async (token: string | null, { rejectWithValue }) => {
+    try {
+      const res = await axios.get(
+        "/api/jobs/jobmatches",
+        getAxiosConfig(token),
+      );
+      return res.data as Job[];
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to fetch candidate matches",
+      );
+    }
+  },
+);
+
+export const fetchVendorCandidateMatches = createAsyncThunk(
+  "jobs/fetchVendorCandidateMatches",
+  async (
+    payload: { token: string | null; jobId?: string | null },
+    { rejectWithValue },
+  ) => {
+    try {
+      const { token, jobId } = payload;
+      const res = await axios.get("/api/jobs/profilematches", {
+        ...getAxiosConfig(token),
+        params: jobId ? { job_id: jobId } : {},
+      });
+      return res.data as CandidateProfileMatch[];
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to fetch vendor candidate matches",
+      );
+    }
+  },
+);
+
+export const sendPoke = createAsyncThunk(
+  "jobs/sendPoke",
+  async (
+    payload: {
+      token: string | null;
+      to_email: string;
+      to_name: string;
+      subject_context: string;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const { token, ...body } = payload;
+      const res = await axios.post(
+        "/api/jobs/poke",
+        body,
+        getAxiosConfig(token),
+      );
+      return res.data?.message || "Poke sent";
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to send poke",
+      );
+    }
+  },
+);
+
+export const postJob = createAsyncThunk(
+  "jobs/postJob",
+  async (
+    payload: {
+      token: string | null;
+      data: Omit<
+        Job,
+        | "id"
+        | "vendor_id"
+        | "vendor_email"
+        | "is_active"
+        | "application_count"
+        | "created_at"
+        | "match_percentage"
+        | "match_breakdown"
+      >;
+    },
+    { rejectWithValue },
+  ) => {
+    try {
+      const { token, data } = payload;
+      const res = await axios.post(
+        "/api/jobs/create",
+        data,
+        getAxiosConfig(token),
+      );
+      return res.data as Job;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.error || "Failed to post job");
+    }
+  },
+);
+
+export const fetchProfile = createAsyncThunk(
+  "jobs/fetchProfile",
+  async (token: string | null, { rejectWithValue }) => {
+    try {
+      const res = await axios.get("/api/jobs/profile", getAxiosConfig(token));
+      return res.data as CandidateProfile;
+    } catch (err: any) {
+      if (err.response?.status === 404) return null;
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to fetch profile",
+      );
+    }
+  },
+);
+
+export const upsertProfile = createAsyncThunk(
+  "jobs/upsertProfile",
+  async (
+    payload: { token: string | null; data: CandidateProfile },
+    { rejectWithValue },
+  ) => {
+    try {
+      const { token, data } = payload;
+      const res = await axios.put(
+        "/api/jobs/profile",
+        data,
+        getAxiosConfig(token),
+      );
+      return res.data as CandidateProfile;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to save profile",
+      );
+    }
+  },
+);
+
+const jobsSlice = createSlice({
+  name: "jobs",
+  initialState,
+  reducers: {
+    clearPokeState: (state) => {
+      state.pokeError = null;
+      state.pokeSuccessMessage = null;
+    },
+    clearProfileError: (state) => {
+      state.profileError = null;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchVendorJobs.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchVendorJobs.fulfilled, (state, action) => {
+        state.loading = false;
+        state.vendorJobs = action.payload;
+      })
+      .addCase(fetchVendorJobs.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      .addCase(fetchCandidateMatches.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchCandidateMatches.fulfilled, (state, action) => {
+        state.loading = false;
+        state.candidateMatches = action.payload;
+      })
+      .addCase(fetchCandidateMatches.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      .addCase(fetchVendorCandidateMatches.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchVendorCandidateMatches.fulfilled, (state, action) => {
+        state.loading = false;
+        state.vendorCandidateMatches = action.payload;
+      })
+      .addCase(fetchVendorCandidateMatches.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      .addCase(sendPoke.pending, (state) => {
+        state.pokeLoading = true;
+        state.pokeError = null;
+        state.pokeSuccessMessage = null;
+      })
+      .addCase(sendPoke.fulfilled, (state, action) => {
+        state.pokeLoading = false;
+        state.pokeSuccessMessage = action.payload;
+      })
+      .addCase(sendPoke.rejected, (state, action) => {
+        state.pokeLoading = false;
+        state.pokeError = action.payload as string;
+      })
+
+      .addCase(postJob.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(postJob.fulfilled, (state, action) => {
+        state.loading = false;
+        state.vendorJobs.unshift(action.payload);
+      })
+      .addCase(postJob.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      .addCase(fetchProfile.pending, (state) => {
+        state.profileLoading = true;
+        state.profileError = null;
+      })
+      .addCase(fetchProfile.fulfilled, (state, action) => {
+        state.profileLoading = false;
+        state.profile = action.payload;
+      })
+      .addCase(fetchProfile.rejected, (state, action) => {
+        state.profileLoading = false;
+        state.profileError = action.payload as string;
+      })
+
+      .addCase(upsertProfile.pending, (state) => {
+        state.profileLoading = true;
+        state.profileError = null;
+      })
+      .addCase(upsertProfile.fulfilled, (state, action) => {
+        state.profileLoading = false;
+        state.profile = action.payload;
+      })
+      .addCase(upsertProfile.rejected, (state, action) => {
+        state.profileLoading = false;
+        state.profileError = action.payload as string;
+      });
+  },
+});
+
+export const { clearPokeState, clearProfileError } = jobsSlice.actions;
+export default jobsSlice.reducer;

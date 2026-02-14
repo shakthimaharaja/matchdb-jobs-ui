@@ -1,0 +1,218 @@
+/* ===== Public Landing — Single Section — Windows 97 Theme ===== */
+
+.pub-landing {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family:
+    "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Verdana, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Single section fills the space */
+.pub-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Win97 raised window border */
+  border-top: 2px solid var(--w97-btn-highlight, #fff);
+  border-left: 2px solid var(--w97-btn-highlight, #fff);
+  border-right: 2px solid var(--w97-btn-dark, #404040);
+  border-bottom: 2px solid var(--w97-btn-dark, #404040);
+  background: var(--w97-window, #c0c0c0);
+}
+
+.pub-section-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  background: linear-gradient(
+    to right,
+    var(--w97-titlebar-from, #235a81),
+    var(--w97-titlebar-to, #1a4565)
+  );
+  flex-shrink: 0;
+}
+
+.pub-section-icon {
+  font-size: 12px;
+  color: var(--w97-titlebar-text, #fff);
+}
+
+.pub-section-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--w97-titlebar-text, #fff);
+  flex: 1;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.pub-filter-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0px 5px;
+  background: var(--w97-yellow, #ffd700);
+  color: #000;
+  font-size: 9px;
+  font-weight: bold;
+}
+
+.pub-section-meta {
+  font-size: 10px;
+  color: var(--w97-titlebar-text, #fff);
+  opacity: 0.8;
+}
+
+/* Auth buttons in the title bar */
+.pub-titlebar-auth {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+/* Section body — non-scrollable */
+.pub-section-body {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--w97-input-bg, #fff);
+  /* Sunken border */
+  border-top: 1px solid var(--w97-btn-shadow, #808080);
+  border-left: 1px solid var(--w97-btn-shadow, #808080);
+  border-right: 1px solid var(--w97-btn-highlight, #fff);
+  border-bottom: 1px solid var(--w97-btn-highlight, #fff);
+  margin: 2px;
+}
+
+/* Jobs table */
+.pub-loading {
+  padding: 16px;
+  text-align: center;
+  color: var(--w97-text-secondary, #4e4e4e);
+}
+
+.pub-jobs-table-wrap {
+  overflow: hidden;
+}
+
+.pub-jobs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-family: inherit;
+}
+
+.pub-jobs-table thead th {
+  background: var(--w97-btn-face, #c0c0c0);
+  border: 1px solid var(--w97-btn-shadow, #808080);
+  border-top-color: var(--w97-btn-highlight, #fff);
+  border-left-color: var(--w97-btn-highlight, #fff);
+  padding: 3px 6px;
+  text-align: left;
+  color: var(--w97-text, #000);
+  font-weight: bold;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.pub-jobs-table tbody td {
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--w97-border-light, #d4d0c8);
+  color: var(--w97-text, #000);
+}
+
+.pub-jobs-table tbody tr:nth-child(even) {
+  background: var(--w97-sky, #f0f0f0);
+}
+[data-theme="dark"] .pub-jobs-table tbody tr:nth-child(even) {
+  background: var(--w97-sky, #262626);
+}
+
+.pub-jobs-table tbody tr:hover {
+  background: #d6eaf8;
+  color: #1a3a55;
+}
+.pub-jobs-table tbody tr:hover .pub-job-title,
+.pub-jobs-table tbody tr:hover .pub-skill-tag {
+  color: #1a3a55;
+}
+
+.pub-job-title {
+  font-weight: bold;
+  color: var(--w97-blue, #235a81);
+}
+[data-theme="dark"] .pub-job-title {
+  color: var(--w97-blue, #b0c8e0);
+}
+
+.pub-type-badge {
+  display: inline-block;
+  padding: 0px 4px;
+  background: var(--w97-btn-face, #c0c0c0);
+  color: var(--w97-text, #000);
+  font-size: 9px;
+  font-weight: bold;
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-shadow, #808080);
+  border-bottom: 1px solid var(--w97-btn-shadow, #808080);
+  text-transform: capitalize;
+}
+
+.pub-skills {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.pub-skill-tag {
+  display: inline-block;
+  padding: 0px 3px;
+  background: var(--w97-window, #c0c0c0);
+  color: var(--w97-text, #000);
+  font-size: 9px;
+  border: 1px solid var(--w97-btn-shadow, #808080);
+}
+
+.pub-skill-more {
+  font-size: 9px;
+  color: var(--w97-text-secondary, #4e4e4e);
+  font-weight: bold;
+}
+
+/* Win97 3D buttons */
+.pub-btn {
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: normal;
+  cursor: pointer;
+  font-family: inherit;
+  background: var(--w97-btn-face, #c0c0c0);
+  color: var(--w97-text, #000);
+  border-top: 2px solid var(--w97-btn-highlight, #fff);
+  border-left: 2px solid var(--w97-btn-highlight, #fff);
+  border-right: 2px solid var(--w97-btn-dark, #404040);
+  border-bottom: 2px solid var(--w97-btn-dark, #404040);
+  white-space: nowrap;
+}
+.pub-btn:active {
+  border-top-color: var(--w97-btn-dark, #404040);
+  border-left-color: var(--w97-btn-dark, #404040);
+  border-right-color: var(--w97-btn-highlight, #fff);
+  border-bottom-color: var(--w97-btn-highlight, #fff);
+}
+
+.pub-btn-primary {
+  font-weight: bold;
+  outline: 1px dotted var(--w97-text, #000);
+  outline-offset: -4px;
+}
+
+.pub-btn-secondary {
+  /* same 3D style, no outline */
+}
