@@ -16,11 +16,28 @@ const JOB_TYPES = [
   { value: 'remote', label: 'Remote' },
 ];
 
+const CONTRACT_SUB_TYPES = [
+  { value: '', label: '— None —' },
+  { value: 'c2c', label: 'C2C (Corp-to-Corp)' },
+  { value: 'c2h', label: 'C2H (Contract-to-Hire)' },
+  { value: 'w2', label: 'W2' },
+  { value: '1099', label: '1099' },
+];
+
+const FULL_TIME_SUB_TYPES = [
+  { value: '', label: '— None —' },
+  { value: 'c2h', label: 'C2H (Contract-to-Hire)' },
+  { value: 'w2', label: 'W2' },
+  { value: 'direct_hire', label: 'Direct Hire' },
+  { value: 'salary', label: 'Salary' },
+];
+
 interface FormState {
   title: string;
   description: string;
   location: string;
   job_type: string;
+  job_sub_type: string;
   salary_min: number | null;
   salary_max: number | null;
   pay_per_hour: number | null;
@@ -35,6 +52,7 @@ const EMPTY: FormState = {
   description: '',
   location: '',
   job_type: 'full_time',
+  job_sub_type: '',
   salary_min: null,
   salary_max: null,
   pay_per_hour: null,
@@ -88,6 +106,7 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
         description: form.description,
         location: form.location,
         job_type: form.job_type,
+        job_sub_type: form.job_sub_type || undefined,
         salary_min: form.salary_min,
         salary_max: form.salary_max,
         pay_per_hour: form.pay_per_hour,
@@ -165,10 +184,26 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
                   options={JOB_TYPES}
                   optionLabel="label"
                   optionValue="value"
-                  onChange={(e) => setField('job_type', e.value)}
+                  onChange={(e) => { setField('job_type', e.value); setField('job_sub_type', ''); }}
                 />
               </div>
             </div>
+            {(form.job_type === 'contract' || form.job_type === 'full_time') && (
+              <div className="legacy-grid two-col">
+                <div className="legacy-row">
+                  <label htmlFor="job-sub-type">Sub Type</label>
+                  <Dropdown
+                    id="job-sub-type"
+                    value={form.job_sub_type}
+                    options={form.job_type === 'contract' ? CONTRACT_SUB_TYPES : FULL_TIME_SUB_TYPES}
+                    optionLabel="label"
+                    optionValue="value"
+                    onChange={(e) => setField('job_sub_type', e.value)}
+                    placeholder="Select sub type"
+                  />
+                </div>
+              </div>
+            )}
           </fieldset>
 
           <fieldset className="legacy-fieldset">

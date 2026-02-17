@@ -64,7 +64,7 @@ module.exports = (env = {}) => {
       proxy: [
         {
           context: ['/api/jobs'],
-          target: 'http://localhost:4001',
+          target: 'http://localhost:8001',
           changeOrigin: true,
         },
       ],

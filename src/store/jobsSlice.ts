@@ -9,6 +9,7 @@ export interface Job {
   vendor_email: string;
   location: string;
   job_type: string;
+  job_sub_type?: string;
   salary_min: number | null;
   salary_max: number | null;
   skills_required: string[];

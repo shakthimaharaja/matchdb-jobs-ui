@@ -17,6 +17,17 @@ interface PublicJob {
   created_at: string;
 }
 
+interface PublicProfile {
+  id: string;
+  name: string;
+  current_role: string;
+  current_company: string;
+  preferred_job_type: string;
+  experience_years: number;
+  skills: string[];
+  location: string;
+}
+
 const formatType = (t: string) => t.replace(/_/g, " ");
 const JOB_TYPE_MAP: Record<string, string> = {
   c2c: "contract",
@@ -27,6 +38,7 @@ const JOB_TYPE_MAP: Record<string, string> = {
 
 const PublicLanding: React.FC = () => {
   const [jobs, setJobs] = useState<PublicJob[]>([]);
+  const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [jobTypeFilter, setJobTypeFilter] = useState("");
   const [loginContext, setLoginContext] = useState<"candidate" | "vendor">(
@@ -38,6 +50,14 @@ const PublicLanding: React.FC = () => {
     axios
       .get("/api/jobs/")
       .then((res) => setJobs(res.data))
+      .catch(() => {});
+  }, []);
+
+  // Fetch public candidate profiles
+  useEffect(() => {
+    axios
+      .get("/api/jobs/profiles-public")
+      .then((res) => setProfiles(res.data))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -84,6 +104,7 @@ const PublicLanding: React.FC = () => {
   const icon = isCandidate ? "👤" : "🏢";
   const label = isCandidate ? "Candidate" : "Vendor";
   const sectionTitle = isCandidate ? "Job Openings" : "Candidate Profiles";
+  const recordCount = isCandidate ? filteredJobs.length : profiles.length;
 
   return (
     <div className="pub-landing">
@@ -93,7 +114,7 @@ const PublicLanding: React.FC = () => {
           <span className="pub-section-icon">{isCandidate ? "💼" : "👥"}</span>
           <span className="pub-section-title">
             {sectionTitle}
-            {jobTypeFilter && (
+            {jobTypeFilter && isCandidate && (
               <span className="pub-filter-badge">
                 {jobTypeFilter.toUpperCase()}
               </span>
@@ -102,7 +123,7 @@ const PublicLanding: React.FC = () => {
           <span className="pub-section-meta">
             {loading
               ? "Loading..."
-              : `${filteredJobs.length} record${filteredJobs.length !== 1 ? "s" : ""}`}
+              : `${recordCount} record${recordCount !== 1 ? "s" : ""}`}
           </span>
           <div className="pub-titlebar-auth">
             <button
@@ -120,49 +141,89 @@ const PublicLanding: React.FC = () => {
           </div>
         </div>
 
-        {/* Single non-scrollable table body */}
+        {/* Table body — switches between jobs and profiles */}
         <div className="pub-section-body">
           {loading ? (
             <div className="pub-loading">Loading...</div>
           ) : (
             <div className="pub-jobs-table-wrap">
-              <table className="pub-jobs-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Location</th>
-                    <th>Type</th>
-                    <th>Experience</th>
-                    <th>Skills</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredJobs.map((job) => (
-                    <tr key={job.id}>
-                      <td className="pub-job-title">{job.title}</td>
-                      <td>{job.location}</td>
-                      <td>
-                        <span className="pub-type-badge">
-                          {formatType(job.job_type)}
-                        </span>
-                      </td>
-                      <td>{job.experience_required} yrs</td>
-                      <td className="pub-skills">
-                        {job.skills_required.slice(0, 3).map((s) => (
-                          <span key={s} className="pub-skill-tag">
-                            {s}
-                          </span>
-                        ))}
-                        {job.skills_required.length > 3 && (
-                          <span className="pub-skill-more">
-                            +{job.skills_required.length - 3}
-                          </span>
-                        )}
-                      </td>
+              {isCandidate ? (
+                /* ── Candidate Login selected → show vendor-posted jobs ── */
+                <table className="pub-jobs-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Location</th>
+                      <th>Type</th>
+                      <th>Experience</th>
+                      <th>Skills</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredJobs.map((job) => (
+                      <tr key={job.id}>
+                        <td className="pub-job-title">{job.title}</td>
+                        <td>{job.location}</td>
+                        <td>
+                          <span className="pub-type-badge">
+                            {formatType(job.job_type)}
+                          </span>
+                        </td>
+                        <td>{job.experience_required} yrs</td>
+                        <td className="pub-skills">
+                          {job.skills_required.slice(0, 3).map((s) => (
+                            <span key={s} className="pub-skill-tag">
+                              {s}
+                            </span>
+                          ))}
+                          {job.skills_required.length > 3 && (
+                            <span className="pub-skill-more">
+                              +{job.skills_required.length - 3}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                /* ── Vendor Login selected → show candidate profiles ── */
+                <table className="pub-jobs-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>Company</th>
+                      <th>Location</th>
+                      <th>Experience</th>
+                      <th>Skills</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profiles.map((p) => (
+                      <tr key={p.id}>
+                        <td className="pub-job-title">{p.name}</td>
+                        <td>{p.current_role}</td>
+                        <td>{p.current_company}</td>
+                        <td>{p.location}</td>
+                        <td>{p.experience_years} yrs</td>
+                        <td className="pub-skills">
+                          {p.skills.slice(0, 3).map((s) => (
+                            <span key={s} className="pub-skill-tag">
+                              {s}
+                            </span>
+                          ))}
+                          {p.skills.length > 3 && (
+                            <span className="pub-skill-more">
+                              +{p.skills.length - 3}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
         </div>
