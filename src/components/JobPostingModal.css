@@ -1,0 +1,80 @@
+/* ===== Job Posting Modal — extends ResumeModal W97 theme ===== */
+
+.jpm-window {
+  width: 720px;
+}
+
+/* Active / Closed status badges in titlebar */
+.jpm-badge {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 1px 7px;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.jpm-badge-active {
+  background: rgba(0, 100, 0, 0.25);
+  color: #90ee90;
+  border: 1px solid rgba(144, 238, 144, 0.4);
+}
+
+.jpm-badge-closed {
+  background: rgba(100, 0, 0, 0.25);
+  color: #ffaaaa;
+  border: 1px solid rgba(255, 170, 170, 0.4);
+}
+
+/* Inline confirmation bar (shown before destructive action) */
+.jpm-confirm-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: #fff8e1;
+  border-bottom: 1px solid #e0a000;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.jpm-confirm-bar span {
+  flex: 1;
+  color: #7a4a00;
+  font-weight: bold;
+}
+
+/* Close Position — red-tinted danger button */
+.jpm-btn-danger {
+  border-top-color: #ffaaaa !important;
+  border-left-color: #ffaaaa !important;
+  border-right-color: #880000 !important;
+  border-bottom-color: #880000 !important;
+  color: #880000 !important;
+}
+.jpm-btn-danger:hover:not(:disabled) {
+  background: #ffe0e0 !important;
+  text-decoration: none;
+}
+
+/* Reopen — green-tinted */
+.jpm-btn-reopen {
+  border-top-color: #aaffaa !important;
+  border-left-color: #aaffaa !important;
+  border-right-color: #005500 !important;
+  border-bottom-color: #005500 !important;
+  color: #005500 !important;
+}
+.jpm-btn-reopen:hover:not(:disabled) {
+  background: #e0ffe0 !important;
+  text-decoration: none;
+}
+
+/* Description block — pre-wrap so line breaks render */
+.jpm-description {
+  white-space: pre-wrap;
+  min-height: 80px;
+  max-height: 260px;
+  overflow-y: auto;
+  line-height: 1.55;
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif;
+  font-size: 11px;
+}

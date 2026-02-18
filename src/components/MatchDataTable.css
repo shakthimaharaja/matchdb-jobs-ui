@@ -334,6 +334,51 @@
   white-space: nowrap;
 }
 
+/* ── Status pills for vendor job postings ── */
+.vdp-status-active {
+  color: #006600;
+  border-color: #006600 transparent transparent #006600;
+}
+.vdp-status-closed {
+  color: #880000;
+  border-color: #880000 transparent transparent #880000;
+}
+
+/* ── Action buttons for vendor job postings ── */
+.vdp-btn-close {
+  font-size: 9px !important;
+  padding: 1px 5px !important;
+  color: #880000 !important;
+  border-right-color: #880000 !important;
+  border-bottom-color: #880000 !important;
+}
+.vdp-btn-close:hover:not(:disabled) {
+  background: #ffe0e0 !important;
+  text-decoration: none;
+}
+.vdp-btn-reopen {
+  font-size: 9px !important;
+  padding: 1px 5px !important;
+  color: #005500 !important;
+  border-right-color: #005500 !important;
+  border-bottom-color: #005500 !important;
+}
+.vdp-btn-reopen:hover:not(:disabled) {
+  background: #e0ffe0 !important;
+  text-decoration: none;
+}
+.vdp-btn-matches {
+  font-size: 9px !important;
+  padding: 1px 5px !important;
+  color: #003580 !important;
+  border-right-color: #003580 !important;
+  border-bottom-color: #003580 !important;
+}
+.vdp-btn-matches:hover:not(:disabled) {
+  background: #ddeeff !important;
+  text-decoration: none;
+}
+
 /* ===== MATCH METER ===== */
 .matchdb-meter {
   display: flex;
@@ -355,6 +400,7 @@
   min-width: 30px;
 }
 .matchdb-meter-track {
+  display: block;
   flex: 1;
   height: 8px;
   border-top: 1px solid var(--w97-btn-shadow, #808080);
@@ -366,18 +412,53 @@
   overflow: hidden;
 }
 .matchdb-meter-fill {
+  display: block;
   height: 100%;
   background: var(--w97-navy, #235a81);
   transition: width 0.3s ease;
 }
 .matchdb-meter-fill-high {
-  background: var(--w97-green, #008000);
+  background: var(--w97-green, #2e7d32);
 }
 .matchdb-meter-fill-mid {
-  background: var(--w97-orange, #ff8c00);
+  background: var(--w97-orange, #e8850f);
 }
 .matchdb-meter-fill-low {
-  background: var(--w97-red, #ff0000);
+  background: var(--w97-red, #bb3333);
+}
+
+/* ===== EXPAND BUTTON (first column) ===== */
+.matchdb-btn-expand {
+  background: none;
+  border: none;
+  color: var(--w97-navy, #235a81);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: 100%;
+}
+.matchdb-btn-expand:hover {
+  color: var(--w97-teal, #008080);
+}
+
+/* ===== DOWNLOAD BUTTON (footnote) ===== */
+.matchdb-btn-download {
+  height: 18px;
+  font-size: 10px;
+  background: var(--w97-btn-face, #c0c0c0);
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: 1px solid var(--w97-btn-dark, #404040);
+  color: var(--w97-text, #000);
+  padding: 0 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+}
+.matchdb-btn-download:hover {
+  background: #d4d4d4;
 }
 
 /* ===== POKE BUTTON ===== */
@@ -635,6 +716,12 @@
 }
 
 /* ===== RESPONSIVE ===== */
+
+@media (max-width: 1400px) {
+  .col-mode {
+    display: none;
+  }
+}
 
 @media (max-width: 1300px) {
   .col-phone {

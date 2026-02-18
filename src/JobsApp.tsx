@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import './components/ResumeModal.css';
 import { Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "./store";
@@ -14,7 +15,7 @@ export interface JobsAppProps {
   userId: string | undefined;
   userEmail: string | undefined;
   plan?: string;
-  visibility?: "all" | "c2c" | "w2" | "c2h" | "fulltime";
+  membershipConfig?: Record<string, string[]> | null;
 }
 
 // This component is exposed via Module Federation as 'matchdbJobs/JobsApp'
@@ -25,7 +26,7 @@ const JobsApp: React.FC<JobsAppProps> = ({
   userId,
   userEmail,
   plan = "free",
-  visibility = "all",
+  membershipConfig,
 }) => {
   const [showPostJob, setShowPostJob] = useState(false);
 
@@ -90,6 +91,7 @@ const JobsApp: React.FC<JobsAppProps> = ({
                     userId={userId}
                     userEmail={userEmail}
                     plan={plan}
+                    membershipConfig={membershipConfig}
                   />
                 }
               />
@@ -97,47 +99,21 @@ const JobsApp: React.FC<JobsAppProps> = ({
           )}
         </Routes>
 
-        {/* Inline post-job overlay for vendor (avoids full route change) */}
+        {/* Inline post-job overlay — W97 window chrome via rm-* classes */}
         {showPostJob && userType === "vendor" && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              backgroundColor: "rgba(0,0,0,0.5)",
-              zIndex: 1300,
-              overflowY: "auto",
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "center",
-              paddingTop: 32,
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: "#fff",
-                borderRadius: 8,
-                maxWidth: 860,
-                width: "100%",
-                margin: "32px auto",
-                position: "relative",
-              }}
-            >
-              <button
-                onClick={() => setShowPostJob(false)}
-                style={{
-                  position: "absolute",
-                  top: 12,
-                  right: 12,
-                  background: "none",
-                  border: "none",
-                  fontSize: 20,
-                  cursor: "pointer",
-                  color: "#666",
-                  lineHeight: 1,
-                }}
-              >
-                ✕
-              </button>
+          <div className="rm-overlay" onClick={() => setShowPostJob(false)}>
+            <div className="rm-window" style={{ width: 780 }} onClick={(e) => e.stopPropagation()}>
+              {/* Title bar */}
+              <div className="rm-titlebar">
+                <span className="rm-titlebar-icon">📋</span>
+                <span className="rm-titlebar-title">Post a New Job</span>
+                <button className="rm-close" onClick={() => setShowPostJob(false)} title="Close">✕</button>
+              </div>
+              {/* Status bar */}
+              <div className="rm-statusbar">
+                Fill in the job details below — fields marked * are required. Use Smart Paste to auto-fill from any job description.
+              </div>
+              {/* PostJobPage owns scroll + footer */}
               <PostJobPage
                 token={token}
                 onPosted={() => setShowPostJob(false)}

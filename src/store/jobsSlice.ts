@@ -10,6 +10,7 @@ export interface Job {
   location: string;
   job_type: string;
   job_sub_type?: string;
+  work_mode?: string;
   salary_min: number | null;
   salary_max: number | null;
   skills_required: string[];
@@ -42,6 +43,15 @@ export interface CandidateProfile {
   skills: string[];
   location: string;
   bio: string;
+  // Resume sections
+  resume_summary?: string;
+  resume_experience?: string;
+  resume_education?: string;
+  resume_achievements?: string;
+  // Visibility: which job types/sub-types this profile is visible under
+  visibility_config?: Record<string, string[]>;
+  // Lock flag — set by backend after first save
+  profile_locked?: boolean;
 }
 
 export interface CandidateProfileMatch {
@@ -212,6 +222,63 @@ export const postJob = createAsyncThunk(
   },
 );
 
+export const closeJob = createAsyncThunk(
+  "jobs/closeJob",
+  async (
+    payload: { token: string | null; jobId: string },
+    { rejectWithValue },
+  ) => {
+    try {
+      const { token, jobId } = payload;
+      const res = await axios.patch(
+        `/api/jobs/${jobId}/close`,
+        {},
+        getAxiosConfig(token),
+      );
+      return res.data as Job;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to close job",
+      );
+    }
+  },
+);
+
+export const reopenJob = createAsyncThunk(
+  "jobs/reopenJob",
+  async (
+    payload: { token: string | null; jobId: string },
+    { rejectWithValue },
+  ) => {
+    try {
+      const { token, jobId } = payload;
+      const res = await axios.patch(
+        `/api/jobs/${jobId}/reopen`,
+        {},
+        getAxiosConfig(token),
+      );
+      return res.data as Job;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to reopen job",
+      );
+    }
+  },
+);
+
+export const deleteProfile = createAsyncThunk(
+  "jobs/deleteProfile",
+  async (token: string | null, { rejectWithValue }) => {
+    try {
+      await axios.delete("/api/jobs/profile", getAxiosConfig(token));
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to delete profile",
+      );
+    }
+  },
+);
+
 export const fetchProfile = createAsyncThunk(
   "jobs/fetchProfile",
   async (token: string | null, { rejectWithValue }) => {
@@ -329,6 +396,20 @@ const jobsSlice = createSlice({
         state.error = action.payload as string;
       })
 
+      // closeJob / reopenJob — update the matching entry in vendorJobs
+      .addCase(closeJob.fulfilled, (state, action) => {
+        const idx = state.vendorJobs.findIndex(
+          (j) => j.id === action.payload.id,
+        );
+        if (idx !== -1) state.vendorJobs[idx] = action.payload;
+      })
+      .addCase(reopenJob.fulfilled, (state, action) => {
+        const idx = state.vendorJobs.findIndex(
+          (j) => j.id === action.payload.id,
+        );
+        if (idx !== -1) state.vendorJobs[idx] = action.payload;
+      })
+
       .addCase(fetchProfile.pending, (state) => {
         state.profileLoading = true;
         state.profileError = null;
@@ -351,6 +432,19 @@ const jobsSlice = createSlice({
         state.profile = action.payload;
       })
       .addCase(upsertProfile.rejected, (state, action) => {
+        state.profileLoading = false;
+        state.profileError = action.payload as string;
+      })
+
+      .addCase(deleteProfile.pending, (state) => {
+        state.profileLoading = true;
+        state.profileError = null;
+      })
+      .addCase(deleteProfile.fulfilled, (state) => {
+        state.profileLoading = false;
+        state.profile = null;
+      })
+      .addCase(deleteProfile.rejected, (state, action) => {
         state.profileLoading = false;
         state.profileError = action.payload as string;
       });

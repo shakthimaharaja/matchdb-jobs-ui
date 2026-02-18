@@ -13,9 +13,11 @@ export interface MatchRow {
   experience: string;
   matchPercentage: number;
   location: string;
+  workMode?: string;
   pokeTargetEmail: string;
   pokeTargetName: string;
   pokeSubjectContext: string;
+  rawData?: Record<string, any>; // original job or candidate object for modal
 }
 
 interface MatchDataTableProps {
@@ -28,6 +30,9 @@ interface MatchDataTableProps {
   pokeSuccessMessage: string | null;
   pokeError: string | null;
   onPoke: (row: MatchRow) => void;
+  onRowClick?: (row: MatchRow) => void;
+  onDownload?: () => void;
+  downloadLabel?: string;
 }
 
 const formatType = (value: string) => value.replace(/_/g, " ");
@@ -48,6 +53,9 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
   pokeSuccessMessage,
   pokeError,
   onPoke,
+  onRowClick,
+  onDownload,
+  downloadLabel = "Download CSV",
 }) => {
   return (
     <div className="matchdb-panel">
@@ -87,8 +95,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       <div className="matchdb-table-wrap">
         <table className="matchdb-table">
           <colgroup>
-            {/* Checkbox */}
-            <col style={{ width: "22px" }} />
+            {/* Expand */}
+            <col style={{ width: "28px" }} />
             {/* Name */}
             <col style={{ width: "11%" }} />
             {/* Company */}
@@ -101,6 +109,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
             <col style={{ width: "12%" }} />
             {/* Type */}
             <col style={{ width: "8%" }} />
+            {/* Mode */}
+            <col className="col-mode" style={{ width: "6%" }} />
             {/* Pay/Hr */}
             <col className="col-pay" style={{ width: "7%" }} />
             {/* Exp */}
@@ -114,32 +124,27 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
           </colgroup>
           <thead>
             <tr>
-              <th>
-                <input
-                  type="checkbox"
-                  style={{ margin: 0 }}
-                  aria-label="Select all"
-                />
-              </th>
+              <th title="Click row icon to view details">⊕</th>
               <th>
                 Name <span className="th-sort">▲</span>
               </th>
-              <th className="col-company">Company</th>
-              <th className="col-email">Mail ID</th>
-              <th className="col-phone">Ph No</th>
-              <th>Role</th>
-              <th>Type</th>
-              <th className="col-pay">Pay/Hr</th>
-              <th className="col-experience">Exp</th>
-              <th>Match Meter</th>
-              <th className="col-location">Location</th>
-              <th>Poke</th>
+              <th className="col-company" title="Company or organization name">Company</th>
+              <th className="col-email" title="Contact email address — click to open mail client">Mail ID</th>
+              <th className="col-phone" title="Contact phone number">Ph No</th>
+              <th title="Job title / position">Role</th>
+              <th title="Employment type and sub-type (e.g. Contract › C2C, Full Time › W2)">Type</th>
+              <th className="col-mode" title="Work arrangement: Remote, On-site, or Hybrid">Mode</th>
+              <th className="col-pay" title="Pay rate per hour (USD)">Pay/Hr</th>
+              <th className="col-experience" title="Years of experience required">Exp</th>
+              <th title="How closely this matches your profile skills and preferences">Match Meter</th>
+              <th className="col-location" title="Job or candidate location">Location</th>
+              <th title="Send a poke — notifies the contact by email that you are interested">Poke</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={12} className="matchdb-loading">
+                <td colSpan={13} className="matchdb-loading">
                   Loading records
                   <span className="matchdb-loading-dot">.</span>
                   <span
@@ -159,7 +164,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
             )}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={12} className="matchdb-empty">
+                <td colSpan={13} className="matchdb-empty">
                   MySQL returned an empty result set (i.e. zero rows).
                 </td>
               </tr>
@@ -169,12 +174,23 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
                 const safePct = Math.max(0, Math.min(100, row.matchPercentage));
                 return (
                   <tr key={row.id}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        style={{ margin: 0 }}
-                        aria-label="Select row"
-                      />
+                    <td style={{ textAlign: "center" }}>
+                      {onRowClick ? (
+                        <button
+                          type="button"
+                          className="matchdb-btn matchdb-btn-expand"
+                          title="View details"
+                          onClick={() => onRowClick(row)}
+                        >
+                          ⊕
+                        </button>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          style={{ margin: 0 }}
+                          aria-label="Select row"
+                        />
+                      )}
                     </td>
                     <td title={row.name}>{row.name}</td>
                     <td className="col-company" title={row.company}>
@@ -198,6 +214,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
                         {formatType(row.type)}
                       </span>
                     </td>
+                    <td className="col-mode">{row.workMode || '-'}</td>
                     <td className="col-pay">{row.payPerHour}</td>
                     <td className="col-experience">{row.experience}</td>
                     <td>
@@ -236,7 +253,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         </table>
       </div>
 
-      {/* Footnote */}
+      {/* Footnote + Download */}
       <div className="matchdb-footnote">
         <span>
           Showing {rows.length} record{rows.length !== 1 ? "s" : ""}
@@ -245,6 +262,19 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         <span>Query time: —</span>
         <span className="matchdb-footnote-sep">|</span>
         <span>InnoDB</span>
+        {onDownload && (
+          <>
+            <span className="matchdb-footnote-sep" style={{ marginLeft: "auto" }}>|</span>
+            <button
+              type="button"
+              className="matchdb-btn matchdb-btn-download"
+              onClick={onDownload}
+              title={downloadLabel}
+            >
+              ⬇ {downloadLabel}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

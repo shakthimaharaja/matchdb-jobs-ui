@@ -5,6 +5,7 @@ interface NavItem {
   label: string;
   count?: number;
   active?: boolean;
+  depth?: number; // 0 = top-level, 1 = child sub-item
   onClick?: () => void;
 }
 
@@ -23,11 +24,13 @@ interface DBLayoutProps {
 
 /**
  * DBLayout no longer renders its own header/sidebar.
- * Instead it emits a 'matchdb:subnav' CustomEvent so the Shell sidebar
- * can render the MFE nav groups as sub-rows in its single unified sidebar.
+ * Instead it emits CustomEvents so the Shell can render nav + breadcrumb:
+ *   matchdb:subnav      — sidebar nav groups
+ *   matchdb:breadcrumb  — breadcrumb segments (string[])
  */
-const DBLayout: React.FC<DBLayoutProps> = ({ navGroups, children }) => {
+const DBLayout: React.FC<DBLayoutProps> = ({ navGroups, breadcrumb, children }) => {
   const prevJson = useRef("");
+  const prevBc = useRef("");
 
   useEffect(() => {
     // Only dispatch when navGroups actually change (avoid infinite loops)
@@ -40,6 +43,7 @@ const DBLayout: React.FC<DBLayoutProps> = ({ navGroups, children }) => {
           label: i.label,
           count: i.count,
           active: i.active,
+          depth: i.depth,
         })),
       })),
     );
@@ -53,10 +57,22 @@ const DBLayout: React.FC<DBLayoutProps> = ({ navGroups, children }) => {
     }
   });
 
+  // Emit breadcrumb segments whenever they change
+  useEffect(() => {
+    const json = JSON.stringify(breadcrumb);
+    if (json !== prevBc.current) {
+      prevBc.current = json;
+      window.dispatchEvent(
+        new CustomEvent("matchdb:breadcrumb", { detail: breadcrumb }),
+      );
+    }
+  });
+
   useEffect(() => {
     return () => {
-      // Clear sub-nav when this component unmounts
+      // Clear sub-nav + breadcrumb when this component unmounts
       window.dispatchEvent(new CustomEvent("matchdb:subnav", { detail: [] }));
+      window.dispatchEvent(new CustomEvent("matchdb:breadcrumb", { detail: [] }));
     };
   }, []);
 
