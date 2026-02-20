@@ -78,9 +78,10 @@ const EMPTY: IProfile = {
 interface Props {
   token: string | null;
   userEmail: string | undefined;
+  onSaved?: () => void;
 }
 
-const CandidateProfile: React.FC<Props> = ({ token, userEmail }) => {
+const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
   const dispatch = useAppDispatch();
   const { profile, profileLoading, profileError } = useAppSelector(
     (state) => state.jobs,
@@ -163,6 +164,7 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail }) => {
         resume_education: "",
         resume_achievements: "",
       });
+      onSaved?.();
     }
   };
 

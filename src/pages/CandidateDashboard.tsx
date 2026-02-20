@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Chip, Tooltip } from "@mui/material";
+import { Alert, Box, Button, Chip, Tooltip } from "@mui/material";
 import StarIcon from "@mui/icons-material/Star";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import { useAppDispatch, useAppSelector } from "../store";
 import MatchDataTable, { MatchRow } from "../components/MatchDataTable";
 import DBLayout, { NavGroup } from "../components/DBLayout";
@@ -18,8 +18,10 @@ interface Props {
   token: string | null;
   userId: string | undefined;
   userEmail: string | undefined;
+  username: string | undefined;
   plan?: string;
   membershipConfig?: Record<string, string[]> | null;
+  hasPurchasedVisibility?: boolean;
 }
 
 const formatRate = (value?: number | null) =>
@@ -64,15 +66,19 @@ const FULL_TIME_SUB_TYPES = [
 
 const POKE_LIMIT: Record<string, number> = {
   free: 5,
-  pro: 20,
+  basic: 25,
+  pro: 50,
+  pro_plus: Infinity,
   enterprise: Infinity,
 };
 
 const CandidateDashboard: React.FC<Props> = ({
   token,
   userEmail,
+  username,
   plan = "free",
   membershipConfig,
+  hasPurchasedVisibility = false,
 }) => {
   const dispatch = useAppDispatch();
   const {
@@ -94,17 +100,35 @@ const CandidateDashboard: React.FC<Props> = ({
   const [selectedJob, setSelectedJob] = useState<Record<string, any> | null>(
     null,
   );
+  const [urlCopied, setUrlCopied] = useState(false);
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const view = searchParams.get("view") || "matches";
-  const showProfile = view === "profile";
-  const setView = (v: "profile" | "matches") => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set("view", v);
-      return next;
-    });
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileRequired, setProfileRequired] = useState(false);
+  const [pricingBlur, setPricingBlur] = useState(false);
+
+  const openPricingModal = () => {
+    setPricingBlur(true);
+    window.dispatchEvent(
+      new CustomEvent("matchdb:openPricing", { detail: { tab: "candidate" } }),
+    );
   };
+
+  useEffect(() => {
+    const onClose = () => setPricingBlur(false);
+    window.addEventListener("matchdb:pricingClosed", onClose);
+    return () => window.removeEventListener("matchdb:pricingClosed", onClose);
+  }, []);
+
+  // Shell fires this after candidate payment completes + pricing modal closes (required flow)
+  useEffect(() => {
+    const onOpenProfile = () => {
+      setProfileRequired(true);
+      setProfileOpen(true);
+    };
+    window.addEventListener("matchdb:openProfile", onOpenProfile);
+    return () =>
+      window.removeEventListener("matchdb:openProfile", onOpenProfile);
+  }, []);
 
   const pokeLimit = POKE_LIMIT[plan] ?? 5;
   const profileChecked = useRef(false);
@@ -114,14 +138,16 @@ const CandidateDashboard: React.FC<Props> = ({
     dispatch(fetchProfile(token));
   }, [dispatch, token]);
 
-  // Auto-open resume modal on first login when candidate has no profile yet
+  // Auto-open profile modal for paid candidates who haven't created a profile yet.
+  // Unpaid candidates are handled by the pricing → matchdb:openProfile event flow.
   useEffect(() => {
     if (profileChecked.current) return;
     if (profileLoading) return;
-    // fetchProfile has resolved — profile is either an object or null
     profileChecked.current = true;
-    if (profile === null) {
-      setView("profile");
+    // Only auto-open for candidates who have already paid — otherwise the post-payment
+    // event chain (ShellLayout → matchdb:openProfile) handles this as a required modal.
+    if (hasPurchasedVisibility && profile === null) {
+      setProfileOpen(true);
     }
   }, [profileLoading, profile]);
 
@@ -368,15 +394,15 @@ const CandidateDashboard: React.FC<Props> = ({
         {
           id: "my-profile",
           label: "My Profile",
-          active: showProfile,
-          onClick: () => setView("profile"),
+          active: profileOpen,
+          onClick: () => setProfileOpen(true),
         },
         {
           id: "matches",
           label: "Matched Jobs",
           count: candidateMatches.length,
-          active: !showProfile,
-          onClick: () => setView("matches"),
+          active: !profileOpen,
+          onClick: () => setProfileOpen(false),
         },
       ],
     },
@@ -424,165 +450,355 @@ const CandidateDashboard: React.FC<Props> = ({
     <DBLayout
       userType="candidate"
       navGroups={navGroups}
-      breadcrumb={
-        showProfile
-          ? ["Candidate Portal", "My Profile"]
-          : ["Candidate Portal", "Matched Jobs", filterLabel]
-      }
+      breadcrumb={["Candidate Portal", "Matched Jobs", filterLabel]}
     >
-      {showProfile ? (
-        <CandidateProfile token={token} userEmail={userEmail} />
-      ) : (
-        <div className="matchdb-page">
-          {/* Plan badge + poke counter */}
+      {/* Main content — blurred when profile modal or pricing modal is open */}
+      <div
+        className="matchdb-page"
+        style={
+          profileOpen || pricingBlur
+            ? { filter: "blur(2px)", pointerEvents: "none", userSelect: "none" }
+            : undefined
+        }
+      >
+        {!hasPurchasedVisibility ? (
+          /* ── LOCKED STATE — no visibility package purchased yet ── */
           <div
+            className="matchdb-panel"
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 8,
+              textAlign: "center",
+              padding: "64px 32px",
+              maxWidth: 520,
+              margin: "40px auto",
             }}
           >
-            <Tooltip title={`Your current plan: ${plan}`}>
-              <Chip
-                label={plan.toUpperCase()}
-                size="small"
-                icon={<StarIcon style={{ fontSize: 13 }} />}
-                color={
-                  plan === "pro"
-                    ? "primary"
-                    : plan === "enterprise"
-                      ? "success"
-                      : "default"
-                }
-                variant="outlined"
-                style={{ fontWeight: 700, fontSize: 11 }}
-              />
-            </Tooltip>
-            {isFinite(pokeLimit) && (
-              <Chip
-                label={`Pokes: ${pokeCount}/${pokeLimit}`}
-                size="small"
-                color={pokeCount >= pokeLimit ? "error" : "default"}
-                variant="outlined"
-                style={{ fontSize: 11 }}
-              />
-            )}
+            <div style={{ fontSize: 52, marginBottom: 16 }}>🔒</div>
+            <h2 style={{ margin: "0 0 12px", fontSize: 18, fontWeight: 700 }}>
+              Purchase a Visibility Package to See Job Matches
+            </h2>
+            <p
+              style={{
+                margin: "0 0 8px",
+                fontSize: 13,
+                color: "#555",
+                lineHeight: 1.6,
+              }}
+            >
+              Job openings matched to your profile are hidden until you purchase
+              a Visibility Package. Once purchased, your profile becomes
+              discoverable by recruiters and you'll see your personalized
+              matches here.
+            </p>
+            <p style={{ margin: "0 0 24px", fontSize: 12, color: "#888" }}>
+              Packages start at <strong>$13</strong> — one-time payment, no
+              subscription required.
+            </p>
+            <button
+              type="button"
+              className="matchdb-btn matchdb-btn-primary"
+              style={{ fontSize: 14, padding: "10px 28px" }}
+              onClick={openPricingModal}
+            >
+              View Visibility Packages →
+            </button>
           </div>
-
-          {/* Toolbar */}
-          <div className="matchdb-toolbar">
-            <div className="matchdb-toolbar-left">
-              <label className="matchdb-label" htmlFor="candidate-search">
-                Search
-              </label>
-              <input
-                id="candidate-search"
-                className="matchdb-input"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Title, company, location..."
-              />
-              <label className="matchdb-label" htmlFor="candidate-type">
-                Type
-              </label>
-              <select
-                id="candidate-type"
-                className="matchdb-select"
-                value={filterType}
-                onChange={(e) => {
-                  setFilterType(e.target.value);
-                  setFilterSubType("");
-                }}
-              >
-                <option value="">All</option>
-                {JOB_TYPES.filter((t) => showType(t.value)).map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-              {(filterType === "contract" || filterType === "full_time") && (
-                <>
-                  <label className="matchdb-label" htmlFor="candidate-subtype">
-                    Sub
-                  </label>
-                  <select
-                    id="candidate-subtype"
-                    className="matchdb-select"
-                    value={filterSubType}
-                    onChange={(e) => setFilterSubType(e.target.value)}
+        ) : (
+          /* ── UNLOCKED STATE — visibility purchased, show matches ── */
+          <>
+            {/* Visibility coverage info */}
+            {membershipConfig && (
+              <Alert
+                severity="success"
+                icon={<VisibilityIcon fontSize="small" />}
+                action={
+                  <Button
+                    color="success"
+                    size="small"
+                    variant="outlined"
+                    onClick={openPricingModal}
+                    sx={{ fontWeight: 700, fontSize: 11, whiteSpace: "nowrap" }}
                   >
-                    <option value="">All</option>
-                    {(filterType === "contract"
-                      ? CONTRACT_SUB_TYPES
-                      : FULL_TIME_SUB_TYPES
-                    )
-                      .filter((st) => showSubtype(filterType, st.value))
-                      .map((st) => (
-                        <option key={st.value} value={st.value}>
-                          {st.label}
-                        </option>
-                      ))}
-                  </select>
-                </>
-              )}
-              <label className="matchdb-label" htmlFor="candidate-workmode">
-                Mode
-              </label>
-              <select
-                id="candidate-workmode"
-                className="matchdb-select"
-                value={filterWorkMode}
-                onChange={(e) => setFilterWorkMode(e.target.value)}
+                    Add More
+                  </Button>
+                }
+                sx={{ mb: 1.5, py: 0.5, fontSize: 13, alignItems: "center" }}
               >
-                <option value="">All</option>
-                {WORK_MODES.map((wm) => (
-                  <option key={wm.value} value={wm.value}>
-                    {wm.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="matchdb-btn"
-                onClick={() => {
-                  setSearchText("");
-                  setFilterType("");
-                  setFilterSubType("");
-                  setFilterWorkMode("");
+                Visible in:{" "}
+                {Object.entries(membershipConfig)
+                  .map(([domain, subs]) =>
+                    subs.length > 0
+                      ? `${domain} (${subs.map((s) => s.toUpperCase()).join(", ")})`
+                      : domain,
+                  )
+                  .join(" · ")}
+                {" — "}expand your reach by adding more subdomains.
+              </Alert>
+            )}
+
+            {/* Shareable profile URL */}
+            {username && profile && (
+              <div
+                className="matchdb-panel"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 10px",
+                  marginBottom: 8,
+                  fontSize: 12,
                 }}
               >
-                Reset
-              </button>
-            </div>
-            <div className="matchdb-toolbar-right">
-              <button
-                type="button"
-                className="matchdb-btn matchdb-btn-primary"
-                onClick={() => dispatch(fetchCandidateMatches(token))}
-              >
-                ↻ Refresh
-              </button>
-            </div>
-          </div>
+                <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                  🔗 Your Profile URL:
+                </span>
+                <code
+                  style={{
+                    flex: 1,
+                    background: "#fff",
+                    border: "1px solid #a0a0a0",
+                    padding: "3px 6px",
+                    fontSize: 11,
+                    fontFamily: "monospace",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {`${window.location.origin}/resume/${username}`}
+                </code>
+                <button
+                  type="button"
+                  className="matchdb-btn"
+                  style={{ fontSize: 11, padding: "3px 10px" }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      `${window.location.origin}/resume/${username}`,
+                    );
+                    setUrlCopied(true);
+                    setTimeout(() => setUrlCopied(false), 2000);
+                  }}
+                >
+                  {urlCopied ? "✓ Copied" : "Copy"}
+                </button>
+              </div>
+            )}
 
-          <MatchDataTable
-            title="Related Job Openings"
-            titleIcon="📌"
-            rows={rows}
-            loading={loading}
-            error={error}
-            pokeLoading={pokeLoading}
-            pokeSuccessMessage={pokeSuccessMessage}
-            pokeError={pokeError}
-            onPoke={handlePoke}
-            onRowClick={(row) => setSelectedJob(row.rawData || null)}
-            onDownload={handleDownloadCSV}
-            downloadLabel="Download CSV"
-          />
+            {/* Plan badge + poke counter */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+              <Tooltip title={`Your current plan: ${plan}`}>
+                <Chip
+                  label={plan === "pro_plus" ? "PRO PLUS" : plan.toUpperCase()}
+                  size="small"
+                  icon={<StarIcon style={{ fontSize: 13 }} />}
+                  color={
+                    plan === "pro_plus"
+                      ? "success"
+                      : plan === "pro"
+                        ? "primary"
+                        : plan === "basic"
+                          ? "info"
+                          : plan === "enterprise"
+                            ? "success"
+                            : "default"
+                  }
+                  variant="outlined"
+                  style={{ fontWeight: 700, fontSize: 11 }}
+                />
+              </Tooltip>
+              {isFinite(pokeLimit) && (
+                <Chip
+                  label={`Pokes: ${pokeCount}/${pokeLimit}`}
+                  size="small"
+                  color={pokeCount >= pokeLimit ? "error" : "default"}
+                  variant="outlined"
+                  style={{ fontSize: 11 }}
+                />
+              )}
+            </Box>
+
+            {/* Toolbar */}
+            <div className="matchdb-toolbar">
+              <div className="matchdb-toolbar-left">
+                <label className="matchdb-label" htmlFor="candidate-search">
+                  Search
+                </label>
+                <input
+                  id="candidate-search"
+                  className="matchdb-input"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="Title, company, location..."
+                />
+                <label className="matchdb-label" htmlFor="candidate-type">
+                  Type
+                </label>
+                <select
+                  id="candidate-type"
+                  className="matchdb-select"
+                  value={filterType}
+                  onChange={(e) => {
+                    setFilterType(e.target.value);
+                    setFilterSubType("");
+                  }}
+                >
+                  <option value="">All</option>
+                  {JOB_TYPES.filter((t) => showType(t.value)).map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                {(filterType === "contract" || filterType === "full_time") && (
+                  <>
+                    <label
+                      className="matchdb-label"
+                      htmlFor="candidate-subtype"
+                    >
+                      Sub
+                    </label>
+                    <select
+                      id="candidate-subtype"
+                      className="matchdb-select"
+                      value={filterSubType}
+                      onChange={(e) => setFilterSubType(e.target.value)}
+                    >
+                      <option value="">All</option>
+                      {(filterType === "contract"
+                        ? CONTRACT_SUB_TYPES
+                        : FULL_TIME_SUB_TYPES
+                      )
+                        .filter((st) => showSubtype(filterType, st.value))
+                        .map((st) => (
+                          <option key={st.value} value={st.value}>
+                            {st.label}
+                          </option>
+                        ))}
+                    </select>
+                  </>
+                )}
+                <label className="matchdb-label" htmlFor="candidate-workmode">
+                  Mode
+                </label>
+                <select
+                  id="candidate-workmode"
+                  className="matchdb-select"
+                  value={filterWorkMode}
+                  onChange={(e) => setFilterWorkMode(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {WORK_MODES.map((wm) => (
+                    <option key={wm.value} value={wm.value}>
+                      {wm.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="matchdb-btn"
+                  onClick={() => {
+                    setSearchText("");
+                    setFilterType("");
+                    setFilterSubType("");
+                    setFilterWorkMode("");
+                  }}
+                >
+                  Reset
+                </button>
+              </div>
+              <div className="matchdb-toolbar-right">
+                <button
+                  type="button"
+                  className="matchdb-btn matchdb-btn-primary"
+                  onClick={() => dispatch(fetchCandidateMatches(token))}
+                >
+                  ↻ Refresh
+                </button>
+              </div>
+            </div>
+
+            <MatchDataTable
+              title="Related Job Openings"
+              titleIcon="📌"
+              rows={rows}
+              loading={loading}
+              error={error}
+              pokeLoading={pokeLoading}
+              pokeSuccessMessage={pokeSuccessMessage}
+              pokeError={pokeError}
+              onPoke={handlePoke}
+              onRowClick={(row) => setSelectedJob(row.rawData || null)}
+              onDownload={handleDownloadCSV}
+              downloadLabel="Download CSV"
+            />
+          </>
+        )}
+      </div>
+
+      {/* Profile edit modal — rm-overlay blurs the table behind it */}
+      {profileOpen && (
+        <div
+          className="rm-overlay"
+          onClick={profileRequired ? undefined : () => setProfileOpen(false)}
+          style={profileRequired ? { cursor: "default" } : undefined}
+        >
+          <div
+            className="rm-window"
+            style={{
+              width: 860,
+              maxHeight: "92vh",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="rm-titlebar">
+              <span className="rm-titlebar-icon">👤</span>
+              <span className="rm-titlebar-title">
+                My Profile — Candidate Resume
+              </span>
+              {profileRequired ? (
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: "#ffcc00",
+                    marginLeft: "auto",
+                    marginRight: 8,
+                  }}
+                >
+                  Complete &amp; save to continue
+                </span>
+              ) : (
+                <button
+                  className="rm-close"
+                  onClick={() => setProfileOpen(false)}
+                  title="Close"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <div className="rm-statusbar">
+              {profileRequired
+                ? "Please complete your profile below and click Save — you'll then see your matched job openings."
+                : "Complete your profile to improve job match accuracy. The more detail you provide, the better your matches."}
+            </div>
+            <CandidateProfile
+              token={token}
+              userEmail={userEmail}
+              onSaved={
+                profileRequired
+                  ? () => {
+                      setProfileOpen(false);
+                      setProfileRequired(false);
+                    }
+                  : undefined
+              }
+            />
+          </div>
         </div>
       )}
+
       <DetailModal
         open={selectedJob !== null}
         onClose={() => setSelectedJob(null)}

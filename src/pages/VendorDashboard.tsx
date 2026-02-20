@@ -48,8 +48,20 @@ const MODE_LABELS: Record<string, string> = {
   remote: 'Remote', onsite: 'On-Site', hybrid: 'Hybrid',
 };
 
-const JOB_LIMIT: Record<string, number> = { free: 1, pro: 10, enterprise: Infinity };
-const POKE_LIMIT: Record<string, number> = { free: 0, pro: 50, enterprise: Infinity };
+const JOB_LIMIT: Record<string, number> = {
+  free: 0,        // Free accounts cannot post jobs — must subscribe
+  basic: 5,       // Basic Membership: up to 5 active job postings
+  pro: 10,        // Pro Membership: up to 10 active job postings
+  pro_plus: 20,   // Pro Plus Membership: up to 20 active job postings
+  enterprise: Infinity, // legacy compatibility
+};
+const POKE_LIMIT: Record<string, number> = {
+  free: 0,
+  basic: 25,
+  pro: 50,
+  pro_plus: Infinity,
+  enterprise: Infinity,
+};
 
 type ViewMode = 'candidates' | 'postings';
 
@@ -67,7 +79,7 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
 
   // URL-driven navigation state — gives browser back/forward for free
   const [searchParams, setSearchParams] = useSearchParams();
-  const viewMode: ViewMode = (searchParams.get('view') as ViewMode) || 'candidates';
+  const viewMode: ViewMode = (searchParams.get('view') as ViewMode) || 'postings';
   const selectedJobId = searchParams.get('job') || '';
 
   const setViewMode = (mode: ViewMode) => {
@@ -92,10 +104,24 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
   const [selectedJobPosting, setSelectedJobPosting] = useState<Job | null>(null);
   const [postingSearch, setPostingSearch] = useState('');
   const [closingJobId, setClosingJobId] = useState<string | null>(null);
+  const [pricingBlur, setPricingBlur] = useState(false);
 
-  const jobLimit = JOB_LIMIT[plan] ?? 1;
+  const openPricingModal = () => {
+    setPricingBlur(true);
+    window.dispatchEvent(new CustomEvent('matchdb:openPricing', { detail: { tab: 'vendor' } }));
+  };
+
+  useEffect(() => {
+    const onClose = () => setPricingBlur(false);
+    window.addEventListener('matchdb:pricingClosed', onClose);
+    return () => window.removeEventListener('matchdb:pricingClosed', onClose);
+  }, []);
+
+  const jobLimit = JOB_LIMIT[plan] ?? 0;
   const pokeLimit = POKE_LIMIT[plan] ?? 0;
-  const atJobLimit = isFinite(jobLimit) && vendorJobs.length >= jobLimit;
+  // Count only ACTIVE job postings against the limit
+  const activeJobCount = vendorJobs.filter((j) => j.is_active).length;
+  const atJobLimit = isFinite(jobLimit) && activeJobCount >= jobLimit;
 
   useEffect(() => {
     dispatch(fetchVendorJobs(token));
@@ -279,24 +305,24 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
         viewMode === 'postings' ? 'My Job Postings' : selectedJobTitle,
       ]}
     >
-      <div className="matchdb-page">
+      <div className="matchdb-page" style={pricingBlur ? { filter: 'blur(2px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
 
         {/* Plan / limit badges + Post Job button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
           <Tooltip title={`Your current plan: ${plan}`}>
             <Chip
-              label={plan.toUpperCase()}
+              label={plan === 'pro_plus' ? 'PRO PLUS' : plan.toUpperCase()}
               size="small"
               icon={<StarIcon style={{ fontSize: 13 }} />}
-              color={plan === 'pro' ? 'primary' : plan === 'enterprise' ? 'success' : 'default'}
+              color={plan === 'pro_plus' || plan === 'enterprise' ? 'success' : plan === 'pro' ? 'primary' : plan === 'basic' ? 'info' : 'default'}
               variant="outlined"
               style={{ fontWeight: 700, fontSize: 11 }}
             />
           </Tooltip>
           {isFinite(jobLimit) && (
-            <Tooltip title={atJobLimit ? 'Upgrade to post more jobs' : ''}>
+            <Tooltip title={atJobLimit ? (jobLimit === 0 ? 'Subscribe to post jobs' : 'Upgrade to post more jobs') : ''}>
               <Chip
-                label={`Jobs: ${vendorJobs.length}/${jobLimit}`}
+                label={jobLimit === 0 ? 'No posting limit on free plan' : `Active Jobs: ${activeJobCount}/${jobLimit}`}
                 size="small"
                 icon={atJobLimit ? <LockIcon style={{ fontSize: 13 }} /> : undefined}
                 color={atJobLimit ? 'warning' : 'default'}
@@ -318,11 +344,13 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
             <button
               type="button"
               className="matchdb-btn matchdb-btn-primary"
-              onClick={onPostJob}
-              disabled={atJobLimit}
-              style={{ marginLeft: 'auto', opacity: atJobLimit ? 0.5 : 1 }}
+              onClick={atJobLimit ? openPricingModal : onPostJob}
+              style={{ marginLeft: 'auto' }}
             >
-              {atJobLimit ? '🔒 Upgrade to Post More' : '+ Post New Job'}
+              {atJobLimit
+                ? (plan === 'free' ? '🔒 Subscribe to Post Jobs' : '🔒 Upgrade to Post More')
+                : '+ Post New Job'
+              }
             </button>
           )}
         </div>
@@ -517,6 +545,29 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
         {/* ── MATCHED CANDIDATES VIEW ── */}
         {viewMode === 'candidates' && (
           <>
+            {/* FREE PLAN GATE — must have a paid subscription to view candidates */}
+            {plan === 'free' && (
+              <div className="matchdb-panel" style={{ textAlign: 'center', padding: '48px 24px' }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: '#333', margin: '0 0 8px' }}>
+                  Subscription Required
+                </h3>
+                <p style={{ fontSize: 13, color: '#666', maxWidth: 400, margin: '0 auto 20px', lineHeight: 1.6 }}>
+                  Viewing matched candidates requires an active subscription. Subscribe to the{' '}
+                  <strong>Basic</strong> plan ($22/mo) or higher to browse candidates and send pokes.
+                </p>
+                <button
+                  type="button"
+                  className="matchdb-btn matchdb-btn-primary"
+                  onClick={openPricingModal}
+                >
+                  View Subscription Plans →
+                </button>
+              </div>
+            )}
+
+            {/* Normal candidates view — only shown for paid plan holders */}
+            {plan !== 'free' && <>
             {/* Toolbar */}
             <div className="matchdb-toolbar">
               <div className="matchdb-toolbar-left">
@@ -576,6 +627,7 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
               onDownload={handleDownloadCSV}
               downloadLabel="Download CSV"
             />
+            </>}
           </>
         )}
 

@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import './components/ResumeModal.css';
+import "./components/ResumeModal.css";
 import { Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "./store";
 import CandidateDashboard from "./pages/CandidateDashboard";
 import VendorDashboard from "./pages/VendorDashboard";
-import CandidateProfile from "./pages/CandidateProfile";
 import PostJobPage from "./pages/PostJobPage";
 import PublicLanding from "./pages/PublicLanding";
 
@@ -14,8 +13,10 @@ export interface JobsAppProps {
   userType: string | undefined;
   userId: string | undefined;
   userEmail: string | undefined;
+  username: string | undefined;
   plan?: string;
   membershipConfig?: Record<string, string[]> | null;
+  hasPurchasedVisibility?: boolean;
 }
 
 // This component is exposed via Module Federation as 'matchdbJobs/JobsApp'
@@ -25,8 +26,10 @@ const JobsApp: React.FC<JobsAppProps> = ({
   userType,
   userId,
   userEmail,
+  username,
   plan = "free",
   membershipConfig,
+  hasPurchasedVisibility = false,
 }) => {
   const [showPostJob, setShowPostJob] = useState(false);
 
@@ -78,20 +81,16 @@ const JobsApp: React.FC<JobsAppProps> = ({
           ) : (
             <>
               <Route
-                path="/profile"
-                element={
-                  <CandidateProfile token={token} userEmail={userEmail} />
-                }
-              />
-              <Route
                 path="*"
                 element={
                   <CandidateDashboard
                     token={token}
                     userId={userId}
                     userEmail={userEmail}
+                    username={username}
                     plan={plan}
                     membershipConfig={membershipConfig}
+                    hasPurchasedVisibility={hasPurchasedVisibility}
                   />
                 }
               />
@@ -102,16 +101,27 @@ const JobsApp: React.FC<JobsAppProps> = ({
         {/* Inline post-job overlay — W97 window chrome via rm-* classes */}
         {showPostJob && userType === "vendor" && (
           <div className="rm-overlay" onClick={() => setShowPostJob(false)}>
-            <div className="rm-window" style={{ width: 780 }} onClick={(e) => e.stopPropagation()}>
+            <div
+              className="rm-window"
+              style={{ width: 780 }}
+              onClick={(e) => e.stopPropagation()}
+            >
               {/* Title bar */}
               <div className="rm-titlebar">
                 <span className="rm-titlebar-icon">📋</span>
                 <span className="rm-titlebar-title">Post a New Job</span>
-                <button className="rm-close" onClick={() => setShowPostJob(false)} title="Close">✕</button>
+                <button
+                  className="rm-close"
+                  onClick={() => setShowPostJob(false)}
+                  title="Close"
+                >
+                  ✕
+                </button>
               </div>
               {/* Status bar */}
               <div className="rm-statusbar">
-                Fill in the job details below — fields marked * are required. Use Smart Paste to auto-fill from any job description.
+                Fill in the job details below — fields marked * are required.
+                Use Smart Paste to auto-fill from any job description.
               </div>
               {/* PostJobPage owns scroll + footer */}
               <PostJobPage
