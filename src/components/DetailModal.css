@@ -1,4 +1,4 @@
-/* ===== DETAIL MODAL ===== */
+/* ===== DETAIL MODAL — uses global --w97-* vars from styles/w97-theme.css ===== */
 .detail-modal-overlay {
   position: fixed;
   inset: 0;
@@ -11,11 +11,11 @@
 }
 
 .detail-modal {
-  background: #f0f0f0;
-  border-top: 2px solid #fff;
-  border-left: 2px solid #fff;
-  border-right: 2px solid #404040;
-  border-bottom: 2px solid #404040;
+  background: var(--w97-window, #f0f0f0);
+  border-top: 2px solid var(--w97-btn-highlight, #fff);
+  border-left: 2px solid var(--w97-btn-highlight, #fff);
+  border-right: 2px solid var(--w97-btn-dark, #404040);
+  border-bottom: 2px solid var(--w97-btn-dark, #404040);
   box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.4);
   width: 680px;
   max-width: 96vw;
@@ -28,8 +28,12 @@
 
 /* Title bar */
 .detail-modal-titlebar {
-  background: linear-gradient(to right, #235a81, #1a4565);
-  color: #fff;
+  background: linear-gradient(
+    to right,
+    var(--w97-titlebar-from, #235a81),
+    var(--w97-titlebar-to, #1a4565)
+  );
+  color: var(--w97-titlebar-text, #fff);
   padding: 4px 8px;
   display: flex;
   align-items: center;
@@ -41,7 +45,7 @@
   font-weight: 700;
   font-size: 12px;
   flex: 1;
-  text-shadow: 1px 1px 0 rgba(0,0,0,.3);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 .detail-modal-match {
@@ -50,17 +54,26 @@
   padding: 1px 6px;
   border-radius: 2px;
 }
-.detail-modal-match.high { background: #2e7d32; color: #fff; }
-.detail-modal-match.mid  { background: #e8850f; color: #fff; }
-.detail-modal-match.low  { background: #bb3333; color: #fff; }
+.detail-modal-match.high {
+  background: var(--w97-green, #2e7d32);
+  color: #fff;
+}
+.detail-modal-match.mid {
+  background: var(--w97-orange, #e8850f);
+  color: #fff;
+}
+.detail-modal-match.low {
+  background: var(--w97-red, #bb3333);
+  color: #fff;
+}
 
 .detail-modal-close {
-  background: #c0c0c0;
-  border-top: 1px solid #fff;
-  border-left: 1px solid #fff;
-  border-right: 1px solid #404040;
-  border-bottom: 1px solid #404040;
-  color: #000;
+  background: var(--w97-btn-face, #c0c0c0);
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: 1px solid var(--w97-btn-dark, #404040);
+  color: var(--w97-text, #000);
   font-size: 11px;
   font-weight: 700;
   width: 18px;
@@ -79,9 +92,9 @@
   flex: 1;
   overflow-y: auto;
   padding: 10px 12px;
-  background: #fff;
-  border-top: 1px solid #aaa;
-  border-bottom: 1px solid #aaa;
+  background: var(--w97-input-bg, #fff);
+  border-top: 1px solid var(--w97-btn-shadow, #aaa);
+  border-bottom: 1px solid var(--w97-btn-shadow, #aaa);
 }
 
 .detail-section {
@@ -91,10 +104,10 @@
 .detail-section h3 {
   font-size: 11px;
   font-weight: 700;
-  color: #235a81;
+  color: var(--w97-navy, #235a81);
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border-bottom: 1px solid #c8d8e8;
+  border-bottom: 1px solid var(--w97-border-light, #c8d8e8);
   padding-bottom: 3px;
   margin: 0 0 6px 0;
 }
@@ -114,14 +127,14 @@
 .detail-label {
   font-size: 9px;
   font-weight: 700;
-  color: #5a7a99;
+  color: var(--w97-text-secondary, #5a7a99);
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
 .detail-value {
   font-size: 11px;
-  color: #1a1a1a;
+  color: var(--w97-text, #1a1a1a);
   word-break: break-word;
 }
 
@@ -134,7 +147,7 @@
 .detail-tag {
   background: #e6eef8;
   border: 1px solid #9ab0c9;
-  color: #213f62;
+  color: var(--w97-navy, #213f62);
   font-size: 10px;
   font-weight: 600;
   padding: 1px 6px;
@@ -142,7 +155,7 @@
 
 .detail-text {
   font-size: 11px;
-  color: #1a1a1a;
+  color: var(--w97-text, #1a1a1a);
   line-height: 1.5;
   white-space: pre-wrap;
   margin: 0;
@@ -151,11 +164,11 @@
 .detail-pre {
   font-family: inherit;
   font-size: 11px;
-  color: #1a1a1a;
+  color: var(--w97-text, #1a1a1a);
   line-height: 1.5;
   white-space: pre-wrap;
-  background: #f7f9fb;
-  border: 1px solid #cad6e4;
+  background: var(--w97-window-alt, #f7f9fb);
+  border: 1px solid var(--w97-border-light, #cad6e4);
   padding: 6px 8px;
   margin: 0;
 }
@@ -166,7 +179,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 6px;
-  background: #f0f0f0;
+  background: var(--w97-window, #f0f0f0);
   flex-shrink: 0;
 }
 
@@ -174,43 +187,32 @@
   height: 24px;
   font-size: 10px;
   font-weight: 700;
-  border-top: 1px solid #fff;
-  border-left: 1px solid #fff;
-  border-right: 1px solid #404040;
-  border-bottom: 1px solid #404040;
-  background: #c0c0c0;
-  color: #000;
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: 1px solid var(--w97-btn-dark, #404040);
+  background: var(--w97-btn-face, #c0c0c0);
+  color: var(--w97-text, #000);
   padding: 0 10px;
   cursor: pointer;
   font-family: inherit;
 }
-.detail-btn:hover { background: #d4d4d4; }
+.detail-btn:hover {
+  background: #d4d4d4;
+}
 
 .detail-btn-pdf {
-  background: #235a81;
+  background: var(--w97-navy, #235a81);
   color: #fff;
   border-color: #5a90c0 #0a3050 #0a3050 #5a90c0;
 }
-.detail-btn-pdf:hover { background: #1a4565; }
+.detail-btn-pdf:hover {
+  background: #1a4565;
+}
 
 /* Dark mode */
-[data-theme="dark"] .detail-modal {
-  background: #2d2d2d;
-  border-color: #555 #111 #111 #555;
-}
-[data-theme="dark"] .detail-modal-body {
-  background: #1e1e1e;
-  border-color: #444;
-}
-[data-theme="dark"] .detail-section h3 {
+[data-theme="dark"] .detail-tag {
+  background: #2a3a4a;
+  border-color: #5a7a9a;
   color: #a0c0e0;
-  border-bottom-color: #444;
 }
-[data-theme="dark"] .detail-label { color: #7090b0; }
-[data-theme="dark"] .detail-value { color: #ddd; }
-[data-theme="dark"] .detail-text,
-[data-theme="dark"] .detail-pre { color: #ccc; background: #252525; border-color: #444; }
-[data-theme="dark"] .detail-tag { background: #2a3a4a; border-color: #5a7a9a; color: #a0c0e0; }
-[data-theme="dark"] .detail-modal-footer { background: #2d2d2d; }
-[data-theme="dark"] .detail-btn { background: #444; color: #ddd; border-color: #666 #222 #222 #666; }
-[data-theme="dark"] .detail-btn:hover { background: #555; }

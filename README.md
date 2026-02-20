@@ -29,12 +29,13 @@ matchdb-jobs-ui/
 │   ├── bootstrap.tsx            # React root render (standalone mode)
 │   ├── JobsApp.tsx              # ★ Exposed MFE component — routing entry
 │   ├── components/
+│   │   ├── index.ts             # ★ Barrel export (DBLayout, DetailModal, JobPostingModal, MatchDataTable, ResumeModal, types)
 │   │   ├── DBLayout.tsx         # phpMyAdmin-style panel with subnav events
 │   │   ├── DBLayout.css         # Panel styling
 │   │   ├── MatchDataTable.tsx   # Data table with sort, checkbox, poke
 │   │   ├── MatchDataTable.css   # Table styling
 │   │   ├── DetailModal.tsx      # Job/profile detail viewer with PDF download
-│   │   ├── DetailModal.css      # Detail modal styling
+│   │   ├── DetailModal.css      # Detail modal styling (uses CSS vars)
 │   │   ├── ResumeModal.tsx      # Candidate profile create/edit modal
 │   │   ├── ResumeModal.css      # Resume modal styling
 │   │   ├── JobPostingModal.tsx  # Vendor job detail viewer with close/reopen
@@ -48,9 +49,15 @@ matchdb-jobs-ui/
 │   │   ├── PostJobPage.tsx         # Vendor job posting form
 │   │   ├── PostJobPage.css         # Job posting form styling
 │   │   └── LegacyForms.css        # Form styling shared between pages
-│   └── store/
-│       ├── index.ts             # Redux store config
-│       └── jobsSlice.ts         # Jobs state, CRUD thunks
+│   ├── store/
+│   │   ├── index.ts             # Redux store config
+│   │   └── jobsSlice.ts         # Jobs state, CRUD thunks
+│   ├── styles/
+│   │   ├── index.css            # ★ Barrel — imports w97-theme + w97-base
+│   │   ├── w97-theme.css        # ★ Global CSS custom properties (light + dark via [data-theme])
+│   │   └── w97-base.css         # ★ Shared utility classes (raised, sunken, titlebar, scroll)
+│   └── utils/
+│       └── index.ts             # ★ Shared helpers (fmtCurrency, fmtDate, fmtList, formatExperience, authHeader, downloadBlob, TYPE_LABELS, SUB_LABELS)
 ├── env/
 │   └── .env.development         # Local env vars
 ├── webpack.config.js            # Webpack + Module Federation config
@@ -80,16 +87,16 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 
 ## Props from Shell (JobsAppProps)
 
-| Prop                    | Type                             | Description                     |
-| ----------------------- | -------------------------------- | ------------------------------- |
-| `token`                 | `string \| null`                 | JWT access token                |
-| `userType`              | `string \| null`                 | `candidate` or `vendor`         |
-| `userId`                | `string \| null`                 | User ID                         |
-| `userEmail`             | `string \| null`                 | User email                      |
-| `username`              | `string \| undefined`           | Username slug for profile URLs  |
-| `plan`                  | `string \| undefined`           | Subscription plan               |
-| `membershipConfig`      | `Record<string,string[]> \| null`| Purchased visibility domains   |
-| `hasPurchasedVisibility`| `boolean \| undefined`          | Unlocks matched jobs view       |
+| Prop                     | Type                              | Description                    |
+| ------------------------ | --------------------------------- | ------------------------------ |
+| `token`                  | `string \| null`                  | JWT access token               |
+| `userType`               | `string \| null`                  | `candidate` or `vendor`        |
+| `userId`                 | `string \| null`                  | User ID                        |
+| `userEmail`              | `string \| null`                  | User email                     |
+| `username`               | `string \| undefined`             | Username slug for profile URLs |
+| `plan`                   | `string \| undefined`             | Subscription plan              |
+| `membershipConfig`       | `Record<string,string[]> \| null` | Purchased visibility domains   |
+| `hasPurchasedVisibility` | `boolean \| undefined`            | Unlocks matched jobs view      |
 
 ## Routing (JobsApp.tsx)
 
@@ -111,12 +118,15 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 ## Components
 
 ### DetailModal
+
 Generic detail viewer for jobs and candidate profiles. Shows formatted field data in a modal overlay with a "Download PDF" feature that opens a print-friendly window.
 
 ### ResumeModal
+
 Profile create/edit modal for candidates. Loads existing profile data, allows editing (name, email, phone, location, company, role, resume sections, bio), and saves via `upsertProfile` thunk.
 
 ### JobPostingModal
+
 Job detail viewer for vendors with close/reopen actions. Displays full job metadata including pay rate, type, sub-type labels (C2C/C2H/W2/1099/Direct Hire/Salary), and work mode. Includes confirmation flow for close/reopen operations.
 
 ## Inter-MFE Events (CustomEvent)
@@ -185,3 +195,29 @@ To run the entire MatchDB platform locally, start services in this order:
 ```
 
 Then open **http://localhost:3000** in your browser.
+
+## Global Styles (`src/styles/`)
+
+The Windows 97 theme is centralized into global style files imported once in `bootstrap.tsx`:
+
+| File            | Purpose                                                                    |
+| --------------- | -------------------------------------------------------------------------- |
+| `w97-theme.css` | 50+ `--w97-*` CSS custom properties for light & dark mode (`[data-theme]`) |
+| `w97-base.css`  | Shared utility classes: `.w97-raised`, `.w97-sunken`, `.w97-scroll`, etc.  |
+| `index.css`     | Barrel — imports both theme and base CSS in one import                     |
+
+When running inside the shell host, the shell's own CSS variables override these defaults.
+
+## Utilities (`src/utils/`)
+
+| Export               | Description                                               |
+| -------------------- | --------------------------------------------------------- |
+| `fmtCurrency()`      | Formats a number as currency or returns "—"               |
+| `fmtDate()`          | Formats an ISO date string to short readable form         |
+| `fmtList()`          | Joins an array with commas                                |
+| `fmtVal()`           | Returns a displayable value or "—"                        |
+| `formatExperience()` | Formats years of experience                               |
+| `TYPE_LABELS`        | Map: full_time → "Full Time", contract → "Contract", etc. |
+| `SUB_LABELS`         | Map: c2c → "C2C", direct_hire → "Direct Hire", etc.       |
+| `authHeader()`       | Builds `{ Authorization: 'Bearer …' }` header             |
+| `downloadBlob()`     | Triggers a file download from a Blob response             |

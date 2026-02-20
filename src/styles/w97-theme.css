@@ -1,0 +1,87 @@
+/* =============================================================================
+   W97 THEME — CSS Custom Properties (Light & Dark)
+   Provides --w97-* variables for standalone Jobs-UI rendering.
+   When running inside the Shell host these are overridden by the host CSS.
+   ============================================================================= */
+
+/* ---- Light / Default ---- */
+:root {
+  --w97-desktop: #f3f3f3;
+  --w97-window: #ffffff;
+  --w97-window-alt: #f7f7f7;
+  --w97-titlebar-from: #235a81;
+  --w97-titlebar-to: #1a4565;
+  --w97-titlebar-text: #ffffff;
+  --w97-text: #333333;
+  --w97-text-secondary: #555555;
+  --w97-btn-face: #e5e5e5;
+  --w97-btn-highlight: #ffffff;
+  --w97-btn-shadow: #aaaaaa;
+  --w97-btn-dark: #888888;
+  --w97-input-bg: #ffffff;
+  --w97-input-border: #aaaaaa;
+  --w97-border-light: #dddddd;
+  --w97-border-dark: #999999;
+  --w97-sidebar-bg: #f3f3f3;
+  --w97-sidebar-active: #235a81;
+  --w97-sidebar-active-text: #ffffff;
+  --w97-nav-hover: #e0e0e0;
+  --w97-nav-text: #235a81;
+  --w97-content-bg: #ffffff;
+  --w97-breadcrumb-bg: #e5e5e5;
+  --w97-footer-bg: #e5e5e5;
+  --w97-scrollbar-track: #f0f0f0;
+  --w97-scrollbar-thumb: #cccccc;
+  /* Accent colors */
+  --w97-red: #bb3333;
+  --w97-orange: #e8850f;
+  --w97-green: #2e7d32;
+  --w97-blue: #235a81;
+  --w97-yellow: #f5a623;
+  --w97-teal: #0077b5;
+  --w97-navy: #235a81;
+  --w97-sky: #f0f0f0;
+  /* Status bar */
+  --w97-status-bg: #e5e5e5;
+  --w97-status-border-top: #cccccc;
+}
+
+/* ---- Dark Mode ---- */
+[data-theme="dark"] {
+  --w97-desktop: #1e1e1e;
+  --w97-window: #2d2d2d;
+  --w97-window-alt: #383838;
+  --w97-titlebar-from: #1a3a55;
+  --w97-titlebar-to: #132d42;
+  --w97-titlebar-text: #d0e0f0;
+  --w97-text: #e0e0e0;
+  --w97-text-secondary: #a0a0a0;
+  --w97-btn-face: #3a3a3a;
+  --w97-btn-highlight: #555555;
+  --w97-btn-shadow: #1a1a1a;
+  --w97-btn-dark: #111111;
+  --w97-input-bg: #252525;
+  --w97-input-border: #555555;
+  --w97-border-light: #444444;
+  --w97-border-dark: #111111;
+  --w97-sidebar-bg: #2a2a2a;
+  --w97-sidebar-active: #2a5a80;
+  --w97-sidebar-active-text: #d0e0f0;
+  --w97-nav-hover: #3a3a3a;
+  --w97-nav-text: #a0c0e0;
+  --w97-content-bg: #1e1e1e;
+  --w97-breadcrumb-bg: #2d2d2d;
+  --w97-footer-bg: #2a2a2a;
+  --w97-scrollbar-track: #2d2d2d;
+  --w97-scrollbar-thumb: #555555;
+  --w97-status-bg: #2a2a2a;
+  --w97-status-border-top: #111111;
+  --w97-red: #e05555;
+  --w97-orange: #d08030;
+  --w97-green: #4caf50;
+  --w97-blue: #5090d0;
+  --w97-yellow: #f0b040;
+  --w97-teal: #4da8da;
+  --w97-navy: #5090d0;
+  --w97-sky: #2a2a2a;
+}

@@ -6,6 +6,7 @@ import JobsApp from "./JobsApp";
 import "primereact/resources/themes/md-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
+import "./styles/index.css";
 
 // Standalone mode — for running matchdb-jobs-ui independently during development
 const root = createRoot(document.getElementById("root") as HTMLElement);

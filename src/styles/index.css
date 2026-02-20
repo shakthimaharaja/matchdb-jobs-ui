@@ -1,0 +1,8 @@
+/* =============================================================================
+   MatchDB Jobs-UI — Global Styles Entry Point
+   Import this once in bootstrap.tsx to make theme variables and base helpers
+   available across the entire application.
+   ============================================================================= */
+
+@import "./w97-theme.css";
+@import "./w97-base.css";
