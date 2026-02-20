@@ -32,14 +32,21 @@ matchdb-jobs-ui/
 │   │   ├── DBLayout.tsx         # phpMyAdmin-style panel with subnav events
 │   │   ├── DBLayout.css         # Panel styling
 │   │   ├── MatchDataTable.tsx   # Data table with sort, checkbox, poke
-│   │   └── MatchDataTable.css   # Table styling
+│   │   ├── MatchDataTable.css   # Table styling
+│   │   ├── DetailModal.tsx      # Job/profile detail viewer with PDF download
+│   │   ├── DetailModal.css      # Detail modal styling
+│   │   ├── ResumeModal.tsx      # Candidate profile create/edit modal
+│   │   ├── ResumeModal.css      # Resume modal styling
+│   │   ├── JobPostingModal.tsx  # Vendor job detail viewer with close/reopen
+│   │   └── JobPostingModal.css  # Job posting modal styling
 │   ├── pages/
 │   │   ├── PublicLanding.tsx    # Pre-login view — single table + title-bar auth
 │   │   ├── PublicLanding.css    # Public landing styling
-│   │   ├── CandidateDashboard.tsx  # Candidate view — profile, jobs, applications
+│   │   ├── CandidateDashboard.tsx  # Candidate view — profile, matched jobs, visibility
 │   │   ├── VendorDashboard.tsx     # Vendor view — post jobs, browse candidates
 │   │   ├── CandidateProfile.tsx    # Candidate profile edit form
 │   │   ├── PostJobPage.tsx         # Vendor job posting form
+│   │   ├── PostJobPage.css         # Job posting form styling
 │   │   └── LegacyForms.css        # Form styling shared between pages
 │   └── store/
 │       ├── index.ts             # Redux store config
@@ -71,6 +78,19 @@ new ModuleFederationPlugin({
 
 The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`.
 
+## Props from Shell (JobsAppProps)
+
+| Prop                    | Type                             | Description                     |
+| ----------------------- | -------------------------------- | ------------------------------- |
+| `token`                 | `string \| null`                 | JWT access token                |
+| `userType`              | `string \| null`                 | `candidate` or `vendor`         |
+| `userId`                | `string \| null`                 | User ID                         |
+| `userEmail`             | `string \| null`                 | User email                      |
+| `username`              | `string \| undefined`           | Username slug for profile URLs  |
+| `plan`                  | `string \| undefined`           | Subscription plan               |
+| `membershipConfig`      | `Record<string,string[]> \| null`| Purchased visibility domains   |
+| `hasPurchasedVisibility`| `boolean \| undefined`          | Unlocks matched jobs view       |
+
 ## Routing (JobsApp.tsx)
 
 | Condition                  | Component Rendered   |
@@ -78,6 +98,26 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 | Not logged in              | `PublicLanding`      |
 | Logged in as **candidate** | `CandidateDashboard` |
 | Logged in as **vendor**    | `VendorDashboard`    |
+
+## Candidate Dashboard Features
+
+- **Locked state (🔒):** When `hasPurchasedVisibility` is `false`, shows a blurred/locked panel prompting the candidate to purchase a Visibility Package (starting at $13, one-time). CTA button opens the shell's Pricing modal.
+- **Unlocked state:** When visibility is purchased, shows:
+  - **Visibility coverage alert** — displays purchased domains/subdomains (e.g., "contract (C2C, C2H) · full_time (W2)") with an "Add More" button
+  - **Matched jobs table** — ranked job matches based on profile skills, preferences, and visibility config
+  - **Shareable profile URL** — displays `{origin}/resume/{username}` with a "Copy" button (clipboard integration)
+  - Plan badge + poke counter
+
+## Components
+
+### DetailModal
+Generic detail viewer for jobs and candidate profiles. Shows formatted field data in a modal overlay with a "Download PDF" feature that opens a print-friendly window.
+
+### ResumeModal
+Profile create/edit modal for candidates. Loads existing profile data, allows editing (name, email, phone, location, company, role, resume sections, bio), and saves via `upsertProfile` thunk.
+
+### JobPostingModal
+Job detail viewer for vendors with close/reopen actions. Displays full job metadata including pay rate, type, sub-type labels (C2C/C2H/W2/1099/Direct Hire/Salary), and work mode. Includes confirmation flow for close/reopen operations.
 
 ## Inter-MFE Events (CustomEvent)
 
