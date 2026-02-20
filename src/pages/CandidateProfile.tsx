@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import useDraftCache from "../hooks/useDraftCache";
 import axios from "axios";
 import { Button } from "primereact/button";
 import { Dropdown } from "primereact/dropdown";
@@ -79,16 +80,20 @@ interface Props {
   token: string | null;
   userEmail: string | undefined;
   onSaved?: () => void;
+  premiumUnlocked?: boolean;
+  onRequestPremiumUnlock?: () => void;
 }
 
-const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
+const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved, premiumUnlocked = false, onRequestPremiumUnlock }) => {
   const dispatch = useAppDispatch();
   const { profile, profileLoading, profileError } = useAppSelector(
     (state) => state.jobs,
   );
 
+  const { saveDraft, getDraft, clearDraft, hasDraft } = useDraftCache<IProfile>('matchdb_draft_candidate_profile');
   const [form, setForm] = useState<IProfile>(EMPTY);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
@@ -103,6 +108,9 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
     resume_achievements: "",
   });
 
+  // editIntent = user clicked "OK" acknowledging the $3 cost; fields become editable
+  const [editIntent, setEditIntent] = useState(false);
+
   useEffect(() => {
     dispatch(fetchProfile(token));
   }, [dispatch, token]);
@@ -110,12 +118,36 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
   useEffect(() => {
     if (profile) {
       setForm({ ...profile });
-    } else if (userEmail && !form.email) {
-      setForm((f) => ({ ...f, email: userEmail }));
+      clearDraft();
+      setShowDraftBanner(false);
+    } else if (!profileLoading) {
+      // Load complete — no server profile found
+      if (hasDraft()) {
+        setShowDraftBanner(true);
+      } else if (userEmail) {
+        setForm((f) => (!f.email ? { ...f, email: userEmail } : f));
+      }
     }
-  }, [profile, userEmail]);
+  }, [profile, profileLoading, userEmail]);
+
+  // Auto-save form to localStorage while filling in (only when no confirmed server profile)
+  useEffect(() => {
+    if (!profile && (form.name || form.resume_summary || form.resume_experience || form.bio)) {
+      saveDraft(form);
+    }
+  }, [form, profile]);
+
+  const restoreFromDraft = () => {
+    const draft = getDraft();
+    if (draft) setForm(draft);
+    setShowDraftBanner(false);
+  };
 
   const isLocked = !!profile?.profile_locked;
+  // premiumLocked = profile saved + user hasn't paid $3 to unlock full editing
+  const premiumLocked = isLocked && !premiumUnlocked;
+  // effectivelyLocked = premiumLocked but user hasn't clicked "OK" yet
+  const effectivelyLocked = premiumLocked && !editIntent;
 
   const setField = <K extends keyof IProfile>(key: K, value: IProfile[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -137,25 +169,19 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
     dispatch(clearProfileError());
     // For locked profiles, merge appended text into the resume fields
     let saveData = { ...form };
-    if (isLocked) {
-      const appendFields = [
-        "resume_summary",
-        "resume_experience",
-        "resume_education",
-        "resume_achievements",
-      ] as const;
-      for (const field of appendFields) {
-        const extra = additions[field].trim();
-        if (extra) {
-          saveData = {
-            ...saveData,
-            [field]: ((saveData[field] || "") + "\n\n" + extra).trim(),
-          };
-        }
+    if (premiumLocked) {
+      // Only resume_summary has an append textarea when premium fields are locked
+      const extra = additions.resume_summary.trim();
+      if (extra) {
+        saveData = {
+          ...saveData,
+          resume_summary: ((saveData.resume_summary || "") + "\n\n" + extra).trim(),
+        };
       }
     }
     const result = await dispatch(upsertProfile({ token, data: saveData }));
     if (upsertProfile.fulfilled.match(result)) {
+      clearDraft();
       setSaveSuccess(true);
       // Clear additions after successful save
       setAdditions({
@@ -213,9 +239,13 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
           <span className="matchdb-panel-title-icon">📋</span>
           <span className="matchdb-panel-title-text">Candidate Profile</span>
           <span className="matchdb-panel-title-meta">
-            {isLocked
-              ? "🔒 Resume locked — contact & preferences editable"
-              : "New profile — fill in details, skills auto-extracted on save"}
+            {isLocked && premiumUnlocked
+              ? "🔓 Premium unlocked — all fields fully editable"
+              : isLocked && editIntent
+                ? "✏ Editing unlocked — proceed to billing to save changes"
+                : isLocked
+                  ? "🔒 Some fields locked — see notice below"
+                  : "New profile — fill in details, skills auto-extracted on save"}
           </span>
         </div>
 
@@ -250,15 +280,108 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
           </div>
         )}
 
+        {/* Draft restore banner */}
+        {showDraftBanner && !profile && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "4px 8px",
+              background: "#fffbe6",
+              borderBottom: "1px solid #ffe066",
+              fontSize: 11,
+              flexShrink: 0,
+            }}
+          >
+            <span>📋 You have an unsaved draft from a previous session.</span>
+            <button
+              type="button"
+              className="matchdb-btn"
+              onClick={restoreFromDraft}
+            >
+              ↩ Restore Draft
+            </button>
+            <button
+              type="button"
+              className="matchdb-btn"
+              style={{ color: "#888" }}
+              onClick={() => { clearDraft(); setShowDraftBanner(false); }}
+            >
+              ✕ Discard
+            </button>
+          </div>
+        )}
+
         {/* Scrollable body */}
         <div
           style={{
             flex: 1,
             overflow: "auto",
             padding: 8,
-            background: "var(--w97-window, #fff)",
+            background: "var(--w97-window, #c0c0c0)",
           }}
         >
+          {/* $3 acknowledgment notice — top of form, shown when locked */}
+          {premiumLocked && !editIntent && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                padding: "8px 10px",
+                background: "#fff9e6",
+                border: "1px solid #c8960c",
+                marginBottom: 8,
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ fontSize: 12, color: "#7a5800", lineHeight: 1.5 }}>
+                <strong>🔒 Updating company, experience, education &amp; bio</strong> — requires payment at billing.
+                Click <strong>OK</strong> to enable editing for this session.
+              </div>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className="matchdb-btn matchdb-btn-primary"
+                  style={{ whiteSpace: "nowrap" }}
+                  onClick={() => setEditIntent(true)}
+                >
+                  OK, Let Me Edit
+                </button>
+                <button
+                  type="button"
+                  className="matchdb-btn"
+                  style={{ color: "#235a81", whiteSpace: "nowrap" }}
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent("matchdb:openPricing", { detail: { tab: "candidate" } }),
+                    )
+                  }
+                >
+                  ↑ Add Visibility
+                </button>
+              </div>
+            </div>
+          )}
+          {premiumLocked && editIntent && (
+            <div
+              style={{
+                padding: "6px 10px",
+                background: "#e8f5e9",
+                border: "1px solid #81c784",
+                marginBottom: 8,
+                fontSize: 11,
+                color: "#1b5e20",
+                flexShrink: 0,
+              }}
+            >
+              ✓ Editing unlocked for this session. Make your changes, then click{" "}
+              <strong>Update Profile → Billing</strong> below to pay and save.
+            </div>
+          )}
+
           {/* Personal Information */}
           <fieldset className="legacy-fieldset">
             <legend>Personal Information</legend>
@@ -303,7 +426,14 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
 
           {/* Professional Details */}
           <fieldset className="legacy-fieldset">
-            <legend>Professional Details</legend>
+            <legend>
+              Professional Details
+              {effectivelyLocked && (
+                <span style={{ marginLeft: 8, fontSize: 11, color: "#888", fontWeight: 400 }}>
+                  🔒 Company &amp; role locked
+                </span>
+              )}
+            </legend>
             <div className="legacy-grid two-col">
               <div className="legacy-row">
                 <label htmlFor="profile-company">Current Company</label>
@@ -311,7 +441,7 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
                   id="profile-company"
                   value={form.current_company}
                   onChange={(e) => setField("current_company", e.target.value)}
-                  disabled={isLocked}
+                  disabled={effectivelyLocked}
                 />
               </div>
               <div className="legacy-row">
@@ -320,7 +450,7 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
                   id="profile-role"
                   value={form.current_role}
                   onChange={(e) => setField("current_role", e.target.value)}
-                  disabled={isLocked}
+                  disabled={effectivelyLocked}
                 />
               </div>
             </div>
@@ -492,25 +622,22 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
           <fieldset className="legacy-fieldset">
             <legend>
               Resume
-              {isLocked && (
-                <span
-                  style={{
-                    marginLeft: 8,
-                    fontSize: 11,
-                    color: "#888",
-                    fontWeight: 400,
-                  }}
-                >
-                  🔒 Original content locked — use "Add more" to append
+              {effectivelyLocked ? (
+                <span style={{ marginLeft: 8, fontSize: 11, color: "#888", fontWeight: 400 }}>
+                  🔒 Experience/education/bio locked · summary append below
                 </span>
-              )}
+              ) : isLocked ? (
+                <span style={{ marginLeft: 8, fontSize: 11, color: "#888", fontWeight: 400 }}>
+                  🔓 Editing unlocked — all fields fully editable
+                </span>
+              ) : null}
             </legend>
 
             <div className="legacy-row">
               <label htmlFor="profile-summary">
                 Professional Summary / Objective
               </label>
-              {isLocked ? (
+              {effectivelyLocked ? (
                 <>
                   <div className="legacy-readonly-text">
                     {form.resume_summary || "—"}
@@ -549,31 +676,10 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
 
             <div className="legacy-row" style={{ marginTop: 10 }}>
               <label htmlFor="profile-experience">Work Experience</label>
-              {isLocked ? (
-                <>
-                  <div className="legacy-readonly-text">
-                    {form.resume_experience || "—"}
-                  </div>
-                  <label
-                    htmlFor="profile-experience-add"
-                    style={{ marginTop: 6, fontSize: 11, color: "#555" }}
-                  >
-                    ＋ Add more experience:
-                  </label>
-                  <InputTextarea
-                    id="profile-experience-add"
-                    value={additions.resume_experience}
-                    onChange={(e) =>
-                      setAdditions((a) => ({
-                        ...a,
-                        resume_experience: e.target.value,
-                      }))
-                    }
-                    rows={3}
-                    autoResize={false}
-                    placeholder="Append additional work experience..."
-                  />
-                </>
+              {effectivelyLocked ? (
+                <div className="legacy-readonly-text">
+                  {form.resume_experience || "—"}
+                </div>
               ) : (
                 <InputTextarea
                   id="profile-experience"
@@ -590,31 +696,10 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
 
             <div className="legacy-row" style={{ marginTop: 10 }}>
               <label htmlFor="profile-education">Education</label>
-              {isLocked ? (
-                <>
-                  <div className="legacy-readonly-text">
-                    {form.resume_education || "—"}
-                  </div>
-                  <label
-                    htmlFor="profile-education-add"
-                    style={{ marginTop: 6, fontSize: 11, color: "#555" }}
-                  >
-                    ＋ Add more education:
-                  </label>
-                  <InputTextarea
-                    id="profile-education-add"
-                    value={additions.resume_education}
-                    onChange={(e) =>
-                      setAdditions((a) => ({
-                        ...a,
-                        resume_education: e.target.value,
-                      }))
-                    }
-                    rows={2}
-                    autoResize={false}
-                    placeholder="Append additional education or courses..."
-                  />
-                </>
+              {effectivelyLocked ? (
+                <div className="legacy-readonly-text">
+                  {form.resume_education || "—"}
+                </div>
               ) : (
                 <InputTextarea
                   id="profile-education"
@@ -631,31 +716,10 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
               <label htmlFor="profile-achievements">
                 Certifications &amp; Achievements
               </label>
-              {isLocked ? (
-                <>
-                  <div className="legacy-readonly-text">
-                    {form.resume_achievements || "—"}
-                  </div>
-                  <label
-                    htmlFor="profile-achievements-add"
-                    style={{ marginTop: 6, fontSize: 11, color: "#555" }}
-                  >
-                    ＋ Add more certifications/achievements:
-                  </label>
-                  <InputTextarea
-                    id="profile-achievements-add"
-                    value={additions.resume_achievements}
-                    onChange={(e) =>
-                      setAdditions((a) => ({
-                        ...a,
-                        resume_achievements: e.target.value,
-                      }))
-                    }
-                    rows={2}
-                    autoResize={false}
-                    placeholder="Append additional certifications..."
-                  />
-                </>
+              {effectivelyLocked ? (
+                <div className="legacy-readonly-text">
+                  {form.resume_achievements || "—"}
+                </div>
               ) : (
                 <InputTextarea
                   id="profile-achievements"
@@ -672,7 +736,7 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
 
             <div className="legacy-row" style={{ marginTop: 10 }}>
               <label htmlFor="profile-bio">Brief Introduction</label>
-              {isLocked ? (
+              {effectivelyLocked ? (
                 <div className="legacy-readonly-text">{form.bio || "—"}</div>
               ) : (
                 <InputTextarea
@@ -787,27 +851,37 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved }) => {
           <button
             type="button"
             className="matchdb-btn matchdb-btn-primary"
-            onClick={handleSave}
+            onClick={premiumLocked && editIntent ? onRequestPremiumUnlock : handleSave}
             disabled={profileLoading || !form.name || !form.email}
           >
             {profileLoading
               ? "⏳ Saving..."
-              : isLocked
-                ? "✓ Update Profile"
-                : "💾 Save & Extract Skills"}
+              : premiumLocked && editIntent
+                ? "✏ Update Profile → Billing"
+                : isLocked && premiumUnlocked
+                  ? "💾 Save All Changes"
+                  : isLocked
+                    ? "✓ Update Profile"
+                    : "💾 Save & Extract Skills"}
           </button>
           {!isLocked && (
-            <span
-              style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}
-            >
+            <span style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}>
               Skills will be auto-extracted from your resume on save.
             </span>
           )}
-          {isLocked && (
-            <span
-              style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}
-            >
-              Appended experience &amp; new visibility types will be saved.
+          {effectivelyLocked && !editIntent && (
+            <span style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}>
+              Summary append &amp; visibility changes will be saved.
+            </span>
+          )}
+          {premiumLocked && editIntent && (
+            <span style={{ fontSize: 10, color: "#1b5e20" }}>
+              Proceeds to plans &amp; pricing — add visibility, then pay for profile update.
+            </span>
+          )}
+          {isLocked && premiumUnlocked && (
+            <span style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}>
+              All fields will be updated and skills re-extracted.
             </span>
           )}
           <span style={{ flex: 1 }} />

@@ -8,10 +8,13 @@ import MatchDataTable, { MatchRow } from '../components/MatchDataTable';
 import DBLayout, { NavGroup } from '../components/DBLayout';
 import DetailModal from '../components/DetailModal';
 import JobPostingModal from '../components/JobPostingModal';
-import { Job } from '../store/jobsSlice';
+import PokeEmailModal from '../components/PokeEmailModal';
+import { Job, PokeRecord } from '../store/jobsSlice';
 import {
   clearPokeState,
   closeJob,
+  fetchPokesSent,
+  fetchPokesReceived,
   fetchVendorCandidateMatches,
   fetchVendorJobs,
   reopenJob,
@@ -31,8 +34,14 @@ const formatExperience = (value?: number | null) => `${Number(value || 0)} yrs`;
 
 const fmtDate = (iso: string) => {
   try {
-    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  } catch { return iso; }
+    return new Date(iso).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -49,11 +58,11 @@ const MODE_LABELS: Record<string, string> = {
 };
 
 const JOB_LIMIT: Record<string, number> = {
-  free: 0,        // Free accounts cannot post jobs — must subscribe
-  basic: 5,       // Basic Membership: up to 5 active job postings
-  pro: 10,        // Pro Membership: up to 10 active job postings
-  pro_plus: 20,   // Pro Plus Membership: up to 20 active job postings
-  enterprise: Infinity, // legacy compatibility
+  free: 0,
+  basic: 5,
+  pro: 10,
+  pro_plus: 20,
+  enterprise: Infinity,
 };
 const POKE_LIMIT: Record<string, number> = {
   free: 0,
@@ -63,9 +72,110 @@ const POKE_LIMIT: Record<string, number> = {
   enterprise: Infinity,
 };
 
-type ViewMode = 'candidates' | 'postings';
+type ViewMode = 'candidates' | 'postings' | 'pokes-sent' | 'pokes-received' | 'mails-sent' | 'mails-received';
 
-const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) => {
+/* ── Inline activity table (pokes or mails, sent or received) ── */
+const SECTION_META: Record<
+  'pokes-sent' | 'pokes-received' | 'mails-sent' | 'mails-received',
+  { icon: string; title: string; toCol: string; emptyMsg: string }
+> = {
+  'pokes-sent':     { icon: '⚡', title: 'Pokes Sent',     toCol: 'To (Candidate)',   emptyMsg: 'No pokes sent yet.' },
+  'pokes-received': { icon: '⚡', title: 'Pokes Received',  toCol: 'From (Candidate)', emptyMsg: 'No pokes received yet.' },
+  'mails-sent':     { icon: '✉', title: 'Mails Sent',      toCol: 'To (Candidate)',   emptyMsg: 'No mails sent yet.' },
+  'mails-received': { icon: '✉', title: 'Mails Received',   toCol: 'From (Candidate)', emptyMsg: 'No mails received yet.' },
+};
+
+const PokesTable: React.FC<{
+  pokes: PokeRecord[];
+  loading: boolean;
+  section: 'pokes-sent' | 'pokes-received' | 'mails-sent' | 'mails-received';
+}> = ({ pokes, loading, section }) => {
+  const isSent = section === 'pokes-sent' || section === 'mails-sent';
+  const meta = SECTION_META[section];
+  return (
+    <div className="matchdb-panel">
+      <div className="matchdb-panel-title">
+        <span className="matchdb-panel-title-icon">{meta.icon}</span>
+        <span className="matchdb-panel-title-text">{meta.title}</span>
+        <span className="matchdb-panel-title-meta">
+          {loading ? 'Loading...' : `${pokes.length} record${pokes.length !== 1 ? 's' : ''}`}
+        </span>
+      </div>
+      <div className="matchdb-table-wrap">
+        <table className="matchdb-table">
+          <colgroup>
+            <col style={{ width: 28 }} />
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '16%' }} />
+            <col />
+            <col style={{ width: '9%' }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{meta.toCol}</th>
+              <th>Email</th>
+              <th>Type</th>
+              <th>Job Title</th>
+              <th>Subject / Context</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr>
+                <td colSpan={7} className="matchdb-loading">
+                  Loading records
+                  <span className="matchdb-loading-dot">.</span>
+                  <span className="matchdb-loading-dot" style={{ animationDelay: '0.2s' }}>.</span>
+                  <span className="matchdb-loading-dot" style={{ animationDelay: '0.4s' }}>.</span>
+                </td>
+              </tr>
+            )}
+            {!loading && pokes.length === 0 && (
+              <tr>
+                <td colSpan={7} className="matchdb-empty">{meta.emptyMsg}</td>
+              </tr>
+            )}
+            {!loading && pokes.map((p, i) => {
+              const personName = isSent ? p.target_name : p.sender_name;
+              const personEmail = isSent ? p.target_email : p.sender_email;
+              const personType = isSent ? 'Candidate' : (p.sender_type || 'Candidate');
+              return (
+                <tr key={p.id}>
+                  <td style={{ textAlign: 'center', color: '#808080', fontSize: 10 }}>{i + 1}</td>
+                  <td title={personName}>{personName}</td>
+                  <td>
+                    <a href={`mailto:${personEmail}`} style={{ color: '#2a5fa0', textDecoration: 'none' }}>
+                      {personEmail}
+                    </a>
+                  </td>
+                  <td>
+                    <span className="matchdb-type-pill" style={{ textTransform: 'capitalize' }}>
+                      {personType}
+                    </span>
+                  </td>
+                  <td title={p.job_title || '—'}>{p.job_title || '—'}</td>
+                  <td title={p.subject}>{p.subject}</td>
+                  <td style={{ fontSize: 11 }}>{new Date(p.created_at).toLocaleDateString()}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="matchdb-footnote">
+        <span>Showing {pokes.length} record{pokes.length !== 1 ? 's' : ''}</span>
+        <span className="matchdb-footnote-sep">|</span>
+        <span>InnoDB</span>
+      </div>
+    </div>
+  );
+};
+
+const VendorDashboard: React.FC<Props> = ({ token, userEmail, plan = 'free', onPostJob }) => {
   const dispatch = useAppDispatch();
   const {
     vendorJobs,
@@ -75,9 +185,12 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
     pokeLoading,
     pokeSuccessMessage,
     pokeError,
+    pokesSent,
+    pokesReceived,
+    pokesLoading,
   } = useAppSelector((state) => state.jobs);
 
-  // URL-driven navigation state — gives browser back/forward for free
+  // URL-driven navigation — browser back/forward for free
   const [searchParams, setSearchParams] = useSearchParams();
   const viewMode: ViewMode = (searchParams.get('view') as ViewMode) || 'postings';
   const selectedJobId = searchParams.get('job') || '';
@@ -99,12 +212,43 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
   };
 
   const [searchText, setSearchText] = useState('');
-  const [pokeCount, setPokeCount] = useState(0);
   const [selectedCandidate, setSelectedCandidate] = useState<Record<string, any> | null>(null);
   const [selectedJobPosting, setSelectedJobPosting] = useState<Job | null>(null);
   const [postingSearch, setPostingSearch] = useState('');
   const [closingJobId, setClosingJobId] = useState<string | null>(null);
   const [pricingBlur, setPricingBlur] = useState(false);
+  const [pokeEmailRow, setPokeEmailRow] = useState<MatchRow | null>(null);
+  const [pokeEmailSentSuccess, setPokeEmailSentSuccess] = useState(false);
+
+  // Derive poke/email tracking from server-side pokesSent data
+  const pokedRowIds = useMemo(
+    () => new Set(pokesSent.filter((p) => !p.is_email).map((p) => p.target_id)),
+    [pokesSent],
+  );
+  const emailedRowIds = useMemo(
+    () => new Set(pokesSent.filter((p) => p.is_email).map((p) => p.target_id)),
+    [pokesSent],
+  );
+  const pokeCount = useMemo(
+    () => pokesSent.filter((p) => !p.is_email).length,
+    [pokesSent],
+  );
+  const emailCount = useMemo(
+    () => pokesSent.filter((p) => p.is_email).length,
+    [pokesSent],
+  );
+
+  // target_id → poke created_at (passed to MatchDataTable for 24h mail cooldown)
+  const pokedAtMap = useMemo(
+    () => new Map(pokesSent.filter((p) => !p.is_email).map((p) => [p.target_id, p.created_at])),
+    [pokesSent],
+  );
+
+  // Pre-filtered lists for Pokes / Mails sections
+  const pokesSentOnly = useMemo(() => pokesSent.filter((p) => !p.is_email), [pokesSent]);
+  const mailsSentOnly = useMemo(() => pokesSent.filter((p) => p.is_email), [pokesSent]);
+  const pokesReceivedOnly = useMemo(() => pokesReceived.filter((p) => !p.is_email), [pokesReceived]);
+  const mailsReceivedOnly = useMemo(() => pokesReceived.filter((p) => p.is_email), [pokesReceived]);
 
   const openPricingModal = () => {
     setPricingBlur(true);
@@ -119,12 +263,14 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
 
   const jobLimit = JOB_LIMIT[plan] ?? 0;
   const pokeLimit = POKE_LIMIT[plan] ?? 0;
-  // Count only ACTIVE job postings against the limit
-  const activeJobCount = vendorJobs.filter((j) => j.is_active).length;
+  const activeJobs = vendorJobs.filter((j) => j.is_active);
+  const activeJobCount = activeJobs.length;
   const atJobLimit = isFinite(jobLimit) && activeJobCount >= jobLimit;
 
   useEffect(() => {
     dispatch(fetchVendorJobs(token));
+    dispatch(fetchPokesSent(token));
+    dispatch(fetchPokesReceived(token));
   }, [dispatch, token]);
 
   useEffect(() => {
@@ -134,7 +280,9 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
   }, [dispatch, token, selectedJobId, viewMode]);
 
   useEffect(() => {
-    return () => { dispatch(clearPokeState()); };
+    return () => {
+      dispatch(clearPokeState());
+    };
   }, [dispatch]);
 
   /* ── Candidate matches rows ── */
@@ -143,10 +291,12 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
       .filter((candidate) => {
         const q = searchText.trim().toLowerCase();
         if (!q) return true;
-        return candidate.name?.toLowerCase().includes(q)
-          || candidate.current_role?.toLowerCase().includes(q)
-          || candidate.location?.toLowerCase().includes(q)
-          || candidate.email?.toLowerCase().includes(q);
+        return (
+          candidate.name?.toLowerCase().includes(q) ||
+          candidate.current_role?.toLowerCase().includes(q) ||
+          candidate.location?.toLowerCase().includes(q) ||
+          candidate.email?.toLowerCase().includes(q)
+        );
       })
       .map((candidate) => ({
         id: candidate.id,
@@ -172,7 +322,6 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
     setClosingJobId(jobId);
     await dispatch(closeJob({ token, jobId }));
     setClosingJobId(null);
-    // Sync the modal's job reference with updated state
     setSelectedJobPosting((prev) =>
       prev?.id === jobId ? { ...prev, is_active: false } : prev,
     );
@@ -191,27 +340,87 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
   const filteredPostings = useMemo(() => {
     const q = postingSearch.trim().toLowerCase();
     if (!q) return vendorJobs;
-    return vendorJobs.filter((j) =>
-      j.title?.toLowerCase().includes(q) ||
-      j.location?.toLowerCase().includes(q) ||
-      j.job_type?.toLowerCase().includes(q),
+    return vendorJobs.filter(
+      (j) =>
+        j.title?.toLowerCase().includes(q) ||
+        j.location?.toLowerCase().includes(q) ||
+        j.job_type?.toLowerCase().includes(q),
     );
   }, [vendorJobs, postingSearch]);
 
+  const selectedJobTitle = selectedJobId
+    ? activeJobs.find((j) => j.id === selectedJobId)?.title || 'Job'
+    : 'All Openings';
+
   const handlePoke = (row: MatchRow) => {
-    if (!row.pokeTargetEmail || pokeCount >= pokeLimit) return;
+    if (!row.pokeTargetEmail) return;
+    if (isFinite(pokeLimit) && pokeCount >= pokeLimit) return;
     dispatch(clearPokeState());
-    dispatch(sendPoke({
-      token,
-      to_email: row.pokeTargetEmail,
-      to_name: row.pokeTargetName,
-      subject_context: row.pokeSubjectContext,
-    }));
-    setPokeCount((c) => c + 1);
+    dispatch(
+      sendPoke({
+        token,
+        to_email: row.pokeTargetEmail,
+        to_name: row.pokeTargetName,
+        subject_context: row.pokeSubjectContext,
+        target_id: row.id,
+        is_email: false,
+        sender_name: userEmail?.split('@')[0] || 'Vendor',
+        sender_email: userEmail || '',
+        job_id: selectedJobId || undefined,
+        job_title: selectedJobId ? selectedJobTitle : undefined,
+      }),
+    ).then((result) => {
+      if (sendPoke.fulfilled.match(result)) {
+        dispatch(fetchPokesSent(token));
+      }
+    });
+  };
+
+  const handlePokeEmail = (row: MatchRow) => {
+    dispatch(clearPokeState());
+    setPokeEmailSentSuccess(false);
+    setPokeEmailRow(row);
+  };
+
+  const handlePokeEmailSend = async (params: {
+    to_email: string;
+    to_name: string;
+    subject_context: string;
+    email_body: string;
+    pdf_data?: string;
+  }) => {
+    if (!pokeEmailRow) return;
+    const result = await dispatch(
+      sendPoke({
+        token,
+        to_email: params.to_email,
+        to_name: params.to_name,
+        subject_context: params.subject_context,
+        email_body: params.email_body,
+        target_id: pokeEmailRow.id,
+        is_email: true,
+        sender_name: userEmail?.split('@')[0] || 'Vendor',
+        sender_email: userEmail || '',
+        job_id: selectedJobId || undefined,
+        job_title: selectedJobId ? selectedJobTitle : undefined,
+      }),
+    );
+    if (sendPoke.fulfilled.match(result)) {
+      setPokeEmailSentSuccess(true);
+      dispatch(fetchPokesSent(token));
+      setTimeout(() => {
+        setPokeEmailSentSuccess(false);
+        setPokeEmailRow(null);
+        dispatch(clearPokeState());
+      }, 2000);
+    }
   };
 
   const handleDownloadCSV = () => {
-    const headers = ['Name', 'Company', 'Email', 'Phone', 'Role', 'Type', 'Pay/Hr', 'Exp', 'Match%', 'Location'];
+    const headers = [
+      'Name', 'Company', 'Email', 'Phone', 'Role', 'Type',
+      'Pay/Hr', 'Exp', 'Match%', 'Location',
+    ];
     const csvRows = rows.map((r) =>
       [r.name, r.company, r.email, r.phone, r.role, r.type, r.payPerHour, r.experience, r.matchPercentage, r.location]
         .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
@@ -228,7 +437,6 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
   };
 
   /* ── Sidebar nav groups ── */
-  const activeJobs = vendorJobs.filter((j) => j.is_active);
   const navGroups: NavGroup[] = [
     {
       label: 'View',
@@ -250,7 +458,7 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
         },
       ],
     },
-    ...(viewMode === 'candidates' ? [{
+    {
       label: 'Job Openings',
       icon: '',
       items: [
@@ -258,17 +466,70 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
           id: '',
           label: 'All Active Openings',
           count: activeJobs.length,
-          active: selectedJobId === '',
-          onClick: () => setSelectedJobId(''),
+          active: viewMode === 'candidates' && selectedJobId === '',
+          onClick: () => { setViewMode('candidates'); setSelectedJobId(''); },
         },
         ...activeJobs.map((job) => ({
           id: job.id,
           label: job.title,
-          active: selectedJobId === job.id,
-          onClick: () => setSelectedJobId(job.id),
+          active: viewMode === 'candidates' && selectedJobId === job.id,
+          onClick: () => { setViewMode('candidates'); setSelectedJobId(job.id); },
         })),
       ],
-    }] : []),
+    },
+    {
+      label: 'Pokes',
+      icon: '',
+      items: [
+        {
+          id: 'pokes-sent',
+          label: 'Pokes Sent',
+          count: pokesSentOnly.length,
+          active: viewMode === 'pokes-sent',
+          onClick: () => setViewMode('pokes-sent'),
+        },
+        {
+          id: 'pokes-received',
+          label: 'Pokes Received',
+          count: pokesReceivedOnly.length,
+          active: viewMode === 'pokes-received',
+          onClick: () => setViewMode('pokes-received'),
+        },
+      ],
+    },
+    {
+      label: 'Mails',
+      icon: '',
+      items: [
+        {
+          id: 'mails-sent',
+          label: 'Mails Sent',
+          count: mailsSentOnly.length,
+          active: viewMode === 'mails-sent',
+          onClick: () => setViewMode('mails-sent'),
+        },
+        {
+          id: 'mails-received',
+          label: 'Mails Received',
+          count: mailsReceivedOnly.length,
+          active: viewMode === 'mails-received',
+          onClick: () => setViewMode('mails-received'),
+        },
+        ...(plan !== 'free' && rows.length > 0
+          ? [
+              {
+                id: 'mail-template',
+                label: '✉ Mail Template',
+                tooltip: 'Compose a personalised email to any matched candidate — click ✉ next to any row',
+                onClick: () => {
+                  setViewMode('candidates');
+                  if (rows.length > 0) handlePokeEmail(rows[0]);
+                },
+              },
+            ]
+          : []),
+      ],
+    },
     {
       label: 'Actions',
       icon: '',
@@ -278,51 +539,90 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
           label: 'Refresh Data',
           onClick: () => {
             dispatch(fetchVendorJobs(token));
+            dispatch(fetchPokesSent(token));
+            dispatch(fetchPokesReceived(token));
             if (viewMode === 'candidates') {
-              dispatch(fetchVendorCandidateMatches({ token, jobId: selectedJobId || null }));
+              dispatch(
+                fetchVendorCandidateMatches({ token, jobId: selectedJobId || null }),
+              );
             }
           },
         },
         {
           id: 'reset',
           label: 'Reset Filters',
-          onClick: () => { setSelectedJobId(''); setSearchText(''); setPostingSearch(''); },
+          onClick: () => {
+            setSelectedJobId('');
+            setSearchText('');
+            setPostingSearch('');
+          },
         },
       ],
     },
   ];
 
-  const selectedJobTitle = selectedJobId
-    ? (activeJobs.find((j) => j.id === selectedJobId)?.title || 'Job')
-    : 'All Openings';
+  const breadcrumb: [string, string] | [string, string, string] =
+    viewMode === 'pokes-sent'      ? ['Vendor Portal', 'Pokes', 'Pokes Sent']
+    : viewMode === 'pokes-received'  ? ['Vendor Portal', 'Pokes', 'Pokes Received']
+    : viewMode === 'mails-sent'      ? ['Vendor Portal', 'Mails', 'Mails Sent']
+    : viewMode === 'mails-received'  ? ['Vendor Portal', 'Mails', 'Mails Received']
+    : viewMode === 'candidates'      ? ['Vendor Portal', selectedJobTitle]
+    : ['Vendor Portal', 'My Job Postings'];
 
   return (
-    <DBLayout
-      userType="vendor"
-      navGroups={navGroups}
-      breadcrumb={[
-        'Vendor Portal',
-        viewMode === 'postings' ? 'My Job Postings' : selectedJobTitle,
-      ]}
-    >
-      <div className="matchdb-page" style={pricingBlur ? { filter: 'blur(2px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
-
+    <DBLayout userType="vendor" navGroups={navGroups} breadcrumb={breadcrumb}>
+      <div
+        className="matchdb-page"
+        style={
+          pricingBlur
+            ? { filter: 'blur(2px)', pointerEvents: 'none', userSelect: 'none' }
+            : undefined
+        }
+      >
         {/* Plan / limit badges + Post Job button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginBottom: 8,
+            flexWrap: 'wrap',
+          }}
+        >
           <Tooltip title={`Your current plan: ${plan}`}>
             <Chip
               label={plan === 'pro_plus' ? 'PRO PLUS' : plan.toUpperCase()}
               size="small"
               icon={<StarIcon style={{ fontSize: 13 }} />}
-              color={plan === 'pro_plus' || plan === 'enterprise' ? 'success' : plan === 'pro' ? 'primary' : plan === 'basic' ? 'info' : 'default'}
+              color={
+                plan === 'pro_plus' || plan === 'enterprise'
+                  ? 'success'
+                  : plan === 'pro'
+                    ? 'primary'
+                    : plan === 'basic'
+                      ? 'info'
+                      : 'default'
+              }
               variant="outlined"
               style={{ fontWeight: 700, fontSize: 11 }}
             />
           </Tooltip>
           {isFinite(jobLimit) && (
-            <Tooltip title={atJobLimit ? (jobLimit === 0 ? 'Subscribe to post jobs' : 'Upgrade to post more jobs') : ''}>
+            <Tooltip
+              title={
+                atJobLimit
+                  ? jobLimit === 0
+                    ? 'Subscribe to post jobs'
+                    : 'Upgrade to post more jobs'
+                  : ''
+              }
+            >
               <Chip
-                label={jobLimit === 0 ? 'No posting limit on free plan' : `Active Jobs: ${activeJobCount}/${jobLimit}`}
+                label={
+                  jobLimit === 0
+                    ? 'No job postings on free plan'
+                    : `Active Jobs: ${activeJobCount}/${jobLimit}`
+                }
                 size="small"
                 icon={atJobLimit ? <LockIcon style={{ fontSize: 13 }} /> : undefined}
                 color={atJobLimit ? 'warning' : 'default'}
@@ -331,15 +631,28 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
               />
             </Tooltip>
           )}
-          {isFinite(pokeLimit) && (
+          <Tooltip title={`Quick pokes sent (limit: ${isFinite(pokeLimit) ? pokeLimit : '∞'}/month)`}>
             <Chip
-              label={`Pokes: ${pokeCount}/${pokeLimit}`}
+              label={
+                isFinite(pokeLimit)
+                  ? `Pokes: ${pokeCount}/${pokeLimit}`
+                  : `Pokes: ${pokeCount}`
+              }
               size="small"
-              color={pokeCount >= pokeLimit ? 'error' : 'default'}
+              color={isFinite(pokeLimit) && pokeCount >= pokeLimit ? 'error' : 'default'}
               variant="outlined"
               style={{ fontSize: 11 }}
             />
-          )}
+          </Tooltip>
+          <Tooltip title="Mail templates sent (each candidate can be emailed once)">
+            <Chip
+              label={`Emails: ${emailCount}`}
+              size="small"
+              color="default"
+              variant="outlined"
+              style={{ fontSize: 11 }}
+            />
+          </Tooltip>
           {onPostJob && (
             <button
               type="button"
@@ -348,17 +661,37 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
               style={{ marginLeft: 'auto' }}
             >
               {atJobLimit
-                ? (plan === 'free' ? '🔒 Subscribe to Post Jobs' : '🔒 Upgrade to Post More')
-                : '+ Post New Job'
-              }
+                ? plan === 'free'
+                  ? '🔒 Subscribe to Post Jobs'
+                  : '🔒 Upgrade to Post More'
+                : '+ Post New Job'}
             </button>
           )}
         </div>
 
+        {/* ── POKES SENT VIEW ── */}
+        {viewMode === 'pokes-sent' && (
+          <PokesTable pokes={pokesSentOnly} loading={pokesLoading} section="pokes-sent" />
+        )}
+
+        {/* ── POKES RECEIVED VIEW ── */}
+        {viewMode === 'pokes-received' && (
+          <PokesTable pokes={pokesReceivedOnly} loading={pokesLoading} section="pokes-received" />
+        )}
+
+        {/* ── MAILS SENT VIEW ── */}
+        {viewMode === 'mails-sent' && (
+          <PokesTable pokes={mailsSentOnly} loading={pokesLoading} section="mails-sent" />
+        )}
+
+        {/* ── MAILS RECEIVED VIEW ── */}
+        {viewMode === 'mails-received' && (
+          <PokesTable pokes={mailsReceivedOnly} loading={pokesLoading} section="mails-received" />
+        )}
+
         {/* ── MY JOB POSTINGS VIEW ── */}
         {viewMode === 'postings' && (
           <>
-            {/* Toolbar */}
             <div className="matchdb-toolbar">
               <div className="matchdb-toolbar-left">
                 <label className="matchdb-label" htmlFor="posting-search">Search</label>
@@ -388,13 +721,14 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
               </div>
             </div>
 
-            {/* Postings table */}
             <div className="matchdb-panel">
               <div className="matchdb-panel-title">
                 <span className="matchdb-panel-title-icon">📋</span>
                 <span className="matchdb-panel-title-text">My Job Postings</span>
                 <span className="matchdb-panel-title-meta">
-                  {loading ? 'Loading...' : `${filteredPostings.length} record${filteredPostings.length !== 1 ? 's' : ''}`}
+                  {loading
+                    ? 'Loading...'
+                    : `${filteredPostings.length} record${filteredPostings.length !== 1 ? 's' : ''}`}
                 </span>
               </div>
 
@@ -438,8 +772,18 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
                         <td colSpan={13} className="matchdb-loading">
                           Loading records
                           <span className="matchdb-loading-dot">.</span>
-                          <span className="matchdb-loading-dot" style={{ animationDelay: '0.2s' }}>.</span>
-                          <span className="matchdb-loading-dot" style={{ animationDelay: '0.4s' }}>.</span>
+                          <span
+                            className="matchdb-loading-dot"
+                            style={{ animationDelay: '0.2s' }}
+                          >
+                            .
+                          </span>
+                          <span
+                            className="matchdb-loading-dot"
+                            style={{ animationDelay: '0.4s' }}
+                          >
+                            .
+                          </span>
                         </td>
                       </tr>
                     )}
@@ -452,87 +796,114 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
                         </td>
                       </tr>
                     )}
-                    {!loading && filteredPostings.map((job) => {
-                      const typeStr = TYPE_LABELS[job.job_type] || job.job_type || '-';
-                      const subStr = job.job_sub_type ? ` › ${SUB_LABELS[job.job_sub_type] || job.job_sub_type.toUpperCase()}` : '';
-                      return (
-                        <tr key={job.id} title={`Click ⊕ to view full posting for "${job.title}"`}>
-                          <td style={{ textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              className="matchdb-btn matchdb-btn-expand"
-                              title="View full job posting"
-                              onClick={() => setSelectedJobPosting(job)}
-                            >
-                              ⊕
-                            </button>
-                          </td>
-                          <td title={job.title}>{job.title}</td>
-                          <td>
-                            <span className={`matchdb-type-pill vdp-status${job.is_active ? '-active' : '-closed'}`}>
-                              {job.is_active ? '● Active' : '● Closed'}
-                            </span>
-                          </td>
-                          <td title={job.location}>{job.location || '—'}</td>
-                          <td title={`${typeStr}${subStr}`}>
-                            <span className="matchdb-type-pill">{typeStr}{subStr}</span>
-                          </td>
-                          <td>{job.work_mode ? (MODE_LABELS[job.work_mode] || job.work_mode) : '—'}</td>
-                          <td>{formatRate(job.pay_per_hour)}</td>
-                          <td>{job.experience_required != null ? `${job.experience_required}y` : '—'}</td>
-                          <td>{job.skills_required?.length ?? 0}</td>
-                          <td>{job.application_count ?? 0}</td>
-                          <td>{fmtDate(job.created_at)}</td>
-                          <td style={{ textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              className="matchdb-btn vdp-btn-matches"
-                              disabled={!job.is_active}
-                              title={job.is_active ? `View candidates matched to "${job.title}"` : 'Position is closed — reopen to view matches'}
-                              onClick={() => {
-                                setSearchParams((prev) => {
-                                  const next = new URLSearchParams(prev);
-                                  next.set('view', 'candidates');
-                                  next.set('job', job.id);
-                                  return next;
-                                });
-                              }}
-                            >
-                              👥 View
-                            </button>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            {job.is_active ? (
+                    {!loading &&
+                      filteredPostings.map((job) => {
+                        const typeStr =
+                          TYPE_LABELS[job.job_type] || job.job_type || '-';
+                        const subStr = job.job_sub_type
+                          ? ` › ${SUB_LABELS[job.job_sub_type] || job.job_sub_type.toUpperCase()}`
+                          : '';
+                        return (
+                          <tr
+                            key={job.id}
+                            title={`Click ⊕ to view full posting for "${job.title}"`}
+                          >
+                            <td style={{ textAlign: 'center' }}>
                               <button
                                 type="button"
-                                className="matchdb-btn vdp-btn-close"
-                                disabled={closingJobId === job.id}
-                                onClick={() => handleCloseJob(job.id)}
-                                title="Close this position — stop accepting applications"
+                                className="matchdb-btn matchdb-btn-expand"
+                                title="View full job posting"
+                                onClick={() => setSelectedJobPosting(job)}
                               >
-                                {closingJobId === job.id ? '...' : '🔒 Close'}
+                                ⊕
                               </button>
-                            ) : (
+                            </td>
+                            <td title={job.title}>{job.title}</td>
+                            <td>
+                              <span
+                                className={`matchdb-type-pill vdp-status${job.is_active ? '-active' : '-closed'}`}
+                              >
+                                {job.is_active ? '● Active' : '● Closed'}
+                              </span>
+                            </td>
+                            <td title={job.location}>{job.location || '—'}</td>
+                            <td title={`${typeStr}${subStr}`}>
+                              <span className="matchdb-type-pill">
+                                {typeStr}
+                                {subStr}
+                              </span>
+                            </td>
+                            <td>
+                              {job.work_mode
+                                ? MODE_LABELS[job.work_mode] || job.work_mode
+                                : '—'}
+                            </td>
+                            <td>{formatRate(job.pay_per_hour)}</td>
+                            <td>
+                              {job.experience_required != null
+                                ? `${job.experience_required}y`
+                                : '—'}
+                            </td>
+                            <td>{job.skills_required?.length ?? 0}</td>
+                            <td>{job.application_count ?? 0}</td>
+                            <td>{fmtDate(job.created_at)}</td>
+                            <td style={{ textAlign: 'center' }}>
                               <button
                                 type="button"
-                                className="matchdb-btn vdp-btn-reopen"
-                                disabled={closingJobId === job.id}
-                                onClick={() => handleReopenJob(job.id)}
-                                title="Reopen this position — resume accepting applications"
+                                className="matchdb-btn vdp-btn-matches"
+                                disabled={!job.is_active}
+                                title={
+                                  job.is_active
+                                    ? `View candidates matched to "${job.title}"`
+                                    : 'Position is closed — reopen to view matches'
+                                }
+                                onClick={() => {
+                                  setSearchParams((prev) => {
+                                    const next = new URLSearchParams(prev);
+                                    next.set('view', 'candidates');
+                                    next.set('job', job.id);
+                                    return next;
+                                  });
+                                }}
                               >
-                                {closingJobId === job.id ? '...' : '✔ Reopen'}
+                                👥 View
                               </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              {job.is_active ? (
+                                <button
+                                  type="button"
+                                  className="matchdb-btn vdp-btn-close"
+                                  disabled={closingJobId === job.id}
+                                  onClick={() => handleCloseJob(job.id)}
+                                  title="Close this position — stop accepting applications"
+                                >
+                                  {closingJobId === job.id ? '...' : '🔒 Close'}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="matchdb-btn vdp-btn-reopen"
+                                  disabled={closingJobId === job.id}
+                                  onClick={() => handleReopenJob(job.id)}
+                                  title="Reopen this position — resume accepting applications"
+                                >
+                                  {closingJobId === job.id ? '...' : '✔ Reopen'}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
 
               <div className="matchdb-footnote">
-                <span>Showing {filteredPostings.length} of {vendorJobs.length} posting{vendorJobs.length !== 1 ? 's' : ''}</span>
+                <span>
+                  Showing {filteredPostings.length} of {vendorJobs.length} posting
+                  {vendorJobs.length !== 1 ? 's' : ''}
+                </span>
                 <span className="matchdb-footnote-sep">|</span>
                 <span>Active: {activeJobs.length}</span>
                 <span className="matchdb-footnote-sep">|</span>
@@ -545,14 +916,32 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
         {/* ── MATCHED CANDIDATES VIEW ── */}
         {viewMode === 'candidates' && (
           <>
-            {/* FREE PLAN GATE — must have a paid subscription to view candidates */}
             {plan === 'free' && (
-              <div className="matchdb-panel" style={{ textAlign: 'center', padding: '48px 24px' }}>
+              <div
+                className="matchdb-panel"
+                style={{ textAlign: 'center', padding: '48px 24px' }}
+              >
                 <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: '#333', margin: '0 0 8px' }}>
+                <h3
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    marginBottom: 8,
+                    color: '#333',
+                    margin: '0 0 8px',
+                  }}
+                >
                   Subscription Required
                 </h3>
-                <p style={{ fontSize: 13, color: '#666', maxWidth: 400, margin: '0 auto 20px', lineHeight: 1.6 }}>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: '#666',
+                    maxWidth: 400,
+                    margin: '0 auto 20px',
+                    lineHeight: 1.6,
+                  }}
+                >
                   Viewing matched candidates requires an active subscription. Subscribe to the{' '}
                   <strong>Basic</strong> plan ($22/mo) or higher to browse candidates and send pokes.
                 </p>
@@ -566,71 +955,89 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
               </div>
             )}
 
-            {/* Normal candidates view — only shown for paid plan holders */}
-            {plan !== 'free' && <>
-            {/* Toolbar */}
-            <div className="matchdb-toolbar">
-              <div className="matchdb-toolbar-left">
-                <label className="matchdb-label" htmlFor="vendor-job-filter">Opening</label>
-                <select
-                  id="vendor-job-filter"
-                  className="matchdb-select"
-                  value={selectedJobId}
-                  onChange={(e) => setSelectedJobId(e.target.value)}
-                >
-                  <option value="">All Active Openings</option>
-                  {activeJobs.map((job) => (
-                    <option key={job.id} value={job.id}>{job.title}</option>
-                  ))}
-                </select>
-                <label className="matchdb-label" htmlFor="vendor-search">Search</label>
-                <input
-                  id="vendor-search"
-                  className="matchdb-input"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Name, role, location..."
-                />
-                <button
-                  type="button"
-                  className="matchdb-btn"
-                  onClick={() => { setSelectedJobId(''); setSearchText(''); }}
-                >
-                  Reset
-                </button>
-              </div>
-              <div className="matchdb-toolbar-right">
-                <button
-                  type="button"
-                  className="matchdb-btn matchdb-btn-primary"
-                  onClick={() => {
-                    dispatch(fetchVendorJobs(token));
-                    dispatch(fetchVendorCandidateMatches({ token, jobId: selectedJobId || null }));
-                  }}
-                >
-                  ↻ Refresh
-                </button>
-              </div>
-            </div>
+            {plan !== 'free' && (
+              <>
+                <div className="matchdb-toolbar">
+                  <div className="matchdb-toolbar-left">
+                    <label className="matchdb-label" htmlFor="vendor-job-filter">
+                      Opening
+                    </label>
+                    <select
+                      id="vendor-job-filter"
+                      className="matchdb-select"
+                      value={selectedJobId}
+                      onChange={(e) => setSelectedJobId(e.target.value)}
+                    >
+                      <option value="">All Active Openings</option>
+                      {activeJobs.map((job) => (
+                        <option key={job.id} value={job.id}>
+                          {job.title}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="matchdb-label" htmlFor="vendor-search">
+                      Search
+                    </label>
+                    <input
+                      id="vendor-search"
+                      className="matchdb-input"
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      placeholder="Name, role, location..."
+                    />
+                    <button
+                      type="button"
+                      className="matchdb-btn"
+                      onClick={() => {
+                        setSelectedJobId('');
+                        setSearchText('');
+                      }}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <div className="matchdb-toolbar-right">
+                    <button
+                      type="button"
+                      className="matchdb-btn matchdb-btn-primary"
+                      onClick={() => {
+                        dispatch(fetchVendorJobs(token));
+                        dispatch(
+                          fetchVendorCandidateMatches({
+                            token,
+                            jobId: selectedJobId || null,
+                          }),
+                        );
+                      }}
+                    >
+                      ↻ Refresh
+                    </button>
+                  </div>
+                </div>
 
-            <MatchDataTable
-              title="Related Candidate Profiles"
-              titleIcon="👥"
-              rows={rows}
-              loading={loading}
-              error={error}
-              pokeLoading={pokeLoading}
-              pokeSuccessMessage={pokeSuccessMessage}
-              pokeError={pokeError}
-              onPoke={handlePoke}
-              onRowClick={(row) => setSelectedCandidate(row.rawData || null)}
-              onDownload={handleDownloadCSV}
-              downloadLabel="Download CSV"
-            />
-            </>}
+                <MatchDataTable
+                  title="Related Candidate Profiles"
+                  titleIcon="👥"
+                  rows={rows}
+                  loading={loading}
+                  error={error}
+                  pokeLoading={pokeLoading}
+                  pokeSuccessMessage={pokeSuccessMessage}
+                  pokeError={pokeError}
+                  isVendor={true}
+                  pokedRowIds={pokedRowIds}
+                  emailedRowIds={emailedRowIds}
+                  pokedAtMap={pokedAtMap}
+                  onPoke={handlePoke}
+                  onPokeEmail={handlePokeEmail}
+                  onRowClick={(row) => setSelectedCandidate(row.rawData || null)}
+                  onDownload={handleDownloadCSV}
+                  downloadLabel="Download CSV"
+                />
+              </>
+            )}
           </>
         )}
-
       </div>
 
       {/* Candidate detail modal */}
@@ -649,6 +1056,23 @@ const VendorDashboard: React.FC<Props> = ({ token, plan = 'free', onPostJob }) =
         job={selectedJobPosting}
         onClose_job={handleCloseJob}
         onReopen_job={handleReopenJob}
+      />
+
+      {/* Mail Template modal */}
+      <PokeEmailModal
+        open={pokeEmailRow !== null}
+        row={pokeEmailRow}
+        isVendor={true}
+        senderName={userEmail?.split('@')[0] || 'Vendor'}
+        senderEmail={userEmail || ''}
+        onSend={handlePokeEmailSend}
+        onClose={() => {
+          setPokeEmailRow(null);
+          setPokeEmailSentSuccess(false);
+          dispatch(clearPokeState());
+        }}
+        sending={pokeLoading}
+        sentSuccess={pokeEmailSentSuccess}
       />
     </DBLayout>
   );

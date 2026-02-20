@@ -6,6 +6,7 @@ interface NavItem {
   count?: number;
   active?: boolean;
   depth?: number; // 0 = top-level, 1 = child sub-item
+  tooltip?: string; // shown as browser title/tooltip on hover in ShellLayout
   onClick?: () => void;
 }
 
@@ -44,6 +45,7 @@ const DBLayout: React.FC<DBLayoutProps> = ({ navGroups, breadcrumb, children }) 
           count: i.count,
           active: i.active,
           depth: i.depth,
+          tooltip: i.tooltip,
         })),
       })),
     );

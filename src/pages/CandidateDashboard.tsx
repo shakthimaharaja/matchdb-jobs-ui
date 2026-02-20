@@ -6,12 +6,16 @@ import { useAppDispatch, useAppSelector } from "../store";
 import MatchDataTable, { MatchRow } from "../components/MatchDataTable";
 import DBLayout, { NavGroup } from "../components/DBLayout";
 import DetailModal from "../components/DetailModal";
+import PokeEmailModal from "../components/PokeEmailModal";
 import CandidateProfile from "./CandidateProfile";
 import {
   clearPokeState,
   fetchCandidateMatches,
+  fetchPokesSent,
+  fetchPokesReceived,
   fetchProfile,
   sendPoke,
+  PokeRecord,
 } from "../store/jobsSlice";
 
 interface Props {
@@ -24,6 +28,8 @@ interface Props {
   hasPurchasedVisibility?: boolean;
 }
 
+type ActiveView = "matches" | "pokes-sent" | "pokes-received" | "mails-sent" | "mails-received";
+
 const formatRate = (value?: number | null) =>
   value ? `$${Number(value).toFixed(0)}` : "-";
 const formatExperience = (value?: number | null) => `${Number(value || 0)} yrs`;
@@ -31,10 +37,7 @@ const companyFromEmail = (email?: string) => {
   if (!email) return "-";
   const domain = email.split("@")[1] || "";
   return domain
-    ? domain
-        .split(".")[0]
-        .replace(/[^a-zA-Z0-9]/g, " ")
-        .trim() || "-"
+    ? domain.split(".")[0].replace(/[^a-zA-Z0-9]/g, " ").trim() || "-"
     : "-";
 };
 
@@ -72,6 +75,107 @@ const POKE_LIMIT: Record<string, number> = {
   enterprise: Infinity,
 };
 
+/* ── Inline activity table (pokes or mails, sent or received) ── */
+const SECTION_META: Record<
+  "pokes-sent" | "pokes-received" | "mails-sent" | "mails-received",
+  { icon: string; title: string; toCol: string; emptyMsg: string }
+> = {
+  "pokes-sent":     { icon: "⚡", title: "Pokes Sent",     toCol: "To (Recruiter)", emptyMsg: "No pokes sent yet." },
+  "pokes-received": { icon: "⚡", title: "Pokes Received",  toCol: "From (Vendor)",  emptyMsg: "No pokes received yet." },
+  "mails-sent":     { icon: "✉", title: "Mails Sent",      toCol: "To (Recruiter)", emptyMsg: "No mails sent yet." },
+  "mails-received": { icon: "✉", title: "Mails Received",   toCol: "From (Vendor)",  emptyMsg: "No mails received yet." },
+};
+
+const PokesTable: React.FC<{
+  pokes: PokeRecord[];
+  loading: boolean;
+  section: "pokes-sent" | "pokes-received" | "mails-sent" | "mails-received";
+}> = ({ pokes, loading, section }) => {
+  const isSent = section === "pokes-sent" || section === "mails-sent";
+  const meta = SECTION_META[section];
+  return (
+    <div className="matchdb-panel">
+      <div className="matchdb-panel-title">
+        <span className="matchdb-panel-title-icon">{meta.icon}</span>
+        <span className="matchdb-panel-title-text">{meta.title}</span>
+        <span className="matchdb-panel-title-meta">
+          {loading ? "Loading..." : `${pokes.length} record${pokes.length !== 1 ? "s" : ""}`}
+        </span>
+      </div>
+      <div className="matchdb-table-wrap">
+        <table className="matchdb-table">
+          <colgroup>
+            <col style={{ width: 28 }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "16%" }} />
+            <col />
+            <col style={{ width: "9%" }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>{meta.toCol}</th>
+              <th>Email</th>
+              <th>Type</th>
+              <th>Job Title</th>
+              <th>Subject / Context</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr>
+                <td colSpan={7} className="matchdb-loading">
+                  Loading records
+                  <span className="matchdb-loading-dot">.</span>
+                  <span className="matchdb-loading-dot" style={{ animationDelay: "0.2s" }}>.</span>
+                  <span className="matchdb-loading-dot" style={{ animationDelay: "0.4s" }}>.</span>
+                </td>
+              </tr>
+            )}
+            {!loading && pokes.length === 0 && (
+              <tr>
+                <td colSpan={7} className="matchdb-empty">{meta.emptyMsg}</td>
+              </tr>
+            )}
+            {!loading && pokes.map((p, i) => {
+              const personName = isSent ? p.target_name : p.sender_name;
+              const personEmail = isSent ? p.target_email : p.sender_email;
+              const personType = isSent ? "Recruiter" : (p.sender_type || "Vendor");
+              return (
+                <tr key={p.id}>
+                  <td style={{ textAlign: "center", color: "#808080", fontSize: 10 }}>{i + 1}</td>
+                  <td title={personName}>{personName}</td>
+                  <td>
+                    <a href={`mailto:${personEmail}`} style={{ color: "#2a5fa0", textDecoration: "none" }}>
+                      {personEmail}
+                    </a>
+                  </td>
+                  <td>
+                    <span className="matchdb-type-pill" style={{ textTransform: "capitalize" }}>
+                      {personType}
+                    </span>
+                  </td>
+                  <td title={p.job_title || "—"}>{p.job_title || "—"}</td>
+                  <td title={p.subject}>{p.subject}</td>
+                  <td style={{ fontSize: 11 }}>{new Date(p.created_at).toLocaleDateString()}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="matchdb-footnote">
+        <span>Showing {pokes.length} record{pokes.length !== 1 ? "s" : ""}</span>
+        <span className="matchdb-footnote-sep">|</span>
+        <span>InnoDB</span>
+      </div>
+    </div>
+  );
+};
+
 const CandidateDashboard: React.FC<Props> = ({
   token,
   userEmail,
@@ -90,26 +194,78 @@ const CandidateDashboard: React.FC<Props> = ({
     pokeError,
     profile,
     profileLoading,
+    pokesSent,
+    pokesReceived,
+    pokesLoading,
   } = useAppSelector((state) => state.jobs);
 
   const [searchText, setSearchText] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterSubType, setFilterSubType] = useState("");
   const [filterWorkMode, setFilterWorkMode] = useState("");
-  const [pokeCount, setPokeCount] = useState(0);
-  const [selectedJob, setSelectedJob] = useState<Record<string, any> | null>(
-    null,
-  );
+  const [activeView, setActiveView] = useState<ActiveView>("matches");
+  const [selectedJob, setSelectedJob] = useState<Record<string, any> | null>(null);
   const [urlCopied, setUrlCopied] = useState(false);
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileRequired, setProfileRequired] = useState(false);
   const [pricingBlur, setPricingBlur] = useState(false);
 
+  // Mail Template modal state
+  const [pokeEmailRow, setPokeEmailRow] = useState<MatchRow | null>(null);
+  const [pokeEmailSentSuccess, setPokeEmailSentSuccess] = useState(false);
+
+  // Premium profile editing unlock ($3 payment gate)
+  const [premiumUnlocked, setPremiumUnlocked] = useState(false);
+  const isProfileLocked = !!profile?.profile_locked;
+
+  // Derive poke/email tracking from server-side pokesSent data
+  const pokedRowIds = useMemo(
+    () => new Set(pokesSent.filter((p) => !p.is_email).map((p) => p.target_id)),
+    [pokesSent],
+  );
+  const emailedRowIds = useMemo(
+    () => new Set(pokesSent.filter((p) => p.is_email).map((p) => p.target_id)),
+    [pokesSent],
+  );
+  const pokeCount = useMemo(
+    () => pokesSent.filter((p) => !p.is_email).length,
+    [pokesSent],
+  );
+  const emailCount = useMemo(
+    () => pokesSent.filter((p) => p.is_email).length,
+    [pokesSent],
+  );
+
+  // target_id → poke created_at (for 24h mail cooldown in MatchDataTable)
+  const pokedAtMap = useMemo(
+    () => new Map(pokesSent.filter((p) => !p.is_email).map((p) => [p.target_id, p.created_at])),
+    [pokesSent],
+  );
+
+  // Pre-filtered lists for Pokes / Mails sections
+  const pokesSentOnly = useMemo(() => pokesSent.filter((p) => !p.is_email), [pokesSent]);
+  const mailsSentOnly = useMemo(() => pokesSent.filter((p) => p.is_email), [pokesSent]);
+  const pokesReceivedOnly = useMemo(() => pokesReceived.filter((p) => !p.is_email), [pokesReceived]);
+  const mailsReceivedOnly = useMemo(() => pokesReceived.filter((p) => p.is_email), [pokesReceived]);
+
+  const profileUrl =
+    username && profile ? `${window.location.origin}/resume/${username}` : null;
+
   const openPricingModal = () => {
     setPricingBlur(true);
     window.dispatchEvent(
       new CustomEvent("matchdb:openPricing", { detail: { tab: "candidate" } }),
+    );
+  };
+
+  const onRequestPremiumUnlock = () => {
+    // Trigger $3 profile-update payment via pricing modal
+    setPricingBlur(true);
+    window.dispatchEvent(
+      new CustomEvent("matchdb:openPricing", {
+        detail: { tab: "candidate", package: "profile-update" },
+      }),
     );
   };
 
@@ -119,16 +275,29 @@ const CandidateDashboard: React.FC<Props> = ({
     return () => window.removeEventListener("matchdb:pricingClosed", onClose);
   }, []);
 
-  // Shell fires this after candidate payment completes + pricing modal closes (required flow)
+  // Listen for successful $3 profile-unlock payment
+  useEffect(() => {
+    const onUnlock = () => setPremiumUnlocked(true);
+    window.addEventListener("matchdb:profileUnlocked", onUnlock);
+    return () => window.removeEventListener("matchdb:profileUnlocked", onUnlock);
+  }, []);
+
   useEffect(() => {
     const onOpenProfile = () => {
       setProfileRequired(true);
       setProfileOpen(true);
     };
     window.addEventListener("matchdb:openProfile", onOpenProfile);
-    return () =>
-      window.removeEventListener("matchdb:openProfile", onOpenProfile);
+    return () => window.removeEventListener("matchdb:openProfile", onOpenProfile);
   }, []);
+
+  // Auto-close mail template success after 4s
+  useEffect(() => {
+    if (pokeEmailSentSuccess) {
+      const t = setTimeout(() => setPokeEmailSentSuccess(false), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [pokeEmailSentSuccess]);
 
   const pokeLimit = POKE_LIMIT[plan] ?? 5;
   const profileChecked = useRef(false);
@@ -136,22 +305,19 @@ const CandidateDashboard: React.FC<Props> = ({
   useEffect(() => {
     dispatch(fetchCandidateMatches(token));
     dispatch(fetchProfile(token));
+    dispatch(fetchPokesSent(token));
+    dispatch(fetchPokesReceived(token));
   }, [dispatch, token]);
 
-  // Auto-open profile modal for paid candidates who haven't created a profile yet.
-  // Unpaid candidates are handled by the pricing → matchdb:openProfile event flow.
   useEffect(() => {
     if (profileChecked.current) return;
     if (profileLoading) return;
     profileChecked.current = true;
-    // Only auto-open for candidates who have already paid — otherwise the post-payment
-    // event chain (ShellLayout → matchdb:openProfile) handles this as a required modal.
     if (hasPurchasedVisibility && profile === null) {
       setProfileOpen(true);
     }
   }, [profileLoading, profile]);
 
-  // membership helpers — null/empty config means unrestricted
   const hasMembership =
     !!membershipConfig && Object.keys(membershipConfig).length > 0;
   const showType = (type: string) =>
@@ -171,7 +337,6 @@ const CandidateDashboard: React.FC<Props> = ({
   const rows = useMemo<MatchRow[]>(() => {
     return candidateMatches
       .filter((job) => {
-        // membership gate
         if (hasMembership) {
           const type = job.job_type || "";
           if (!showType(type)) return false;
@@ -217,7 +382,7 @@ const CandidateDashboard: React.FC<Props> = ({
 
   const handlePoke = (row: MatchRow) => {
     if (!row.pokeTargetEmail) return;
-    if (pokeCount >= pokeLimit) return;
+    if (isFinite(pokeLimit) && pokeCount >= pokeLimit) return;
     dispatch(clearPokeState());
     dispatch(
       sendPoke({
@@ -225,39 +390,65 @@ const CandidateDashboard: React.FC<Props> = ({
         to_email: row.pokeTargetEmail,
         to_name: row.pokeTargetName,
         subject_context: row.pokeSubjectContext,
+        target_id: row.id,
+        target_vendor_id: row.rawData?.vendor_id,
+        is_email: false,
+        sender_name: profile?.name || userEmail || "Candidate",
+        sender_email: userEmail || "",
+        job_id: row.id,
+        job_title: row.role,
+      }),
+    ).then((result) => {
+      if (sendPoke.fulfilled.match(result)) {
+        dispatch(fetchPokesSent(token));
+      }
+    });
+  };
+
+  const handlePokeEmail = (row: MatchRow) => {
+    dispatch(clearPokeState());
+    setPokeEmailSentSuccess(false);
+    setPokeEmailRow(row);
+  };
+
+  const handlePokeEmailSend = async (params: {
+    to_email: string;
+    to_name: string;
+    subject_context: string;
+    email_body: string;
+    pdf_data?: string;
+  }) => {
+    if (!pokeEmailRow) return;
+    const result = await dispatch(
+      sendPoke({
+        token,
+        to_email: params.to_email,
+        to_name: params.to_name,
+        subject_context: params.subject_context,
+        email_body: params.email_body,
+        target_id: pokeEmailRow.id,
+        target_vendor_id: pokeEmailRow.rawData?.vendor_id,
+        is_email: true,
+        sender_name: profile?.name || userEmail || "Candidate",
+        sender_email: userEmail || "",
+        pdf_attachment: params.pdf_data,
+        job_id: pokeEmailRow.id,
+        job_title: pokeEmailRow.role,
       }),
     );
-    setPokeCount((c) => c + 1);
+    if (sendPoke.fulfilled.match(result)) {
+      setPokeEmailSentSuccess(true);
+      dispatch(fetchPokesSent(token));
+    }
   };
 
   const handleDownloadCSV = () => {
     const headers = [
-      "Name",
-      "Company",
-      "Email",
-      "Phone",
-      "Role",
-      "Type",
-      "Mode",
-      "Pay/Hr",
-      "Exp",
-      "Match%",
-      "Location",
+      "Name", "Company", "Email", "Phone", "Role", "Type",
+      "Mode", "Pay/Hr", "Exp", "Match%", "Location",
     ];
     const csvRows = rows.map((r) =>
-      [
-        r.name,
-        r.company,
-        r.email,
-        r.phone,
-        r.role,
-        r.type,
-        r.workMode || "-",
-        r.payPerHour,
-        r.experience,
-        r.matchPercentage,
-        r.location,
-      ]
+      [r.name, r.company, r.email, r.phone, r.role, r.type, r.workMode || "-", r.payPerHour, r.experience, r.matchPercentage, r.location]
         .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
         .join(","),
     );
@@ -271,7 +462,6 @@ const CandidateDashboard: React.FC<Props> = ({
     URL.revokeObjectURL(url);
   };
 
-  // Count per type for sidebar
   const countByType = useMemo(() => {
     const map: Record<string, number> = {};
     candidateMatches.forEach((j) => {
@@ -281,7 +471,6 @@ const CandidateDashboard: React.FC<Props> = ({
     return map;
   }, [candidateMatches]);
 
-  // Count per sub-type for sidebar
   const countBySubType = useMemo(() => {
     const map: Record<string, Record<string, number>> = {};
     candidateMatches.forEach((j) => {
@@ -295,15 +484,15 @@ const CandidateDashboard: React.FC<Props> = ({
     return map;
   }, [candidateMatches]);
 
-  // Build Job Type nav items filtered by candidate's membership
   const jobTypeNavItems = useMemo(() => {
     const items: NavGroup["items"] = [
       {
-        id: "",
-        label: "All Types",
+        id: "matched-jobs",
+        label: "Matched Jobs",
         count: candidateMatches.length,
-        active: filterType === "" && filterSubType === "",
+        active: activeView === "matches" && filterType === "" && filterSubType === "",
         onClick: () => {
+          setActiveView("matches");
           setFilterType("");
           setFilterSubType("");
         },
@@ -314,22 +503,22 @@ const CandidateDashboard: React.FC<Props> = ({
         id: "contract",
         label: "Contract",
         count: countByType["contract"] || 0,
-        active: filterType === "contract" && filterSubType === "",
+        active: activeView === "matches" && filterType === "contract" && filterSubType === "",
         onClick: () => {
+          setActiveView("matches");
           setFilterType("contract");
           setFilterSubType("");
         },
       });
-      CONTRACT_SUB_TYPES.filter((st) =>
-        showSubtype("contract", st.value),
-      ).forEach((st) =>
+      CONTRACT_SUB_TYPES.filter((st) => showSubtype("contract", st.value)).forEach((st) =>
         items.push({
           id: `contract_${st.value}`,
           label: st.label,
           depth: 1,
           count: countBySubType["contract"]?.[st.value] || 0,
-          active: filterType === "contract" && filterSubType === st.value,
+          active: activeView === "matches" && filterType === "contract" && filterSubType === st.value,
           onClick: () => {
+            setActiveView("matches");
             setFilterType("contract");
             setFilterSubType(st.value);
           },
@@ -341,22 +530,22 @@ const CandidateDashboard: React.FC<Props> = ({
         id: "full_time",
         label: "Full Time",
         count: countByType["full_time"] || 0,
-        active: filterType === "full_time" && filterSubType === "",
+        active: activeView === "matches" && filterType === "full_time" && filterSubType === "",
         onClick: () => {
+          setActiveView("matches");
           setFilterType("full_time");
           setFilterSubType("");
         },
       });
-      FULL_TIME_SUB_TYPES.filter((st) =>
-        showSubtype("full_time", st.value),
-      ).forEach((st) =>
+      FULL_TIME_SUB_TYPES.filter((st) => showSubtype("full_time", st.value)).forEach((st) =>
         items.push({
           id: `full_time_${st.value}`,
           label: st.label,
           depth: 1,
           count: countBySubType["full_time"]?.[st.value] || 0,
-          active: filterType === "full_time" && filterSubType === st.value,
+          active: activeView === "matches" && filterType === "full_time" && filterSubType === st.value,
           onClick: () => {
+            setActiveView("matches");
             setFilterType("full_time");
             setFilterSubType(st.value);
           },
@@ -368,8 +557,9 @@ const CandidateDashboard: React.FC<Props> = ({
         id: "part_time",
         label: "Part Time",
         count: countByType["part_time"] || 0,
-        active: filterType === "part_time" && filterSubType === "",
+        active: activeView === "matches" && filterType === "part_time" && filterSubType === "",
         onClick: () => {
+          setActiveView("matches");
           setFilterType("part_time");
           setFilterSubType("");
         },
@@ -377,14 +567,7 @@ const CandidateDashboard: React.FC<Props> = ({
     }
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    membershipConfig,
-    candidateMatches.length,
-    countByType,
-    countBySubType,
-    filterType,
-    filterSubType,
-  ]);
+  }, [membershipConfig, candidateMatches.length, countByType, countBySubType, filterType, filterSubType, activeView]);
 
   const navGroups: NavGroup[] = [
     {
@@ -398,12 +581,74 @@ const CandidateDashboard: React.FC<Props> = ({
           onClick: () => setProfileOpen(true),
         },
         {
-          id: "matches",
-          label: "Matched Jobs",
-          count: candidateMatches.length,
-          active: !profileOpen,
-          onClick: () => setProfileOpen(false),
+          id: "update-profile",
+          label: isProfileLocked && !premiumUnlocked ? "✏ Update Profile ($3)" : "✏ Update Profile",
+          tooltip: isProfileLocked && !premiumUnlocked
+            ? "Edit company, experience & bio — costs $3, pay at billing"
+            : isProfileLocked
+              ? "Premium fields unlocked — all editable"
+              : "Edit your profile details",
+          active: false,
+          onClick: () => setProfileOpen(true),
         },
+      ],
+    },
+    {
+      label: "Job Type",
+      icon: "",
+      items: jobTypeNavItems,
+    },
+    {
+      label: "Pokes",
+      icon: "",
+      items: [
+        {
+          id: "pokes-sent",
+          label: "Pokes Sent",
+          count: pokesSentOnly.length,
+          active: activeView === "pokes-sent",
+          onClick: () => setActiveView("pokes-sent"),
+        },
+        {
+          id: "pokes-received",
+          label: "Pokes Received",
+          count: pokesReceivedOnly.length,
+          active: activeView === "pokes-received",
+          onClick: () => setActiveView("pokes-received"),
+        },
+      ],
+    },
+    {
+      label: "Mails",
+      icon: "",
+      items: [
+        {
+          id: "mails-sent",
+          label: "Mails Sent",
+          count: mailsSentOnly.length,
+          active: activeView === "mails-sent",
+          onClick: () => setActiveView("mails-sent"),
+        },
+        {
+          id: "mails-received",
+          label: "Mails Received",
+          count: mailsReceivedOnly.length,
+          active: activeView === "mails-received",
+          onClick: () => setActiveView("mails-received"),
+        },
+        ...(hasPurchasedVisibility && rows.length > 0
+          ? [
+              {
+                id: "mail-template",
+                label: "✉ Mail Template",
+                tooltip: "Compose a personalised email with your resume — click ✉ next to any row",
+                onClick: () => {
+                  setActiveView("matches");
+                  if (rows.length > 0) handlePokeEmail(rows[0]);
+                },
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -413,7 +658,11 @@ const CandidateDashboard: React.FC<Props> = ({
         {
           id: "refresh",
           label: "Refresh Data",
-          onClick: () => dispatch(fetchCandidateMatches(token)),
+          onClick: () => {
+            dispatch(fetchCandidateMatches(token));
+            dispatch(fetchPokesSent(token));
+            dispatch(fetchPokesReceived(token));
+          },
         },
         {
           id: "reset",
@@ -425,12 +674,21 @@ const CandidateDashboard: React.FC<Props> = ({
             setFilterWorkMode("");
           },
         },
+        ...(profileUrl
+          ? [
+              {
+                id: "profile-url",
+                label: urlCopied ? "✓ Copied!" : "🔗 Copy Profile URL",
+                tooltip: `Click to copy: ${profileUrl}`,
+                onClick: () => {
+                  navigator.clipboard.writeText(profileUrl!);
+                  setUrlCopied(true);
+                  setTimeout(() => setUrlCopied(false), 2500);
+                },
+              },
+            ]
+          : []),
       ],
-    },
-    {
-      label: "Job Type",
-      icon: "",
-      items: jobTypeNavItems,
     },
   ];
 
@@ -446,12 +704,15 @@ const CandidateDashboard: React.FC<Props> = ({
     return `${typeLabel} › ${subLabel}`;
   })();
 
+  const breadcrumb: [string, string, string] =
+    activeView === "pokes-sent"    ? ["Candidate Portal", "Pokes", "Pokes Sent"]
+    : activeView === "pokes-received" ? ["Candidate Portal", "Pokes", "Pokes Received"]
+    : activeView === "mails-sent"     ? ["Candidate Portal", "Mails", "Mails Sent"]
+    : activeView === "mails-received" ? ["Candidate Portal", "Mails", "Mails Received"]
+    : ["Candidate Portal", "Matched Jobs", filterLabel];
+
   return (
-    <DBLayout
-      userType="candidate"
-      navGroups={navGroups}
-      breadcrumb={["Candidate Portal", "Matched Jobs", filterLabel]}
-    >
+    <DBLayout userType="candidate" navGroups={navGroups} breadcrumb={breadcrumb}>
       {/* Main content — blurred when profile modal or pricing modal is open */}
       <div
         className="matchdb-page"
@@ -462,7 +723,7 @@ const CandidateDashboard: React.FC<Props> = ({
         }
       >
         {!hasPurchasedVisibility ? (
-          /* ── LOCKED STATE — no visibility package purchased yet ── */
+          /* ── LOCKED STATE ── */
           <div
             className="matchdb-panel"
             style={{
@@ -477,21 +738,15 @@ const CandidateDashboard: React.FC<Props> = ({
               Purchase a Visibility Package to See Job Matches
             </h2>
             <p
-              style={{
-                margin: "0 0 8px",
-                fontSize: 13,
-                color: "#555",
-                lineHeight: 1.6,
-              }}
+              style={{ margin: "0 0 8px", fontSize: 13, color: "#555", lineHeight: 1.6 }}
             >
-              Job openings matched to your profile are hidden until you purchase
-              a Visibility Package. Once purchased, your profile becomes
-              discoverable by recruiters and you'll see your personalized
-              matches here.
+              Job openings matched to your profile are hidden until you purchase a
+              Visibility Package. Once purchased, your profile becomes discoverable by
+              recruiters and you'll see your personalized matches here.
             </p>
             <p style={{ margin: "0 0 24px", fontSize: 12, color: "#888" }}>
-              Packages start at <strong>$13</strong> — one-time payment, no
-              subscription required.
+              Packages start at <strong>$13</strong> — one-time payment, no subscription
+              required.
             </p>
             <button
               type="button"
@@ -503,9 +758,8 @@ const CandidateDashboard: React.FC<Props> = ({
             </button>
           </div>
         ) : (
-          /* ── UNLOCKED STATE — visibility purchased, show matches ── */
+          /* ── UNLOCKED STATE ── */
           <>
-            {/* Visibility coverage info */}
             {membershipConfig && (
               <Alert
                 severity="success"
@@ -535,55 +789,7 @@ const CandidateDashboard: React.FC<Props> = ({
               </Alert>
             )}
 
-            {/* Shareable profile URL */}
-            {username && profile && (
-              <div
-                className="matchdb-panel"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 10px",
-                  marginBottom: 8,
-                  fontSize: 12,
-                }}
-              >
-                <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
-                  🔗 Your Profile URL:
-                </span>
-                <code
-                  style={{
-                    flex: 1,
-                    background: "#fff",
-                    border: "1px solid #a0a0a0",
-                    padding: "3px 6px",
-                    fontSize: 11,
-                    fontFamily: "monospace",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {`${window.location.origin}/resume/${username}`}
-                </code>
-                <button
-                  type="button"
-                  className="matchdb-btn"
-                  style={{ fontSize: 11, padding: "3px 10px" }}
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `${window.location.origin}/resume/${username}`,
-                    );
-                    setUrlCopied(true);
-                    setTimeout(() => setUrlCopied(false), 2000);
-                  }}
-                >
-                  {urlCopied ? "✓ Copied" : "Copy"}
-                </button>
-              </div>
-            )}
-
-            {/* Plan badge + poke counter */}
+            {/* Plan badge + poke/email counters */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
               <Tooltip title={`Your current plan: ${plan}`}>
                 <Chip
@@ -605,136 +811,181 @@ const CandidateDashboard: React.FC<Props> = ({
                   style={{ fontWeight: 700, fontSize: 11 }}
                 />
               </Tooltip>
-              {isFinite(pokeLimit) && (
+              <Tooltip title={`Quick pokes sent (limit: ${isFinite(pokeLimit) ? pokeLimit : "∞"}/month)`}>
                 <Chip
-                  label={`Pokes: ${pokeCount}/${pokeLimit}`}
+                  label={
+                    isFinite(pokeLimit)
+                      ? `Pokes: ${pokeCount}/${pokeLimit}`
+                      : `Pokes: ${pokeCount}`
+                  }
                   size="small"
-                  color={pokeCount >= pokeLimit ? "error" : "default"}
+                  color={
+                    isFinite(pokeLimit) && pokeCount >= pokeLimit ? "error" : "default"
+                  }
                   variant="outlined"
                   style={{ fontSize: 11 }}
                 />
-              )}
+              </Tooltip>
+              <Tooltip title="Mail templates sent (each job posting can be emailed once)">
+                <Chip
+                  label={`Emails: ${emailCount}`}
+                  size="small"
+                  color="default"
+                  variant="outlined"
+                  style={{ fontSize: 11 }}
+                />
+              </Tooltip>
             </Box>
 
-            {/* Toolbar */}
-            <div className="matchdb-toolbar">
-              <div className="matchdb-toolbar-left">
-                <label className="matchdb-label" htmlFor="candidate-search">
-                  Search
-                </label>
-                <input
-                  id="candidate-search"
-                  className="matchdb-input"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Title, company, location..."
-                />
-                <label className="matchdb-label" htmlFor="candidate-type">
-                  Type
-                </label>
-                <select
-                  id="candidate-type"
-                  className="matchdb-select"
-                  value={filterType}
-                  onChange={(e) => {
-                    setFilterType(e.target.value);
-                    setFilterSubType("");
-                  }}
-                >
-                  <option value="">All</option>
-                  {JOB_TYPES.filter((t) => showType(t.value)).map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-                {(filterType === "contract" || filterType === "full_time") && (
-                  <>
-                    <label
-                      className="matchdb-label"
-                      htmlFor="candidate-subtype"
-                    >
-                      Sub
+            {/* Pokes Sent view */}
+            {activeView === "pokes-sent" && (
+              <PokesTable pokes={pokesSentOnly} loading={pokesLoading} section="pokes-sent" />
+            )}
+
+            {/* Pokes Received view */}
+            {activeView === "pokes-received" && (
+              <PokesTable pokes={pokesReceivedOnly} loading={pokesLoading} section="pokes-received" />
+            )}
+
+            {/* Mails Sent view */}
+            {activeView === "mails-sent" && (
+              <PokesTable pokes={mailsSentOnly} loading={pokesLoading} section="mails-sent" />
+            )}
+
+            {/* Mails Received view */}
+            {activeView === "mails-received" && (
+              <PokesTable pokes={mailsReceivedOnly} loading={pokesLoading} section="mails-received" />
+            )}
+
+            {/* Matched Jobs view */}
+            {activeView === "matches" && (
+              <>
+                {/* Toolbar */}
+                <div className="matchdb-toolbar">
+                  <div className="matchdb-toolbar-left">
+                    <label className="matchdb-label" htmlFor="candidate-search">
+                      Search
+                    </label>
+                    <input
+                      id="candidate-search"
+                      className="matchdb-input"
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      placeholder="Title, company, location..."
+                    />
+                    <label className="matchdb-label" htmlFor="candidate-type">
+                      Type
                     </label>
                     <select
-                      id="candidate-subtype"
+                      id="candidate-type"
                       className="matchdb-select"
-                      value={filterSubType}
-                      onChange={(e) => setFilterSubType(e.target.value)}
+                      value={filterType}
+                      onChange={(e) => {
+                        setFilterType(e.target.value);
+                        setFilterSubType("");
+                      }}
                     >
                       <option value="">All</option>
-                      {(filterType === "contract"
-                        ? CONTRACT_SUB_TYPES
-                        : FULL_TIME_SUB_TYPES
-                      )
-                        .filter((st) => showSubtype(filterType, st.value))
-                        .map((st) => (
-                          <option key={st.value} value={st.value}>
-                            {st.label}
-                          </option>
-                        ))}
+                      {JOB_TYPES.filter((t) => showType(t.value)).map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
                     </select>
-                  </>
-                )}
-                <label className="matchdb-label" htmlFor="candidate-workmode">
-                  Mode
-                </label>
-                <select
-                  id="candidate-workmode"
-                  className="matchdb-select"
-                  value={filterWorkMode}
-                  onChange={(e) => setFilterWorkMode(e.target.value)}
-                >
-                  <option value="">All</option>
-                  {WORK_MODES.map((wm) => (
-                    <option key={wm.value} value={wm.value}>
-                      {wm.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="matchdb-btn"
-                  onClick={() => {
-                    setSearchText("");
-                    setFilterType("");
-                    setFilterSubType("");
-                    setFilterWorkMode("");
-                  }}
-                >
-                  Reset
-                </button>
-              </div>
-              <div className="matchdb-toolbar-right">
-                <button
-                  type="button"
-                  className="matchdb-btn matchdb-btn-primary"
-                  onClick={() => dispatch(fetchCandidateMatches(token))}
-                >
-                  ↻ Refresh
-                </button>
-              </div>
-            </div>
+                    {(filterType === "contract" || filterType === "full_time") && (
+                      <>
+                        <label
+                          className="matchdb-label"
+                          htmlFor="candidate-subtype"
+                        >
+                          Sub
+                        </label>
+                        <select
+                          id="candidate-subtype"
+                          className="matchdb-select"
+                          value={filterSubType}
+                          onChange={(e) => setFilterSubType(e.target.value)}
+                        >
+                          <option value="">All</option>
+                          {(filterType === "contract"
+                            ? CONTRACT_SUB_TYPES
+                            : FULL_TIME_SUB_TYPES
+                          )
+                            .filter((st) => showSubtype(filterType, st.value))
+                            .map((st) => (
+                              <option key={st.value} value={st.value}>
+                                {st.label}
+                              </option>
+                            ))}
+                        </select>
+                      </>
+                    )}
+                    <label className="matchdb-label" htmlFor="candidate-workmode">
+                      Mode
+                    </label>
+                    <select
+                      id="candidate-workmode"
+                      className="matchdb-select"
+                      value={filterWorkMode}
+                      onChange={(e) => setFilterWorkMode(e.target.value)}
+                    >
+                      <option value="">All</option>
+                      {WORK_MODES.map((wm) => (
+                        <option key={wm.value} value={wm.value}>
+                          {wm.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="matchdb-btn"
+                      onClick={() => {
+                        setSearchText("");
+                        setFilterType("");
+                        setFilterSubType("");
+                        setFilterWorkMode("");
+                      }}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <div className="matchdb-toolbar-right">
+                    <button
+                      type="button"
+                      className="matchdb-btn matchdb-btn-primary"
+                      onClick={() => dispatch(fetchCandidateMatches(token))}
+                    >
+                      ↻ Refresh
+                    </button>
+                  </div>
+                </div>
 
-            <MatchDataTable
-              title="Related Job Openings"
-              titleIcon="📌"
-              rows={rows}
-              loading={loading}
-              error={error}
-              pokeLoading={pokeLoading}
-              pokeSuccessMessage={pokeSuccessMessage}
-              pokeError={pokeError}
-              onPoke={handlePoke}
-              onRowClick={(row) => setSelectedJob(row.rawData || null)}
-              onDownload={handleDownloadCSV}
-              downloadLabel="Download CSV"
-            />
+                <MatchDataTable
+                  title="Related Job Openings"
+                  titleIcon="📌"
+                  rows={rows}
+                  loading={loading}
+                  error={error}
+                  pokeLoading={pokeLoading}
+                  pokeSuccessMessage={pokeSuccessMessage}
+                  pokeError={pokeError}
+                  isVendor={false}
+                  pokedRowIds={pokedRowIds}
+                  emailedRowIds={emailedRowIds}
+                  pokedAtMap={pokedAtMap}
+                  onPoke={handlePoke}
+                  onPokeEmail={handlePokeEmail}
+                  onRowClick={(row) => setSelectedJob(row.rawData || null)}
+                  onDownload={handleDownloadCSV}
+                  downloadLabel="Download CSV"
+                />
+              </>
+            )}
           </>
         )}
       </div>
 
-      {/* Profile edit modal — rm-overlay blurs the table behind it */}
+      {/* Profile edit modal */}
       {profileOpen && (
         <div
           className="rm-overlay"
@@ -754,9 +1005,7 @@ const CandidateDashboard: React.FC<Props> = ({
           >
             <div className="rm-titlebar">
               <span className="rm-titlebar-icon">👤</span>
-              <span className="rm-titlebar-title">
-                My Profile — Candidate Resume
-              </span>
+              <span className="rm-titlebar-title">My Profile — Candidate Resume</span>
               {profileRequired ? (
                 <span
                   style={{
@@ -786,6 +1035,8 @@ const CandidateDashboard: React.FC<Props> = ({
             <CandidateProfile
               token={token}
               userEmail={userEmail}
+              premiumUnlocked={premiumUnlocked}
+              onRequestPremiumUnlock={onRequestPremiumUnlock}
               onSaved={
                 profileRequired
                   ? () => {
@@ -798,6 +1049,23 @@ const CandidateDashboard: React.FC<Props> = ({
           </div>
         </div>
       )}
+
+      {/* Mail Template modal */}
+      <PokeEmailModal
+        open={pokeEmailRow !== null}
+        row={pokeEmailRow}
+        isVendor={false}
+        senderName={profile?.name || userEmail || "Candidate"}
+        senderEmail={userEmail || ""}
+        senderProfile={profile}
+        onSend={handlePokeEmailSend}
+        onClose={() => {
+          setPokeEmailRow(null);
+          setPokeEmailSentSuccess(false);
+        }}
+        sending={pokeLoading}
+        sentSuccess={pokeEmailSentSuccess}
+      />
 
       <DetailModal
         open={selectedJob !== null}

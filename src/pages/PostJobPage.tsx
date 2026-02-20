@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../store';
 import { postJob } from '../store/jobsSlice';
+import useDraftCache from '../hooks/useDraftCache';
 import '../components/ResumeModal.css';
 import './PostJobPage.css';
 
@@ -219,9 +220,21 @@ interface Props {
 const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
   const dispatch = useAppDispatch();
   const { loading, error } = useAppSelector((state) => state.jobs);
+  const { saveDraft, getDraft, clearDraft, hasDraft } = useDraftCache<FormState>('matchdb_draft_post_job');
   const [form, setForm] = useState<FormState>(EMPTY);
   const [skillInput, setSkillInput] = useState('');
   const [success, setSuccess] = useState(false);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  // Show restore banner on mount if a draft exists
+  useEffect(() => {
+    if (hasDraft()) setShowDraftBanner(true);
+  }, []);
+
+  // Auto-save draft as user fills in the form
+  useEffect(() => {
+    if (form.title || form.description) saveDraft(form);
+  }, [form]);
 
   // Smart-paste state
   const [pasteText, setPasteText] = useState('');
@@ -289,10 +302,12 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
     }));
 
     if (postJob.fulfilled.match(result)) {
+      clearDraft();
       setSuccess(true);
       setForm(EMPTY);
       setPasteText('');
       setParseResult(null);
+      setShowDraftBanner(false);
       if (onPosted) onPosted();
     }
   };
@@ -303,6 +318,37 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div className="rm-body pjp-body" style={{ flex: 1, minHeight: 0 }}>
+
+        {/* ── Draft restore banner ── */}
+        {showDraftBanner && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '5px 8px', background: '#fffbe6',
+            border: '1px solid #ffe066', borderRadius: 2,
+            fontSize: 11, marginBottom: 6,
+          }}>
+            <span>📋 You have an unsaved job draft from a previous session.</span>
+            <button
+              type="button"
+              className="rm-btn"
+              onClick={() => {
+                const draft = getDraft();
+                if (draft) { setForm(draft); }
+                setShowDraftBanner(false);
+              }}
+            >
+              ↩ Restore Draft
+            </button>
+            <button
+              type="button"
+              className="rm-btn"
+              style={{ color: '#888' }}
+              onClick={() => { clearDraft(); setShowDraftBanner(false); }}
+            >
+              ✕ Discard
+            </button>
+          </div>
+        )}
 
         {/* ── Alerts ── */}
         {error && <div className="rm-alert rm-alert-error">✕ {error}</div>}

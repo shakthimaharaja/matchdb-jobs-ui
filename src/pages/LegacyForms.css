@@ -1,57 +1,71 @@
+/* ===== LegacyForms — Win97 Theme (aligned with MatchDB) ===== */
+
 .legacy-form-page {
   min-height: 100%;
   padding: 6px;
-  background: #d5dde8;
-  font-family: Verdana, Tahoma, Arial, sans-serif;
+  background: var(--w97-window, #c0c0c0);
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif;
   font-size: 11px;
-  color: #242424;
+  color: var(--w97-text, #000);
 }
 
 .legacy-form-shell {
   max-width: 920px;
   margin: 0 auto;
-  border: 1px solid #8fa4bc;
-  background: #e1e6ee;
-  box-shadow: inset 0 1px 0 #f6f9fd;
+  border-top: 2px solid var(--w97-btn-highlight, #fff);
+  border-left: 2px solid var(--w97-btn-highlight, #fff);
+  border-right: 2px solid var(--w97-btn-dark, #404040);
+  border-bottom: 2px solid var(--w97-btn-dark, #404040);
+  background: var(--w97-window, #c0c0c0);
 }
 
 .legacy-form-titlebar {
   padding: 7px 9px;
-  border-bottom: 1px solid #6380a0;
-  background: linear-gradient(to bottom, #e0e9f3 0%, #b9ccdf 100%);
+  border-bottom: 1px solid var(--w97-btn-shadow, #808080);
+  background: linear-gradient(
+    to right,
+    var(--w97-titlebar-from, #235a81),
+    var(--w97-titlebar-to, #1a4565)
+  );
 }
 
 .legacy-form-title {
-  color: #124a81;
+  color: var(--w97-titlebar-text, #fff);
   font-weight: bold;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 .legacy-form-subtitle {
   margin-top: 2px;
-  color: #4a607b;
+  color: var(--w97-titlebar-text, #fff);
+  opacity: 0.8;
   font-size: 10px;
 }
 
 .legacy-form-card {
   padding: 8px;
-  background: #dfe4ec;
+  background: var(--w97-window, #c0c0c0);
 }
 
+/* ── Fieldset: Win97 sunken-left/raised-right inset border ── */
 .legacy-fieldset {
-  border: 1px solid #a6b8cc;
+  border-top: 1px solid var(--w97-btn-shadow, #808080);
+  border-left: 1px solid var(--w97-btn-shadow, #808080);
+  border-right: 1px solid var(--w97-btn-highlight, #fff);
+  border-bottom: 1px solid var(--w97-btn-highlight, #fff);
   margin: 0 0 8px 0;
   padding: 7px 7px 8px;
-  background: #f2f5f9;
+  background: var(--w97-window, #c0c0c0);
 }
 
 .legacy-fieldset legend {
   padding: 0 6px;
   font-weight: bold;
   font-size: 10px;
-  color: #264f80;
+  color: var(--w97-text, #000);
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
@@ -76,11 +90,12 @@
 }
 
 .legacy-row label {
-  color: #2c415c;
+  color: var(--w97-text, #000);
   font-size: 10px;
   font-weight: bold;
 }
 
+/* ── Win97 sunken inputs (top/left shadow, bottom/right highlight) ── */
 .legacy-row input,
 .legacy-row select,
 .legacy-row textarea,
@@ -91,11 +106,15 @@
 .legacy-row .p-inputnumber-input,
 .legacy-skill-entry .p-inputtext {
   width: 100%;
-  border: 1px solid #8ea4bc;
-  background: #fff;
-  color: #1f1f1f;
-  padding: 4px 5px;
+  border-top: 1px solid var(--w97-btn-shadow, #808080);
+  border-left: 1px solid var(--w97-btn-shadow, #808080);
+  border-bottom: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-highlight, #fff);
+  background: var(--w97-input-bg, #fff);
+  color: var(--w97-text, #000);
+  padding: 3px 5px;
   font-size: 11px;
+  font-family: inherit;
   border-radius: 0;
   outline: none;
 }
@@ -111,8 +130,15 @@
 .legacy-row .p-inputtext:focus,
 .legacy-row .p-inputtextarea:focus,
 .legacy-row .p-inputnumber-input:focus {
-  border-color: #2d5f94;
-  box-shadow: inset 0 0 0 1px #bfd3ea;
+  outline: 1px dotted var(--w97-navy, #235a81);
+  outline-offset: -2px;
+}
+
+.legacy-row input:disabled,
+.legacy-row .p-inputtext.p-disabled,
+.legacy-row .p-inputtextarea.p-disabled {
+  background: var(--w97-btn-face, #c0c0c0);
+  color: var(--w97-btn-shadow, #808080);
 }
 
 .legacy-row .p-inputnumber,
@@ -120,9 +146,35 @@
   width: 100%;
 }
 
+/* PrimeReact Dropdown — flatten to Win97 style */
+.legacy-row .p-dropdown {
+  border-top: 1px solid var(--w97-btn-shadow, #808080) !important;
+  border-left: 1px solid var(--w97-btn-shadow, #808080) !important;
+  border-bottom: 1px solid var(--w97-btn-highlight, #fff) !important;
+  border-right: 1px solid var(--w97-btn-highlight, #fff) !important;
+  border-radius: 0 !important;
+  background: var(--w97-input-bg, #fff) !important;
+  box-shadow: none !important;
+}
+
 .legacy-row .p-dropdown .p-dropdown-trigger {
   width: 2rem;
-  color: #2b4b70;
+  color: var(--w97-navy, #235a81);
+  background: var(--w97-btn-face, #c0c0c0);
+  border-left: 1px solid var(--w97-btn-shadow, #808080);
+  border-radius: 0;
+}
+
+.legacy-row .p-dropdown-label {
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--w97-text, #000);
+  padding: 3px 5px;
+}
+
+/* PrimeReact InputNumber */
+.legacy-row .p-inputnumber .p-inputtext {
+  border-radius: 0;
 }
 
 .legacy-skill-entry {
@@ -131,65 +183,92 @@
   margin-bottom: 5px;
 }
 
+/* ── Skill tag list: Win97 sunken container ── */
 .legacy-skill-list {
   min-height: 24px;
   padding: 5px;
-  border: 1px solid #cad6e4;
-  background: #fff;
+  border-top: 1px solid var(--w97-btn-shadow, #808080);
+  border-left: 1px solid var(--w97-btn-shadow, #808080);
+  border-bottom: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-highlight, #fff);
+  background: var(--w97-input-bg, #fff);
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
+/* ── Tag: Win97 raised button look ── */
 .legacy-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border: 1px solid #9ab0c9;
-  background: #e6eef8;
-  color: #213f62;
-  padding: 1px 4px;
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: 1px solid var(--w97-btn-dark, #404040);
+  background: var(--w97-btn-face, #c0c0c0);
+  color: var(--w97-navy, #235a81);
+  padding: 1px 5px;
   font-size: 10px;
+  font-weight: 600;
 }
 
 .legacy-tag-remove {
-  border: 1px solid #8ea3bb;
-  background: #fefefe;
-  color: #3f546b;
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: 1px solid var(--w97-btn-dark, #404040);
+  background: var(--w97-btn-face, #c0c0c0);
+  color: var(--w97-text, #000);
   cursor: pointer;
   width: 16px;
   height: 16px;
   line-height: 12px;
   padding: 0;
   text-align: center;
+  font-family: inherit;
+}
+
+.legacy-tag-remove:active {
+  border-top-color: var(--w97-btn-dark, #404040);
+  border-left-color: var(--w97-btn-dark, #404040);
+  border-right-color: var(--w97-btn-highlight, #fff);
+  border-bottom-color: var(--w97-btn-highlight, #fff);
 }
 
 .legacy-muted {
-  color: #6c7e93;
+  color: var(--w97-btn-shadow, #808080);
   font-style: italic;
   font-size: 10px;
 }
 
-/* Read-only resume text block */
+/* ── Read-only resume text: Win97 sunken ── */
 .legacy-readonly-text {
   width: 100%;
   min-height: 60px;
-  border: 1px solid #cad6e4;
-  background: #f7f9fb;
-  color: #3d546c;
-  padding: 6px 8px;
+  border-top: 1px solid var(--w97-btn-shadow, #808080);
+  border-left: 1px solid var(--w97-btn-shadow, #808080);
+  border-bottom: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-highlight, #fff);
+  background: var(--w97-input-bg, #fff);
+  color: var(--w97-text-secondary, #444);
+  padding: 5px 7px;
   font-size: 11px;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: Verdana, Tahoma, Arial, sans-serif;
+  font-family: inherit;
   line-height: 1.5;
+  box-sizing: border-box;
 }
 
-/* Read-only skill tag (no remove button) */
+/* ── Read-only skill tag ── */
 .legacy-tag-readonly {
-  background: #dce8f5;
-  border-color: #8aabcc;
-  color: #1a3e62;
+  background: var(--w97-btn-face, #c0c0c0);
+  border-top-color: var(--w97-btn-highlight, #fff);
+  border-left-color: var(--w97-btn-highlight, #fff);
+  border-right-color: var(--w97-btn-dark, #404040);
+  border-bottom-color: var(--w97-btn-dark, #404040);
+  color: var(--w97-navy, #235a81);
   font-weight: bold;
 }
 
@@ -199,74 +278,117 @@
   margin-top: 2px;
 }
 
+/* ── Button: matches .matchdb-btn exactly ── */
 .legacy-btn {
-  border: 1px solid #496a8c;
-  background: linear-gradient(to bottom, #f8fbff 0%, #dae7f5 100%);
-  color: #1a3f67;
-  font-size: 10px;
-  font-weight: bold;
-  padding: 4px 9px;
+  height: 22px;
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: 1px solid var(--w97-btn-dark, #404040);
+  background: var(--w97-btn-face, #c0c0c0);
+  color: var(--w97-text, #000);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 9px;
   cursor: pointer;
+  font-family: inherit;
 }
 
 .legacy-prime-btn.p-button {
   border-radius: 0;
   box-shadow: none;
+  height: 22px;
+  font-size: 11px;
+  font-family: inherit;
+  border-top: 1px solid var(--w97-btn-highlight, #fff) !important;
+  border-left: 1px solid var(--w97-btn-highlight, #fff) !important;
+  border-right: 1px solid var(--w97-btn-dark, #404040) !important;
+  border-bottom: 1px solid var(--w97-btn-dark, #404040) !important;
+  background: var(--w97-btn-face, #c0c0c0) !important;
+  color: var(--w97-text, #000) !important;
 }
 
 .legacy-prime-btn.p-button .p-button-label {
-  font-size: 10px;
-  font-weight: bold;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.legacy-prime-btn.p-button:hover {
+  background: #d4d4d4 !important;
+}
+
+.legacy-prime-btn.p-button:active {
+  border-top-color: var(--w97-btn-dark, #404040) !important;
+  border-left-color: var(--w97-btn-dark, #404040) !important;
+  border-right-color: var(--w97-btn-highlight, #fff) !important;
+  border-bottom-color: var(--w97-btn-highlight, #fff) !important;
 }
 
 .legacy-btn:hover {
-  background: linear-gradient(to bottom, #ffffff 0%, #e1ebf7 100%);
+  background: #d4d4d4;
+}
+
+.legacy-btn:active {
+  border-top-color: var(--w97-btn-dark, #404040);
+  border-left-color: var(--w97-btn-dark, #404040);
+  border-right-color: var(--w97-btn-highlight, #fff);
+  border-bottom-color: var(--w97-btn-highlight, #fff);
 }
 
 .legacy-btn:disabled {
   cursor: not-allowed;
-  color: #7c8ea3;
-  border-color: #b2bfce;
-  background: #edf3f9;
+  color: var(--w97-btn-shadow, #808080);
 }
 
 .legacy-btn-primary {
-  border-color: #1e4c7d;
-  background: linear-gradient(to bottom, #3d72a8 0%, #1f4f86 100%);
+  background: var(--w97-navy, #235a81);
   color: #fff;
+  border-color: var(--w97-btn-highlight, #fff) var(--w97-btn-dark, #404040)
+    var(--w97-btn-dark, #404040) var(--w97-btn-highlight, #fff);
 }
 
 .legacy-btn-primary:hover {
-  background: linear-gradient(to bottom, #4a7cb2 0%, #235287 100%);
+  background: #1a4565;
 }
 
+/* ── Alerts ── */
 .legacy-alert {
   position: relative;
-  margin: 8px 10px 0;
-  padding: 7px 30px 7px 8px;
+  margin: 4px 0;
+  padding: 4px 30px 4px 8px;
   border: 1px solid;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .legacy-alert-error {
-  background: #fdeaea;
-  border-color: #d6a5a5;
-  color: #7a2222;
+  background: #e8c0c0;
+  border-top-color: var(--w97-btn-shadow, #808080);
+  border-left-color: var(--w97-btn-shadow, #808080);
+  border-bottom-color: var(--w97-btn-highlight, #fff);
+  border-right-color: var(--w97-btn-highlight, #fff);
+  color: #800000;
 }
 
 .legacy-alert-success {
-  background: #e9f8e8;
-  border-color: #9fc5a0;
-  color: #1f5e2d;
+  background: #c0e8c0;
+  border-top-color: var(--w97-btn-shadow, #808080);
+  border-left-color: var(--w97-btn-shadow, #808080);
+  border-bottom-color: var(--w97-btn-highlight, #fff);
+  border-right-color: var(--w97-btn-highlight, #fff);
+  color: #006000;
 }
 
 .legacy-alert-close {
   position: absolute;
   right: 6px;
   top: 5px;
-  border: 1px solid #9db0c3;
-  background: #fff;
-  color: #324e6c;
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: 1px solid var(--w97-btn-dark, #404040);
+  background: var(--w97-btn-face, #c0c0c0);
+  color: var(--w97-text, #000);
   font-size: 10px;
   line-height: 1;
   width: 16px;
@@ -276,14 +398,14 @@
 }
 
 .legacy-prime-message {
-  margin: 8px 10px 0;
+  margin: 4px 0;
 }
 
 .legacy-prime-message .p-message {
   border-radius: 0;
   border-width: 1px;
   font-size: 11px;
-  padding: 5px 7px;
+  padding: 4px 7px;
 }
 
 @media (max-width: 800px) {

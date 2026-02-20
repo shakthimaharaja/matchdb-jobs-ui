@@ -54,6 +54,23 @@ export interface CandidateProfile {
   profile_locked?: boolean;
 }
 
+export interface PokeRecord {
+  id: string;
+  sender_id: string;
+  sender_name: string;
+  sender_email: string;
+  sender_type: 'vendor' | 'candidate';
+  target_id: string;
+  target_vendor_id?: string;
+  target_email: string;
+  target_name: string;
+  subject: string;
+  is_email: boolean;
+  job_id?: string;
+  job_title?: string;
+  created_at: string;
+}
+
 export interface CandidateProfileMatch {
   id: string;
   candidate_id: string;
@@ -82,9 +99,12 @@ interface JobsState {
   candidateMatches: Job[];
   vendorCandidateMatches: CandidateProfileMatch[];
   profile: CandidateProfile | null;
+  pokesSent: PokeRecord[];
+  pokesReceived: PokeRecord[];
   loading: boolean;
   profileLoading: boolean;
   pokeLoading: boolean;
+  pokesLoading: boolean;
   error: string | null;
   profileError: string | null;
   pokeError: string | null;
@@ -97,9 +117,12 @@ const initialState: JobsState = {
   candidateMatches: [],
   vendorCandidateMatches: [],
   profile: null,
+  pokesSent: [],
+  pokesReceived: [],
   loading: false,
   profileLoading: false,
   pokeLoading: false,
+  pokesLoading: false,
   error: null,
   profileError: null,
   pokeError: null,
@@ -170,21 +193,48 @@ export const sendPoke = createAsyncThunk(
       to_email: string;
       to_name: string;
       subject_context: string;
+      target_id: string;            // candidateProfileId | jobId
+      is_email: boolean;            // false=quick poke, true=mail template
+      email_body?: string;
+      target_vendor_id?: string;    // vendor ID of job (candidate sends)
+      sender_name?: string;
+      sender_email?: string;
+      pdf_attachment?: string;      // base64 PDF for candidate resume
+      job_id?: string;
+      job_title?: string;
     },
     { rejectWithValue },
   ) => {
     try {
       const { token, ...body } = payload;
-      const res = await axios.post(
-        "/api/jobs/poke",
-        body,
-        getAxiosConfig(token),
-      );
-      return res.data?.message || "Poke sent";
+      const res = await axios.post("/api/jobs/poke", body, getAxiosConfig(token));
+      return res.data?.message || "Sent";
     } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.error || "Failed to send poke",
-      );
+      return rejectWithValue(err.response?.data?.error || "Failed to send");
+    }
+  },
+);
+
+export const fetchPokesSent = createAsyncThunk(
+  "jobs/fetchPokesSent",
+  async (token: string | null, { rejectWithValue }) => {
+    try {
+      const res = await axios.get("/api/jobs/pokes/sent", getAxiosConfig(token));
+      return res.data as PokeRecord[];
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.error || "Failed to fetch pokes sent");
+    }
+  },
+);
+
+export const fetchPokesReceived = createAsyncThunk(
+  "jobs/fetchPokesReceived",
+  async (token: string | null, { rejectWithValue }) => {
+    try {
+      const res = await axios.get("/api/jobs/pokes/received", getAxiosConfig(token));
+      return res.data as PokeRecord[];
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.error || "Failed to fetch pokes received");
     }
   },
 );
@@ -447,7 +497,21 @@ const jobsSlice = createSlice({
       .addCase(deleteProfile.rejected, (state, action) => {
         state.profileLoading = false;
         state.profileError = action.payload as string;
-      });
+      })
+
+      .addCase(fetchPokesSent.pending, (state) => { state.pokesLoading = true; })
+      .addCase(fetchPokesSent.fulfilled, (state, action) => {
+        state.pokesLoading = false;
+        state.pokesSent = action.payload;
+      })
+      .addCase(fetchPokesSent.rejected, (state) => { state.pokesLoading = false; })
+
+      .addCase(fetchPokesReceived.pending, (state) => { state.pokesLoading = true; })
+      .addCase(fetchPokesReceived.fulfilled, (state, action) => {
+        state.pokesLoading = false;
+        state.pokesReceived = action.payload;
+      })
+      .addCase(fetchPokesReceived.rejected, (state) => { state.pokesLoading = false; });
   },
 });
 

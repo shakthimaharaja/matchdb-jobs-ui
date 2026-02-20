@@ -461,26 +461,91 @@
   background: #d4d4d4;
 }
 
-/* ===== POKE BUTTON ===== */
+/* ===== EMAIL BUTTON (navy — matches --w97-navy) ===== */
+.matchdb-btn-email {
+  background: var(--w97-navy, #235a81);
+  color: #fff;
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: 1px solid var(--w97-btn-dark, #404040);
+  font-size: 10px;
+  padding: 0 4px;
+  height: 22px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.matchdb-btn-email:hover {
+  background: #1a4565;
+}
+.matchdb-btn-email:active {
+  border-top-color: var(--w97-btn-dark, #404040);
+  border-left-color: var(--w97-btn-dark, #404040);
+  border-bottom-color: var(--w97-btn-highlight, #fff);
+  border-right-color: var(--w97-btn-highlight, #fff);
+}
+.matchdb-btn-email:disabled {
+  background: var(--w97-btn-shadow, #808080);
+  border-color: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ===== SORTABLE HEADER ===== */
+.matchdb-th-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.matchdb-th-sortable:hover {
+  background: #d0d0d0 !important;
+}
+
+/* ===== SELECTED ROW ===== */
+.matchdb-row-selected td {
+  background: #c8dff5 !important;
+  color: #1a3a60 !important;
+}
+
+/* ===== SELECTION BAR ===== */
+.matchdb-selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+  background: #ddeeff;
+  border-bottom: 1px solid #80aadd;
+  font-size: 11px;
+  color: #1a3a60;
+  flex-shrink: 0;
+}
+
+/* ===== POKE BUTTON (teal — matches --w97-teal) ===== */
 .matchdb-btn-poke {
   background: var(--w97-teal, #008080);
   color: #fff;
-  border-top: 1px solid #00b0b0;
-  border-left: 1px solid #00b0b0;
-  border-right: 1px solid #004040;
-  border-bottom: 1px solid #004040;
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: 1px solid var(--w97-btn-dark, #404040);
   width: 100%;
   font-size: 10px;
   padding: 0 4px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 600;
+  height: 22px;
 }
 .matchdb-btn-poke:hover {
-  background: #009090;
+  background: #007070;
 }
 .matchdb-btn-poke:active {
-  border-top-color: #004040;
-  border-left-color: #004040;
-  border-bottom-color: #00b0b0;
-  border-right-color: #00b0b0;
+  border-top-color: var(--w97-btn-dark, #404040);
+  border-left-color: var(--w97-btn-dark, #404040);
+  border-bottom-color: var(--w97-btn-highlight, #fff);
+  border-right-color: var(--w97-btn-highlight, #fff);
 }
 .matchdb-btn-poke:disabled {
   background: var(--w97-btn-shadow, #808080);
