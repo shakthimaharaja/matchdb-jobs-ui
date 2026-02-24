@@ -23,7 +23,7 @@
   display: flex;
   flex-direction: column;
   font-family: "MS Sans Serif", Tahoma, Verdana, Arial, sans-serif;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 /* Title bar */
@@ -43,13 +43,13 @@
 
 .detail-modal-title {
   font-weight: 700;
-  font-size: 12px;
+  font-size: 13px;
   flex: 1;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 .detail-modal-match {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 2px;
@@ -74,7 +74,7 @@
   border-right: 1px solid var(--w97-btn-dark, #404040);
   border-bottom: 1px solid var(--w97-btn-dark, #404040);
   color: var(--w97-text, #000);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   width: 18px;
   height: 18px;
@@ -102,7 +102,7 @@
 }
 
 .detail-section h3 {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--w97-navy, #235a81);
   text-transform: uppercase;
@@ -125,7 +125,7 @@
 }
 
 .detail-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--w97-text-secondary, #5a7a99);
   text-transform: uppercase;
@@ -133,7 +133,7 @@
 }
 
 .detail-value {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--w97-text, #1a1a1a);
   word-break: break-word;
 }
@@ -148,13 +148,13 @@
   background: #e6eef8;
   border: 1px solid #9ab0c9;
   color: var(--w97-navy, #213f62);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   padding: 1px 6px;
 }
 
 .detail-text {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--w97-text, #1a1a1a);
   line-height: 1.5;
   white-space: pre-wrap;
@@ -163,7 +163,7 @@
 
 .detail-pre {
   font-family: inherit;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--w97-text, #1a1a1a);
   line-height: 1.5;
   white-space: pre-wrap;
@@ -184,8 +184,8 @@
 }
 
 .detail-btn {
-  height: 24px;
-  font-size: 10px;
+  height: 26px;
+  font-size: 12px;
   font-weight: 700;
   border-top: 1px solid var(--w97-btn-highlight, #fff);
   border-left: 1px solid var(--w97-btn-highlight, #fff);
@@ -215,4 +215,19 @@
   background: #2a3a4a;
   border-color: #5a7a9a;
   color: #a0c0e0;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .detail-modal {
+    width: 98vw;
+    max-height: 95vh;
+  }
+  .detail-modal-overlay {
+    padding: 8px 4px;
+    align-items: flex-start;
+  }
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
 }

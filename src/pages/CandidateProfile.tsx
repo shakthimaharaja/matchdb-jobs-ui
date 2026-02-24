@@ -56,6 +56,30 @@ const VISIBILITY_TYPES = [
   },
 ];
 
+const COUNTRIES = [
+  { value: '', label: '— Select Country —' },
+  { value: 'US', label: '🇺🇸 United States' },
+  { value: 'IN', label: '🇮🇳 India' },
+  { value: 'GB', label: '🇬🇧 United Kingdom' },
+  { value: 'CA', label: '🇨🇦 Canada' },
+  { value: 'AU', label: '🇦🇺 Australia' },
+  { value: 'DE', label: '🇩🇪 Germany' },
+  { value: 'SG', label: '🇸🇬 Singapore' },
+  { value: 'AE', label: '🇦🇪 UAE' },
+  { value: 'JP', label: '🇯🇵 Japan' },
+  { value: 'NL', label: '🇳🇱 Netherlands' },
+  { value: 'FR', label: '🇫🇷 France' },
+  { value: 'BR', label: '🇧🇷 Brazil' },
+  { value: 'MX', label: '🇲🇽 Mexico' },
+  { value: 'PH', label: '🇵🇭 Philippines' },
+  { value: 'IL', label: '🇮🇱 Israel' },
+  { value: 'IE', label: '🇮🇪 Ireland' },
+  { value: 'PL', label: '🇵🇱 Poland' },
+  { value: 'SE', label: '🇸🇪 Sweden' },
+  { value: 'CH', label: '🇨🇭 Switzerland' },
+  { value: 'KR', label: '🇰🇷 South Korea' },
+];
+
 const EMPTY: IProfile = {
   name: "",
   email: "",
@@ -67,6 +91,7 @@ const EMPTY: IProfile = {
   experience_years: 0,
   skills: [],
   location: "",
+  profile_country: "",
   bio: "",
   resume_summary: "",
   resume_experience: "",
@@ -420,6 +445,20 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved, premiumU
                   onChange={(e) => setField("location", e.target.value)}
                   placeholder="City, State"
                 />
+              </div>
+              <div className="legacy-row">
+                <label htmlFor="profile-country">🌍 Subscription Country *</label>
+                <select
+                  id="profile-country"
+                  className="p-inputtext"
+                  style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
+                  value={form.profile_country || ''}
+                  onChange={(e) => setField("profile_country" as any, e.target.value)}
+                >
+                  {COUNTRIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </fieldset>
@@ -852,7 +891,7 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved, premiumU
             type="button"
             className="matchdb-btn matchdb-btn-primary"
             onClick={premiumLocked && editIntent ? onRequestPremiumUnlock : handleSave}
-            disabled={profileLoading || !form.name || !form.email}
+            disabled={profileLoading || !form.name || !form.email || !form.profile_country}
           >
             {profileLoading
               ? "⏳ Saving..."

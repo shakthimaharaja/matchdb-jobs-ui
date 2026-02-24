@@ -1,7 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Box, Button, Chip, Tooltip } from "@mui/material";
-import StarIcon from "@mui/icons-material/Star";
-import VisibilityIcon from "@mui/icons-material/Visibility";
 import { useAppDispatch, useAppSelector } from "../store";
 import MatchDataTable, { MatchRow } from "../components/MatchDataTable";
 import DBLayout, { NavGroup } from "../components/DBLayout";
@@ -28,7 +25,12 @@ interface Props {
   hasPurchasedVisibility?: boolean;
 }
 
-type ActiveView = "matches" | "pokes-sent" | "pokes-received" | "mails-sent" | "mails-received";
+type ActiveView =
+  | "matches"
+  | "pokes-sent"
+  | "pokes-received"
+  | "mails-sent"
+  | "mails-received";
 
 const formatRate = (value?: number | null) =>
   value ? `$${Number(value).toFixed(0)}` : "-";
@@ -37,7 +39,10 @@ const companyFromEmail = (email?: string) => {
   if (!email) return "-";
   const domain = email.split("@")[1] || "";
   return domain
-    ? domain.split(".")[0].replace(/[^a-zA-Z0-9]/g, " ").trim() || "-"
+    ? domain
+        .split(".")[0]
+        .replace(/[^a-zA-Z0-9]/g, " ")
+        .trim() || "-"
     : "-";
 };
 
@@ -75,15 +80,50 @@ const POKE_LIMIT: Record<string, number> = {
   enterprise: Infinity,
 };
 
+const COUNTRY_FLAGS: Record<string, string> = {
+  US: '🇺🇸', IN: '🇮🇳', GB: '🇬🇧', CA: '🇨🇦', AU: '🇦🇺',
+  DE: '🇩🇪', SG: '🇸🇬', AE: '🇦🇪', JP: '🇯🇵', NL: '🇳🇱',
+  FR: '🇫🇷', BR: '🇧🇷', MX: '🇲🇽', PH: '🇵🇭', IL: '🇮🇱',
+  IE: '🇮🇪', PL: '🇵🇱', SE: '🇸🇪', CH: '🇨🇭', KR: '🇰🇷',
+};
+
+const COUNTRY_NAMES: Record<string, string> = {
+  US: 'United States', IN: 'India', GB: 'United Kingdom', CA: 'Canada',
+  AU: 'Australia', DE: 'Germany', SG: 'Singapore', AE: 'UAE',
+  JP: 'Japan', NL: 'Netherlands', FR: 'France', BR: 'Brazil',
+  MX: 'Mexico', PH: 'Philippines', IL: 'Israel', IE: 'Ireland',
+  PL: 'Poland', SE: 'Sweden', CH: 'Switzerland', KR: 'South Korea',
+};
+
 /* ── Inline activity table (pokes or mails, sent or received) ── */
 const SECTION_META: Record<
   "pokes-sent" | "pokes-received" | "mails-sent" | "mails-received",
   { icon: string; title: string; toCol: string; emptyMsg: string }
 > = {
-  "pokes-sent":     { icon: "⚡", title: "Pokes Sent",     toCol: "To (Recruiter)", emptyMsg: "No pokes sent yet." },
-  "pokes-received": { icon: "⚡", title: "Pokes Received",  toCol: "From (Vendor)",  emptyMsg: "No pokes received yet." },
-  "mails-sent":     { icon: "✉", title: "Mails Sent",      toCol: "To (Recruiter)", emptyMsg: "No mails sent yet." },
-  "mails-received": { icon: "✉", title: "Mails Received",   toCol: "From (Vendor)",  emptyMsg: "No mails received yet." },
+  "pokes-sent": {
+    icon: "⚡",
+    title: "Pokes Sent",
+    toCol: "To (Recruiter)",
+    emptyMsg: "No pokes sent yet.",
+  },
+  "pokes-received": {
+    icon: "⚡",
+    title: "Pokes Received",
+    toCol: "From (Vendor)",
+    emptyMsg: "No pokes received yet.",
+  },
+  "mails-sent": {
+    icon: "✉",
+    title: "Mails Sent",
+    toCol: "To (Recruiter)",
+    emptyMsg: "No mails sent yet.",
+  },
+  "mails-received": {
+    icon: "✉",
+    title: "Mails Received",
+    toCol: "From (Vendor)",
+    emptyMsg: "No mails received yet.",
+  },
 };
 
 const PokesTable: React.FC<{
@@ -99,7 +139,9 @@ const PokesTable: React.FC<{
         <span className="matchdb-panel-title-icon">{meta.icon}</span>
         <span className="matchdb-panel-title-text">{meta.title}</span>
         <span className="matchdb-panel-title-meta">
-          {loading ? "Loading..." : `${pokes.length} record${pokes.length !== 1 ? "s" : ""}`}
+          {loading
+            ? "Loading..."
+            : `${pokes.length} record${pokes.length !== 1 ? "s" : ""}`}
         </span>
       </div>
       <div className="matchdb-table-wrap">
@@ -125,50 +167,71 @@ const PokesTable: React.FC<{
             </tr>
           </thead>
           <tbody>
-            {loading && (
+            {loading &&
+              Array.from({ length: 5 }).map((_, ri) => (
+                <tr key={`sk-${ri}`} className="matchdb-skeleton-row" aria-hidden="true">
+                  {[20, 80, 110, 50, 90, 130, 60].map((w, ci) => (
+                    <td key={ci}><span className="w97-shimmer" style={{ width: w }} /></td>
+                  ))}
+                </tr>
+              ))}
+            {!loading && pokes.length === 0 && (
               <tr>
-                <td colSpan={7} className="matchdb-loading">
-                  Loading records
-                  <span className="matchdb-loading-dot">.</span>
-                  <span className="matchdb-loading-dot" style={{ animationDelay: "0.2s" }}>.</span>
-                  <span className="matchdb-loading-dot" style={{ animationDelay: "0.4s" }}>.</span>
+                <td colSpan={7} className="matchdb-empty">
+                  {meta.emptyMsg}
                 </td>
               </tr>
             )}
-            {!loading && pokes.length === 0 && (
-              <tr>
-                <td colSpan={7} className="matchdb-empty">{meta.emptyMsg}</td>
-              </tr>
-            )}
-            {!loading && pokes.map((p, i) => {
-              const personName = isSent ? p.target_name : p.sender_name;
-              const personEmail = isSent ? p.target_email : p.sender_email;
-              const personType = isSent ? "Recruiter" : (p.sender_type || "Vendor");
-              return (
-                <tr key={p.id}>
-                  <td style={{ textAlign: "center", color: "#808080", fontSize: 10 }}>{i + 1}</td>
-                  <td title={personName}>{personName}</td>
-                  <td>
-                    <a href={`mailto:${personEmail}`} style={{ color: "#2a5fa0", textDecoration: "none" }}>
-                      {personEmail}
-                    </a>
-                  </td>
-                  <td>
-                    <span className="matchdb-type-pill" style={{ textTransform: "capitalize" }}>
-                      {personType}
-                    </span>
-                  </td>
-                  <td title={p.job_title || "—"}>{p.job_title || "—"}</td>
-                  <td title={p.subject}>{p.subject}</td>
-                  <td style={{ fontSize: 11 }}>{new Date(p.created_at).toLocaleDateString()}</td>
-                </tr>
-              );
-            })}
+            {!loading &&
+              pokes.map((p, i) => {
+                const personName = isSent ? p.target_name : p.sender_name;
+                const personEmail = isSent ? p.target_email : p.sender_email;
+                const personType = isSent
+                  ? "Recruiter"
+                  : p.sender_type || "Vendor";
+                return (
+                  <tr key={p.id}>
+                    <td
+                      style={{
+                        textAlign: "center",
+                        color: "#808080",
+                        fontSize: 10,
+                      }}
+                    >
+                      {i + 1}
+                    </td>
+                    <td title={personName}>{personName}</td>
+                    <td>
+                      <a
+                        href={`mailto:${personEmail}`}
+                        style={{ color: "#2a5fa0", textDecoration: "none" }}
+                      >
+                        {personEmail}
+                      </a>
+                    </td>
+                    <td>
+                      <span
+                        className="matchdb-type-pill"
+                        style={{ textTransform: "capitalize" }}
+                      >
+                        {personType}
+                      </span>
+                    </td>
+                    <td title={p.job_title || "—"}>{p.job_title || "—"}</td>
+                    <td title={p.subject}>{p.subject}</td>
+                    <td style={{ fontSize: 11 }}>
+                      {new Date(p.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </div>
       <div className="matchdb-footnote">
-        <span>Showing {pokes.length} record{pokes.length !== 1 ? "s" : ""}</span>
+        <span>
+          Showing {pokes.length} record{pokes.length !== 1 ? "s" : ""}
+        </span>
         <span className="matchdb-footnote-sep">|</span>
         <span>InnoDB</span>
       </div>
@@ -187,6 +250,9 @@ const CandidateDashboard: React.FC<Props> = ({
   const dispatch = useAppDispatch();
   const {
     candidateMatches,
+    candidateMatchesTotal,
+    candidateMatchesTypeCounts,
+    candidateMatchesSubTypeCounts,
     loading,
     error,
     pokeLoading,
@@ -199,12 +265,18 @@ const CandidateDashboard: React.FC<Props> = ({
     pokesLoading,
   } = useAppSelector((state) => state.jobs);
 
+  // Server-side pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(25);
+
   const [searchText, setSearchText] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterSubType, setFilterSubType] = useState("");
   const [filterWorkMode, setFilterWorkMode] = useState("");
   const [activeView, setActiveView] = useState<ActiveView>("matches");
-  const [selectedJob, setSelectedJob] = useState<Record<string, any> | null>(null);
+  const [selectedJob, setSelectedJob] = useState<Record<string, any> | null>(
+    null,
+  );
   const [urlCopied, setUrlCopied] = useState(false);
 
   const [profileOpen, setProfileOpen] = useState(false);
@@ -239,15 +311,32 @@ const CandidateDashboard: React.FC<Props> = ({
 
   // target_id → poke created_at (for 24h mail cooldown in MatchDataTable)
   const pokedAtMap = useMemo(
-    () => new Map(pokesSent.filter((p) => !p.is_email).map((p) => [p.target_id, p.created_at])),
+    () =>
+      new Map(
+        pokesSent
+          .filter((p) => !p.is_email)
+          .map((p) => [p.target_id, p.created_at]),
+      ),
     [pokesSent],
   );
 
   // Pre-filtered lists for Pokes / Mails sections
-  const pokesSentOnly = useMemo(() => pokesSent.filter((p) => !p.is_email), [pokesSent]);
-  const mailsSentOnly = useMemo(() => pokesSent.filter((p) => p.is_email), [pokesSent]);
-  const pokesReceivedOnly = useMemo(() => pokesReceived.filter((p) => !p.is_email), [pokesReceived]);
-  const mailsReceivedOnly = useMemo(() => pokesReceived.filter((p) => p.is_email), [pokesReceived]);
+  const pokesSentOnly = useMemo(
+    () => pokesSent.filter((p) => !p.is_email),
+    [pokesSent],
+  );
+  const mailsSentOnly = useMemo(
+    () => pokesSent.filter((p) => p.is_email),
+    [pokesSent],
+  );
+  const pokesReceivedOnly = useMemo(
+    () => pokesReceived.filter((p) => !p.is_email),
+    [pokesReceived],
+  );
+  const mailsReceivedOnly = useMemo(
+    () => pokesReceived.filter((p) => p.is_email),
+    [pokesReceived],
+  );
 
   const profileUrl =
     username && profile ? `${window.location.origin}/resume/${username}` : null;
@@ -279,7 +368,8 @@ const CandidateDashboard: React.FC<Props> = ({
   useEffect(() => {
     const onUnlock = () => setPremiumUnlocked(true);
     window.addEventListener("matchdb:profileUnlocked", onUnlock);
-    return () => window.removeEventListener("matchdb:profileUnlocked", onUnlock);
+    return () =>
+      window.removeEventListener("matchdb:profileUnlocked", onUnlock);
   }, []);
 
   useEffect(() => {
@@ -288,7 +378,8 @@ const CandidateDashboard: React.FC<Props> = ({
       setProfileOpen(true);
     };
     window.addEventListener("matchdb:openProfile", onOpenProfile);
-    return () => window.removeEventListener("matchdb:openProfile", onOpenProfile);
+    return () =>
+      window.removeEventListener("matchdb:openProfile", onOpenProfile);
   }, []);
 
   // Auto-close mail template success after 4s
@@ -302,8 +393,21 @@ const CandidateDashboard: React.FC<Props> = ({
   const pokeLimit = POKE_LIMIT[plan] ?? 5;
   const profileChecked = useRef(false);
 
+  const membershipTypes = useMemo(() => {
+    if (!membershipConfig || Object.keys(membershipConfig).length === 0)
+      return undefined;
+    return Object.keys(membershipConfig);
+  }, [membershipConfig]);
+
   useEffect(() => {
-    dispatch(fetchCandidateMatches(token));
+    dispatch(
+      fetchCandidateMatches({
+        token,
+        page: currentPage,
+        limit: currentPageSize,
+        types: membershipTypes,
+      }),
+    );
     dispatch(fetchProfile(token));
     dispatch(fetchPokesSent(token));
     dispatch(fetchPokesReceived(token));
@@ -317,6 +421,67 @@ const CandidateDashboard: React.FC<Props> = ({
       setProfileOpen(true);
     }
   }, [profileLoading, profile]);
+
+  // Send profile location to shell for the subscription-location display
+  useEffect(() => {
+    if (profile?.location) {
+      window.dispatchEvent(
+        new CustomEvent("matchdb:profileLocation", {
+          detail: { location: profile.location },
+        }),
+      );
+    }
+  }, [profile?.location]);
+
+  // Send "Visible in" text to shell (displayed above pagehead)
+  useEffect(() => {
+    const parts: string[] = [];
+
+    // Show subscription country with flag
+    const country = profile?.profile_country;
+    if (country) {
+      const flag = COUNTRY_FLAGS[country] || '';
+      const name = COUNTRY_NAMES[country] || country;
+      parts.push(`${flag} ${name}`);
+    }
+
+    if (membershipConfig && Object.keys(membershipConfig).length > 0) {
+      const domainText = Object.entries(membershipConfig)
+        .map(([domain, subs]) =>
+          subs.length > 0
+            ? `${domain} (${subs.map((s) => s.toUpperCase()).join(", ")})`
+            : domain,
+        )
+        .join(" · ");
+      parts.push(domainText);
+    }
+
+    if (parts.length > 0) {
+      const text = `Visible in: ${parts.join(" — ")} — expand your reach by adding more subdomains.`;
+      window.dispatchEvent(
+        new CustomEvent("matchdb:visibleIn", { detail: { text } }),
+      );
+    }
+    return () => {
+      // Clear on unmount
+      window.dispatchEvent(
+        new CustomEvent("matchdb:visibleIn", { detail: { text: "" } }),
+      );
+    };
+  }, [membershipConfig, profile?.profile_country]);
+
+  const handlePageChange = (page: number, pageSize: number) => {
+    setCurrentPage(page);
+    setCurrentPageSize(pageSize);
+    dispatch(
+      fetchCandidateMatches({
+        token,
+        page,
+        limit: pageSize,
+        types: membershipTypes,
+      }),
+    );
+  };
 
   const hasMembership =
     !!membershipConfig && Object.keys(membershipConfig).length > 0;
@@ -444,11 +609,32 @@ const CandidateDashboard: React.FC<Props> = ({
 
   const handleDownloadCSV = () => {
     const headers = [
-      "Name", "Company", "Email", "Phone", "Role", "Type",
-      "Mode", "Pay/Hr", "Exp", "Match%", "Location",
+      "Name",
+      "Company",
+      "Email",
+      "Phone",
+      "Role",
+      "Type",
+      "Mode",
+      "Pay/Hr",
+      "Exp",
+      "Match%",
+      "Location",
     ];
     const csvRows = rows.map((r) =>
-      [r.name, r.company, r.email, r.phone, r.role, r.type, r.workMode || "-", r.payPerHour, r.experience, r.matchPercentage, r.location]
+      [
+        r.name,
+        r.company,
+        r.email,
+        r.phone,
+        r.role,
+        r.type,
+        r.workMode || "-",
+        r.payPerHour,
+        r.experience,
+        r.matchPercentage,
+        r.location,
+      ]
         .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
         .join(","),
     );
@@ -463,15 +649,21 @@ const CandidateDashboard: React.FC<Props> = ({
   };
 
   const countByType = useMemo(() => {
+    // Prefer server-provided counts (full dataset); fall back to local page data
+    if (Object.keys(candidateMatchesTypeCounts).length > 0)
+      return candidateMatchesTypeCounts;
     const map: Record<string, number> = {};
     candidateMatches.forEach((j) => {
       const t = j.job_type || "other";
       map[t] = (map[t] || 0) + 1;
     });
     return map;
-  }, [candidateMatches]);
+  }, [candidateMatches, candidateMatchesTypeCounts]);
 
   const countBySubType = useMemo(() => {
+    // Prefer server-provided counts (full dataset); fall back to local page data
+    if (Object.keys(candidateMatchesSubTypeCounts).length > 0)
+      return candidateMatchesSubTypeCounts;
     const map: Record<string, Record<string, number>> = {};
     candidateMatches.forEach((j) => {
       const t = j.job_type || "other";
@@ -482,15 +674,16 @@ const CandidateDashboard: React.FC<Props> = ({
       }
     });
     return map;
-  }, [candidateMatches]);
+  }, [candidateMatches, candidateMatchesSubTypeCounts]);
 
   const jobTypeNavItems = useMemo(() => {
     const items: NavGroup["items"] = [
       {
         id: "matched-jobs",
         label: "Matched Jobs",
-        count: candidateMatches.length,
-        active: activeView === "matches" && filterType === "" && filterSubType === "",
+        count: candidateMatchesTotal,
+        active:
+          activeView === "matches" && filterType === "" && filterSubType === "",
         onClick: () => {
           setActiveView("matches");
           setFilterType("");
@@ -503,20 +696,28 @@ const CandidateDashboard: React.FC<Props> = ({
         id: "contract",
         label: "Contract",
         count: countByType["contract"] || 0,
-        active: activeView === "matches" && filterType === "contract" && filterSubType === "",
+        active:
+          activeView === "matches" &&
+          filterType === "contract" &&
+          filterSubType === "",
         onClick: () => {
           setActiveView("matches");
           setFilterType("contract");
           setFilterSubType("");
         },
       });
-      CONTRACT_SUB_TYPES.filter((st) => showSubtype("contract", st.value)).forEach((st) =>
+      CONTRACT_SUB_TYPES.filter((st) =>
+        showSubtype("contract", st.value),
+      ).forEach((st) =>
         items.push({
           id: `contract_${st.value}`,
           label: st.label,
           depth: 1,
           count: countBySubType["contract"]?.[st.value] || 0,
-          active: activeView === "matches" && filterType === "contract" && filterSubType === st.value,
+          active:
+            activeView === "matches" &&
+            filterType === "contract" &&
+            filterSubType === st.value,
           onClick: () => {
             setActiveView("matches");
             setFilterType("contract");
@@ -530,20 +731,28 @@ const CandidateDashboard: React.FC<Props> = ({
         id: "full_time",
         label: "Full Time",
         count: countByType["full_time"] || 0,
-        active: activeView === "matches" && filterType === "full_time" && filterSubType === "",
+        active:
+          activeView === "matches" &&
+          filterType === "full_time" &&
+          filterSubType === "",
         onClick: () => {
           setActiveView("matches");
           setFilterType("full_time");
           setFilterSubType("");
         },
       });
-      FULL_TIME_SUB_TYPES.filter((st) => showSubtype("full_time", st.value)).forEach((st) =>
+      FULL_TIME_SUB_TYPES.filter((st) =>
+        showSubtype("full_time", st.value),
+      ).forEach((st) =>
         items.push({
           id: `full_time_${st.value}`,
           label: st.label,
           depth: 1,
           count: countBySubType["full_time"]?.[st.value] || 0,
-          active: activeView === "matches" && filterType === "full_time" && filterSubType === st.value,
+          active:
+            activeView === "matches" &&
+            filterType === "full_time" &&
+            filterSubType === st.value,
           onClick: () => {
             setActiveView("matches");
             setFilterType("full_time");
@@ -557,7 +766,10 @@ const CandidateDashboard: React.FC<Props> = ({
         id: "part_time",
         label: "Part Time",
         count: countByType["part_time"] || 0,
-        active: activeView === "matches" && filterType === "part_time" && filterSubType === "",
+        active:
+          activeView === "matches" &&
+          filterType === "part_time" &&
+          filterSubType === "",
         onClick: () => {
           setActiveView("matches");
           setFilterType("part_time");
@@ -567,7 +779,15 @@ const CandidateDashboard: React.FC<Props> = ({
     }
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [membershipConfig, candidateMatches.length, countByType, countBySubType, filterType, filterSubType, activeView]);
+  }, [
+    membershipConfig,
+    candidateMatches.length,
+    countByType,
+    countBySubType,
+    filterType,
+    filterSubType,
+    activeView,
+  ]);
 
   const navGroups: NavGroup[] = [
     {
@@ -582,12 +802,16 @@ const CandidateDashboard: React.FC<Props> = ({
         },
         {
           id: "update-profile",
-          label: isProfileLocked && !premiumUnlocked ? "✏ Update Profile ($3)" : "✏ Update Profile",
-          tooltip: isProfileLocked && !premiumUnlocked
-            ? "Edit company, experience & bio — costs $3, pay at billing"
-            : isProfileLocked
-              ? "Premium fields unlocked — all editable"
-              : "Edit your profile details",
+          label:
+            isProfileLocked && !premiumUnlocked
+              ? "✏ Update Profile ($3)"
+              : "✏ Update Profile",
+          tooltip:
+            isProfileLocked && !premiumUnlocked
+              ? "Edit company, experience & bio — costs $3, pay at billing"
+              : isProfileLocked
+                ? "Premium fields unlocked — all editable"
+                : "Edit your profile details",
           active: false,
           onClick: () => setProfileOpen(true),
         },
@@ -599,7 +823,7 @@ const CandidateDashboard: React.FC<Props> = ({
       items: jobTypeNavItems,
     },
     {
-      label: "Pokes",
+      label: `Pokes (${pokeCount}/${isFinite(pokeLimit) ? pokeLimit : "∞"})`,
       icon: "",
       items: [
         {
@@ -616,10 +840,15 @@ const CandidateDashboard: React.FC<Props> = ({
           active: activeView === "pokes-received",
           onClick: () => setActiveView("pokes-received"),
         },
+        ...(isFinite(pokeLimit) ? [{
+          id: "pokes-remaining",
+          label: "Remaining",
+          count: Math.max(0, pokeLimit - pokeCount),
+        }] : []),
       ],
     },
     {
-      label: "Mails",
+      label: `Mails (${emailCount})`,
       icon: "",
       items: [
         {
@@ -641,7 +870,8 @@ const CandidateDashboard: React.FC<Props> = ({
               {
                 id: "mail-template",
                 label: "✉ Mail Template",
-                tooltip: "Compose a personalised email with your resume — click ✉ next to any row",
+                tooltip:
+                  "Compose a personalised email with your resume — click ✉ next to any row",
                 onClick: () => {
                   setActiveView("matches");
                   if (rows.length > 0) handlePokeEmail(rows[0]);
@@ -659,7 +889,10 @@ const CandidateDashboard: React.FC<Props> = ({
           id: "refresh",
           label: "Refresh Data",
           onClick: () => {
-            dispatch(fetchCandidateMatches(token));
+            setCurrentPage(1);
+            dispatch(
+              fetchCandidateMatches({ token, page: 1, limit: currentPageSize }),
+            );
             dispatch(fetchPokesSent(token));
             dispatch(fetchPokesReceived(token));
           },
@@ -705,14 +938,22 @@ const CandidateDashboard: React.FC<Props> = ({
   })();
 
   const breadcrumb: [string, string, string] =
-    activeView === "pokes-sent"    ? ["Candidate Portal", "Pokes", "Pokes Sent"]
-    : activeView === "pokes-received" ? ["Candidate Portal", "Pokes", "Pokes Received"]
-    : activeView === "mails-sent"     ? ["Candidate Portal", "Mails", "Mails Sent"]
-    : activeView === "mails-received" ? ["Candidate Portal", "Mails", "Mails Received"]
-    : ["Candidate Portal", "Matched Jobs", filterLabel];
+    activeView === "pokes-sent"
+      ? ["Candidate Portal", "Pokes", "Pokes Sent"]
+      : activeView === "pokes-received"
+        ? ["Candidate Portal", "Pokes", "Pokes Received"]
+        : activeView === "mails-sent"
+          ? ["Candidate Portal", "Mails", "Mails Sent"]
+          : activeView === "mails-received"
+            ? ["Candidate Portal", "Mails", "Mails Received"]
+            : ["Candidate Portal", "Matched Jobs", filterLabel];
 
   return (
-    <DBLayout userType="candidate" navGroups={navGroups} breadcrumb={breadcrumb}>
+    <DBLayout
+      userType="candidate"
+      navGroups={navGroups}
+      breadcrumb={breadcrumb}
+    >
       {/* Main content — blurred when profile modal or pricing modal is open */}
       <div
         className="matchdb-page"
@@ -738,15 +979,21 @@ const CandidateDashboard: React.FC<Props> = ({
               Purchase a Visibility Package to See Job Matches
             </h2>
             <p
-              style={{ margin: "0 0 8px", fontSize: 13, color: "#555", lineHeight: 1.6 }}
+              style={{
+                margin: "0 0 8px",
+                fontSize: 13,
+                color: "#555",
+                lineHeight: 1.6,
+              }}
             >
-              Job openings matched to your profile are hidden until you purchase a
-              Visibility Package. Once purchased, your profile becomes discoverable by
-              recruiters and you'll see your personalized matches here.
+              Job openings matched to your profile are hidden until you purchase
+              a Visibility Package. Once purchased, your profile becomes
+              discoverable by recruiters and you'll see your personalized
+              matches here.
             </p>
             <p style={{ margin: "0 0 24px", fontSize: 12, color: "#888" }}>
-              Packages start at <strong>$13</strong> — one-time payment, no subscription
-              required.
+              Packages start at <strong>$13</strong> — one-time payment, no
+              subscription required.
             </p>
             <button
               type="button"
@@ -760,101 +1007,54 @@ const CandidateDashboard: React.FC<Props> = ({
         ) : (
           /* ── UNLOCKED STATE ── */
           <>
-            {membershipConfig && (
-              <Alert
-                severity="success"
-                icon={<VisibilityIcon fontSize="small" />}
-                action={
-                  <Button
-                    color="success"
-                    size="small"
-                    variant="outlined"
-                    onClick={openPricingModal}
-                    sx={{ fontWeight: 700, fontSize: 11, whiteSpace: "nowrap" }}
-                  >
-                    Add More
-                  </Button>
-                }
-                sx={{ mb: 1.5, py: 0.5, fontSize: 13, alignItems: "center" }}
-              >
-                Visible in:{" "}
-                {Object.entries(membershipConfig)
-                  .map(([domain, subs]) =>
-                    subs.length > 0
-                      ? `${domain} (${subs.map((s) => s.toUpperCase()).join(", ")})`
-                      : domain,
-                  )
-                  .join(" · ")}
-                {" — "}expand your reach by adding more subdomains.
-              </Alert>
-            )}
 
-            {/* Plan badge + poke/email counters */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-              <Tooltip title={`Your current plan: ${plan}`}>
-                <Chip
-                  label={plan === "pro_plus" ? "PRO PLUS" : plan.toUpperCase()}
-                  size="small"
-                  icon={<StarIcon style={{ fontSize: 13 }} />}
-                  color={
-                    plan === "pro_plus"
-                      ? "success"
-                      : plan === "pro"
-                        ? "primary"
-                        : plan === "basic"
-                          ? "info"
-                          : plan === "enterprise"
-                            ? "success"
-                            : "default"
-                  }
-                  variant="outlined"
-                  style={{ fontWeight: 700, fontSize: 11 }}
-                />
-              </Tooltip>
-              <Tooltip title={`Quick pokes sent (limit: ${isFinite(pokeLimit) ? pokeLimit : "∞"}/month)`}>
-                <Chip
-                  label={
-                    isFinite(pokeLimit)
-                      ? `Pokes: ${pokeCount}/${pokeLimit}`
-                      : `Pokes: ${pokeCount}`
-                  }
-                  size="small"
-                  color={
-                    isFinite(pokeLimit) && pokeCount >= pokeLimit ? "error" : "default"
-                  }
-                  variant="outlined"
-                  style={{ fontSize: 11 }}
-                />
-              </Tooltip>
-              <Tooltip title="Mail templates sent (each job posting can be emailed once)">
-                <Chip
-                  label={`Emails: ${emailCount}`}
-                  size="small"
-                  color="default"
-                  variant="outlined"
-                  style={{ fontSize: 11 }}
-                />
-              </Tooltip>
-            </Box>
+            {/* Error banner */}
+            {error && (
+              <div className="w97-alert w97-alert-error" role="alert" aria-live="assertive">
+                ⚠ Failed to load matches: {error}
+                <button
+                  aria-label="Retry loading matches"
+                  onClick={() => dispatch(fetchCandidateMatches({ token, page: currentPage, limit: currentPageSize }))}
+                >
+                  ↺ Retry
+                </button>
+              </div>
+            )}
 
             {/* Pokes Sent view */}
             {activeView === "pokes-sent" && (
-              <PokesTable pokes={pokesSentOnly} loading={pokesLoading} section="pokes-sent" />
+              <PokesTable
+                pokes={pokesSentOnly}
+                loading={pokesLoading}
+                section="pokes-sent"
+              />
             )}
 
             {/* Pokes Received view */}
             {activeView === "pokes-received" && (
-              <PokesTable pokes={pokesReceivedOnly} loading={pokesLoading} section="pokes-received" />
+              <PokesTable
+                pokes={pokesReceivedOnly}
+                loading={pokesLoading}
+                section="pokes-received"
+              />
             )}
 
             {/* Mails Sent view */}
             {activeView === "mails-sent" && (
-              <PokesTable pokes={mailsSentOnly} loading={pokesLoading} section="mails-sent" />
+              <PokesTable
+                pokes={mailsSentOnly}
+                loading={pokesLoading}
+                section="mails-sent"
+              />
             )}
 
             {/* Mails Received view */}
             {activeView === "mails-received" && (
-              <PokesTable pokes={mailsReceivedOnly} loading={pokesLoading} section="mails-received" />
+              <PokesTable
+                pokes={mailsReceivedOnly}
+                loading={pokesLoading}
+                section="mails-received"
+              />
             )}
 
             {/* Matched Jobs view */}
@@ -892,7 +1092,8 @@ const CandidateDashboard: React.FC<Props> = ({
                         </option>
                       ))}
                     </select>
-                    {(filterType === "contract" || filterType === "full_time") && (
+                    {(filterType === "contract" ||
+                      filterType === "full_time") && (
                       <>
                         <label
                           className="matchdb-label"
@@ -920,7 +1121,10 @@ const CandidateDashboard: React.FC<Props> = ({
                         </select>
                       </>
                     )}
-                    <label className="matchdb-label" htmlFor="candidate-workmode">
+                    <label
+                      className="matchdb-label"
+                      htmlFor="candidate-workmode"
+                    >
                       Mode
                     </label>
                     <select
@@ -953,7 +1157,16 @@ const CandidateDashboard: React.FC<Props> = ({
                     <button
                       type="button"
                       className="matchdb-btn matchdb-btn-primary"
-                      onClick={() => dispatch(fetchCandidateMatches(token))}
+                      onClick={() => {
+                        setCurrentPage(1);
+                        dispatch(
+                          fetchCandidateMatches({
+                            token,
+                            page: 1,
+                            limit: currentPageSize,
+                          }),
+                        );
+                      }}
                     >
                       ↻ Refresh
                     </button>
@@ -966,6 +1179,10 @@ const CandidateDashboard: React.FC<Props> = ({
                   rows={rows}
                   loading={loading}
                   error={error}
+                  serverTotal={candidateMatchesTotal}
+                  serverPage={currentPage}
+                  serverPageSize={currentPageSize}
+                  onPageChange={handlePageChange}
                   pokeLoading={pokeLoading}
                   pokeSuccessMessage={pokeSuccessMessage}
                   pokeError={pokeError}
@@ -1005,7 +1222,9 @@ const CandidateDashboard: React.FC<Props> = ({
           >
             <div className="rm-titlebar">
               <span className="rm-titlebar-icon">👤</span>
-              <span className="rm-titlebar-title">My Profile — Candidate Resume</span>
+              <span className="rm-titlebar-title">
+                My Profile — Candidate Resume
+              </span>
               {profileRequired ? (
                 <span
                   style={{

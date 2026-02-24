@@ -57,7 +57,7 @@ const JobsApp: React.FC<JobsAppProps> = ({
           {userType === "vendor" ? (
             <>
               <Route
-                path="/post-job"
+                path="post-job"
                 element={
                   <PostJobPage
                     token={token}

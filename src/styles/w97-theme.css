@@ -44,10 +44,16 @@
   /* Status bar */
   --w97-status-bg: #e5e5e5;
   --w97-status-border-top: #cccccc;
+  /* Typography */
+  --w97-font-base: 13px;
+  /* Shimmer skeleton */
+  --w97-shimmer-base: #e8e8e8;
+  --w97-shimmer-highlight: #f5f5f5;
 }
 
 /* ---- Dark Mode ---- */
-[data-theme="dark"] {
+[data-theme="dark"],
+.legacy-shell-root.dark {
   --w97-desktop: #1e1e1e;
   --w97-window: #2d2d2d;
   --w97-window-alt: #383838;
@@ -84,4 +90,7 @@
   --w97-teal: #4da8da;
   --w97-navy: #5090d0;
   --w97-sky: #2a2a2a;
+  /* Shimmer — dark */
+  --w97-shimmer-base: #3a3a3a;
+  --w97-shimmer-highlight: #4a4a4a;
 }

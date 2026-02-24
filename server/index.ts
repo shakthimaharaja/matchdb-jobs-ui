@@ -3,7 +3,7 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 import path from "path";
 import dotenv from "dotenv";
 
-const ENV = process.env.NODE_ENV || "development";
+const ENV = process.env.NODE_ENV || "local";
 dotenv.config({ path: path.resolve(__dirname, "../env", `.env.${ENV}`) });
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 

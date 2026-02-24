@@ -8,6 +8,9 @@ export interface Job {
   vendor_id: string;
   vendor_email: string;
   location: string;
+  job_country?: string;
+  job_state?: string;
+  job_city?: string;
   job_type: string;
   job_sub_type?: string;
   work_mode?: string;
@@ -42,6 +45,7 @@ export interface CandidateProfile {
   experience_years: number;
   skills: string[];
   location: string;
+  profile_country?: string;
   bio: string;
   // Resume sections
   resume_summary?: string;
@@ -59,7 +63,7 @@ export interface PokeRecord {
   sender_id: string;
   sender_name: string;
   sender_email: string;
-  sender_type: 'vendor' | 'candidate';
+  sender_type: "vendor" | "candidate";
   target_id: string;
   target_vendor_id?: string;
   target_email: string;
@@ -93,11 +97,28 @@ export interface CandidateProfileMatch {
   };
 }
 
+// Paginated API response envelope
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  typeCounts?: Record<string, number>;
+  subTypeCounts?: Record<string, Record<string, number>>;
+}
+
 interface JobsState {
   jobs: Job[];
   vendorJobs: Job[];
   candidateMatches: Job[];
   vendorCandidateMatches: CandidateProfileMatch[];
+  // Pagination totals (server-side)
+  candidateMatchesTotal: number;
+  candidateMatchesTypeCounts: Record<string, number>;
+  candidateMatchesSubTypeCounts: Record<string, Record<string, number>>;
+  vendorCandidateMatchesTotal: number;
+  vendorJobsTotal: number;
   profile: CandidateProfile | null;
   pokesSent: PokeRecord[];
   pokesReceived: PokeRecord[];
@@ -116,6 +137,11 @@ const initialState: JobsState = {
   vendorJobs: [],
   candidateMatches: [],
   vendorCandidateMatches: [],
+  candidateMatchesTotal: 0,
+  candidateMatchesTypeCounts: {},
+  candidateMatchesSubTypeCounts: {},
+  vendorCandidateMatchesTotal: 0,
+  vendorJobsTotal: 0,
   profile: null,
   pokesSent: [],
   pokesReceived: [],
@@ -135,10 +161,22 @@ const getAxiosConfig = (token: string | null) => ({
 
 export const fetchVendorJobs = createAsyncThunk(
   "jobs/fetchVendor",
-  async (token: string | null, { rejectWithValue }) => {
+  async (
+    payload: { token: string | null; page?: number; limit?: number },
+    { rejectWithValue },
+  ) => {
     try {
-      const res = await axios.get("/api/jobs/vendor", getAxiosConfig(token));
-      return res.data as Job[];
+      const { token, page, limit } = payload;
+      const params: any = {};
+      if (page !== undefined) {
+        params.page = page;
+        params.limit = limit || 25;
+      }
+      const res = await axios.get("/api/jobs/vendor", {
+        ...getAxiosConfig(token),
+        params,
+      });
+      return res.data as PaginatedResponse<Job> | Job[];
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data?.error || "Failed to fetch vendor jobs",
@@ -149,13 +187,30 @@ export const fetchVendorJobs = createAsyncThunk(
 
 export const fetchCandidateMatches = createAsyncThunk(
   "jobs/fetchCandidateMatches",
-  async (token: string | null, { rejectWithValue }) => {
+  async (
+    payload: {
+      token: string | null;
+      page?: number;
+      limit?: number;
+      types?: string[];
+    },
+    { rejectWithValue },
+  ) => {
     try {
-      const res = await axios.get(
-        "/api/jobs/jobmatches",
-        getAxiosConfig(token),
-      );
-      return res.data as Job[];
+      const { token, page, limit, types } = payload;
+      const params: any = {};
+      if (page !== undefined) {
+        params.page = page;
+        params.limit = limit || 25;
+      }
+      if (types && types.length > 0) {
+        params.types = types.join(",");
+      }
+      const res = await axios.get("/api/jobs/jobmatches", {
+        ...getAxiosConfig(token),
+        params,
+      });
+      return res.data as PaginatedResponse<Job> | Job[];
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data?.error || "Failed to fetch candidate matches",
@@ -167,16 +222,29 @@ export const fetchCandidateMatches = createAsyncThunk(
 export const fetchVendorCandidateMatches = createAsyncThunk(
   "jobs/fetchVendorCandidateMatches",
   async (
-    payload: { token: string | null; jobId?: string | null },
+    payload: {
+      token: string | null;
+      jobId?: string | null;
+      page?: number;
+      limit?: number;
+    },
     { rejectWithValue },
   ) => {
     try {
-      const { token, jobId } = payload;
+      const { token, jobId, page, limit } = payload;
+      const params: any = {};
+      if (jobId) params.job_id = jobId;
+      if (page !== undefined) {
+        params.page = page;
+        params.limit = limit || 25;
+      }
       const res = await axios.get("/api/jobs/profilematches", {
         ...getAxiosConfig(token),
-        params: jobId ? { job_id: jobId } : {},
+        params,
       });
-      return res.data as CandidateProfileMatch[];
+      return res.data as
+        | PaginatedResponse<CandidateProfileMatch>
+        | CandidateProfileMatch[];
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data?.error || "Failed to fetch vendor candidate matches",
@@ -193,13 +261,13 @@ export const sendPoke = createAsyncThunk(
       to_email: string;
       to_name: string;
       subject_context: string;
-      target_id: string;            // candidateProfileId | jobId
-      is_email: boolean;            // false=quick poke, true=mail template
+      target_id: string; // candidateProfileId | jobId
+      is_email: boolean; // false=quick poke, true=mail template
       email_body?: string;
-      target_vendor_id?: string;    // vendor ID of job (candidate sends)
+      target_vendor_id?: string; // vendor ID of job (candidate sends)
       sender_name?: string;
       sender_email?: string;
-      pdf_attachment?: string;      // base64 PDF for candidate resume
+      pdf_attachment?: string; // base64 PDF for candidate resume
       job_id?: string;
       job_title?: string;
     },
@@ -207,7 +275,11 @@ export const sendPoke = createAsyncThunk(
   ) => {
     try {
       const { token, ...body } = payload;
-      const res = await axios.post("/api/jobs/poke", body, getAxiosConfig(token));
+      const res = await axios.post(
+        "/api/jobs/poke",
+        body,
+        getAxiosConfig(token),
+      );
       return res.data?.message || "Sent";
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.error || "Failed to send");
@@ -219,10 +291,15 @@ export const fetchPokesSent = createAsyncThunk(
   "jobs/fetchPokesSent",
   async (token: string | null, { rejectWithValue }) => {
     try {
-      const res = await axios.get("/api/jobs/pokes/sent", getAxiosConfig(token));
+      const res = await axios.get(
+        "/api/jobs/pokes/sent",
+        getAxiosConfig(token),
+      );
       return res.data as PokeRecord[];
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.error || "Failed to fetch pokes sent");
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to fetch pokes sent",
+      );
     }
   },
 );
@@ -231,10 +308,15 @@ export const fetchPokesReceived = createAsyncThunk(
   "jobs/fetchPokesReceived",
   async (token: string | null, { rejectWithValue }) => {
     try {
-      const res = await axios.get("/api/jobs/pokes/received", getAxiosConfig(token));
+      const res = await axios.get(
+        "/api/jobs/pokes/received",
+        getAxiosConfig(token),
+      );
       return res.data as PokeRecord[];
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.error || "Failed to fetch pokes received");
+      return rejectWithValue(
+        err.response?.data?.error || "Failed to fetch pokes received",
+      );
     }
   },
 );
@@ -386,7 +468,14 @@ const jobsSlice = createSlice({
       })
       .addCase(fetchVendorJobs.fulfilled, (state, action) => {
         state.loading = false;
-        state.vendorJobs = action.payload;
+        const payload = action.payload;
+        if (Array.isArray(payload)) {
+          state.vendorJobs = payload;
+          state.vendorJobsTotal = payload.length;
+        } else {
+          state.vendorJobs = payload.data;
+          state.vendorJobsTotal = payload.total;
+        }
       })
       .addCase(fetchVendorJobs.rejected, (state, action) => {
         state.loading = false;
@@ -399,7 +488,18 @@ const jobsSlice = createSlice({
       })
       .addCase(fetchCandidateMatches.fulfilled, (state, action) => {
         state.loading = false;
-        state.candidateMatches = action.payload;
+        const payload = action.payload;
+        if (Array.isArray(payload)) {
+          state.candidateMatches = payload;
+          state.candidateMatchesTotal = payload.length;
+          state.candidateMatchesTypeCounts = {};
+          state.candidateMatchesSubTypeCounts = {};
+        } else {
+          state.candidateMatches = payload.data;
+          state.candidateMatchesTotal = payload.total;
+          state.candidateMatchesTypeCounts = payload.typeCounts || {};
+          state.candidateMatchesSubTypeCounts = payload.subTypeCounts || {};
+        }
       })
       .addCase(fetchCandidateMatches.rejected, (state, action) => {
         state.loading = false;
@@ -412,7 +512,14 @@ const jobsSlice = createSlice({
       })
       .addCase(fetchVendorCandidateMatches.fulfilled, (state, action) => {
         state.loading = false;
-        state.vendorCandidateMatches = action.payload;
+        const payload = action.payload;
+        if (Array.isArray(payload)) {
+          state.vendorCandidateMatches = payload;
+          state.vendorCandidateMatchesTotal = payload.length;
+        } else {
+          state.vendorCandidateMatches = payload.data;
+          state.vendorCandidateMatchesTotal = payload.total;
+        }
       })
       .addCase(fetchVendorCandidateMatches.rejected, (state, action) => {
         state.loading = false;
@@ -499,19 +606,27 @@ const jobsSlice = createSlice({
         state.profileError = action.payload as string;
       })
 
-      .addCase(fetchPokesSent.pending, (state) => { state.pokesLoading = true; })
+      .addCase(fetchPokesSent.pending, (state) => {
+        state.pokesLoading = true;
+      })
       .addCase(fetchPokesSent.fulfilled, (state, action) => {
         state.pokesLoading = false;
         state.pokesSent = action.payload;
       })
-      .addCase(fetchPokesSent.rejected, (state) => { state.pokesLoading = false; })
+      .addCase(fetchPokesSent.rejected, (state) => {
+        state.pokesLoading = false;
+      })
 
-      .addCase(fetchPokesReceived.pending, (state) => { state.pokesLoading = true; })
+      .addCase(fetchPokesReceived.pending, (state) => {
+        state.pokesLoading = true;
+      })
       .addCase(fetchPokesReceived.fulfilled, (state, action) => {
         state.pokesLoading = false;
         state.pokesReceived = action.payload;
       })
-      .addCase(fetchPokesReceived.rejected, (state) => { state.pokesLoading = false; });
+      .addCase(fetchPokesReceived.rejected, (state) => {
+        state.pokesLoading = false;
+      });
   },
 });
 

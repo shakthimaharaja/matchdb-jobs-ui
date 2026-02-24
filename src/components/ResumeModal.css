@@ -9,7 +9,7 @@
   justify-content: center;
   padding: 32px 16px;
   font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .rm-window {
@@ -35,13 +35,13 @@
   background: linear-gradient(to right, var(--w97-titlebar-from, #235a81), var(--w97-titlebar-to, #1a4565));
   color: var(--w97-titlebar-text, #fff);
   padding: 3px 4px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: bold;
   flex-shrink: 0;
 }
 
 .rm-titlebar-icon {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .rm-titlebar-title {
@@ -56,7 +56,7 @@
   border-right: 1px solid var(--w97-btn-dark, #404040);
   border-bottom: 1px solid var(--w97-btn-dark, #404040);
   color: var(--w97-text, #000);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: bold;
   cursor: pointer;
   width: 18px;
@@ -78,7 +78,7 @@
   background: var(--w97-btn-face, #c0c0c0);
   border-bottom: 1px solid var(--w97-btn-shadow, #808080);
   padding: 3px 8px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--w97-text-secondary, #444);
   flex-shrink: 0;
 }
@@ -96,7 +96,7 @@
 /* Alerts */
 .rm-alert {
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: 13px;
   border: 1px solid;
   margin-bottom: 4px;
 }
@@ -122,7 +122,7 @@
 
 .rm-fieldset legend {
   padding: 0 4px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: bold;
   color: var(--w97-text, #000);
 }
@@ -145,20 +145,20 @@
 }
 
 .rm-field label {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: normal;
   color: var(--w97-text, #000);
 }
 
 /* Inputs */
 .rm-input {
-  height: 22px;
+  height: 24px;
   border-top: 1px solid var(--w97-btn-shadow, #808080);
   border-left: 1px solid var(--w97-btn-shadow, #808080);
   border-right: 1px solid var(--w97-btn-highlight, #fff);
   border-bottom: 1px solid var(--w97-btn-highlight, #fff);
   background: var(--w97-input-bg, #fff);
-  font-size: 11px;
+  font-size: 13px;
   padding: 2px 4px;
   font-family: inherit;
   color: var(--w97-text, #000);
@@ -177,7 +177,7 @@
 
 /* Select dropdowns — same inset border as inputs; keep native arrow */
 select.rm-input {
-  height: 22px;
+  height: 24px;
   appearance: auto;
   cursor: pointer;
   padding-right: 2px;
@@ -190,7 +190,7 @@ select.rm-input {
   border-right: 1px solid var(--w97-btn-highlight, #fff);
   border-bottom: 1px solid var(--w97-btn-highlight, #fff);
   background: var(--w97-input-bg, #fff);
-  font-size: 11px;
+  font-size: 13px;
   padding: 4px;
   font-family: "Courier New", Courier, monospace;
   color: var(--w97-text, #000);
@@ -213,14 +213,14 @@ select.rm-input {
   border-right: 1px solid var(--w97-btn-highlight, #fff);
   border-bottom: 1px solid var(--w97-btn-highlight, #fff);
   padding: 4px 6px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--w97-text-secondary, #555);
   white-space: pre-wrap;
   min-height: 44px;
 }
 
 .rm-locked-badge {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: normal;
   color: var(--w97-text-secondary, #666);
   margin-left: 6px;
@@ -228,7 +228,7 @@ select.rm-input {
 
 /* Skills */
 .rm-skill-note {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: normal;
   color: var(--w97-text-secondary, #666);
   margin-left: 6px;
@@ -245,7 +245,7 @@ select.rm-input {
   border-left: 1px solid var(--w97-btn-highlight, #fff);
   border-right: 1px solid var(--w97-btn-dark, #404040);
   border-bottom: 1px solid var(--w97-btn-dark, #404040);
-  font-size: 10px;
+  font-size: 12px;
   padding: 1px 6px;
   color: var(--w97-text, #000);
 }
@@ -269,12 +269,12 @@ select.rm-input {
   border-right: 2px solid var(--w97-btn-dark, #404040);
   border-bottom: 2px solid var(--w97-btn-dark, #404040);
   color: var(--w97-text, #000);
-  font-size: 11px;
+  font-size: 13px;
   font-family: inherit;
   font-weight: bold;
   cursor: pointer;
   padding: 3px 16px;
-  height: 26px;
+  height: 28px;
   border-radius: 0;
 }
 .rm-btn:hover:not(:disabled) {
@@ -292,4 +292,19 @@ select.rm-input {
 }
 .rm-btn-primary {
   min-width: 140px;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .rm-window {
+    width: 98vw;
+    max-height: 95vh;
+  }
+  .rm-overlay {
+    padding: 16px 4px;
+    align-items: center;
+  }
+  .rm-grid-2 {
+    grid-template-columns: 1fr;
+  }
 }

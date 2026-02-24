@@ -36,6 +36,31 @@ const FULL_TIME_SUB_TYPES = [
   { value: 'salary', label: 'Salary' },
 ];
 
+/* ── Country list with flags ───────────────────────────────── */
+const COUNTRIES = [
+  { value: '', label: '— Select Country —', flag: '' },
+  { value: 'US', label: '🇺🇸 United States', flag: '🇺🇸' },
+  { value: 'IN', label: '🇮🇳 India', flag: '🇮🇳' },
+  { value: 'GB', label: '🇬🇧 United Kingdom', flag: '🇬🇧' },
+  { value: 'CA', label: '🇨🇦 Canada', flag: '🇨🇦' },
+  { value: 'AU', label: '🇦🇺 Australia', flag: '🇦🇺' },
+  { value: 'DE', label: '🇩🇪 Germany', flag: '🇩🇪' },
+  { value: 'SG', label: '🇸🇬 Singapore', flag: '🇸🇬' },
+  { value: 'AE', label: '🇦🇪 UAE', flag: '🇦🇪' },
+  { value: 'JP', label: '🇯🇵 Japan', flag: '🇯🇵' },
+  { value: 'NL', label: '🇳🇱 Netherlands', flag: '🇳🇱' },
+  { value: 'FR', label: '🇫🇷 France', flag: '🇫🇷' },
+  { value: 'BR', label: '🇧🇷 Brazil', flag: '🇧🇷' },
+  { value: 'MX', label: '🇲🇽 Mexico', flag: '🇲🇽' },
+  { value: 'PH', label: '🇵🇭 Philippines', flag: '🇵🇭' },
+  { value: 'IL', label: '🇮🇱 Israel', flag: '🇮🇱' },
+  { value: 'IE', label: '🇮🇪 Ireland', flag: '🇮🇪' },
+  { value: 'PL', label: '🇵🇱 Poland', flag: '🇵🇱' },
+  { value: 'SE', label: '🇸🇪 Sweden', flag: '🇸🇪' },
+  { value: 'CH', label: '🇨🇭 Switzerland', flag: '🇨🇭' },
+  { value: 'KR', label: '🇰🇷 South Korea', flag: '🇰🇷' },
+];
+
 /* ── Known skills dictionary for extraction ─────────────────── */
 const SKILL_DICT = [
   'Java', 'Spring Boot', 'Spring', 'Kafka', 'RabbitMQ', 'ActiveMQ',
@@ -183,6 +208,9 @@ interface FormState {
   title: string;
   description: string;
   location: string;
+  job_country: string;
+  job_state: string;
+  job_city: string;
   job_type: string;
   job_sub_type: string;
   work_mode: string;
@@ -199,6 +227,9 @@ const EMPTY: FormState = {
   title: '',
   description: '',
   location: '',
+  job_country: '',
+  job_state: '',
+  job_city: '',
   job_type: 'full_time',
   job_sub_type: '',
   work_mode: '',
@@ -222,7 +253,6 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
   const { loading, error } = useAppSelector((state) => state.jobs);
   const { saveDraft, getDraft, clearDraft, hasDraft } = useDraftCache<FormState>('matchdb_draft_post_job');
   const [form, setForm] = useState<FormState>(EMPTY);
-  const [skillInput, setSkillInput] = useState('');
   const [success, setSuccess] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
 
@@ -245,17 +275,6 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
     setForm((f) => ({ ...f, [key]: value }));
     setSuccess(false);
   };
-
-  const addSkill = () => {
-    const skill = skillInput.trim();
-    if (skill && !form.skills_required.includes(skill)) {
-      setField('skills_required', [...form.skills_required, skill]);
-    }
-    setSkillInput('');
-  };
-
-  const removeSkill = (skill: string) =>
-    setField('skills_required', form.skills_required.filter((s) => s !== skill));
 
   /* ── Smart parse ── */
   const handleParse = () => {
@@ -288,6 +307,9 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
         title: form.title,
         description: form.description,
         location: form.location,
+        job_country: form.job_country,
+        job_state: form.job_state || undefined,
+        job_city: form.job_city || undefined,
         job_type: form.job_type,
         job_sub_type: form.job_sub_type || undefined,
         work_mode: form.work_mode || undefined,
@@ -474,6 +496,50 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
               </select>
             </div>
           </div>
+
+          {/* ── Candidate Location (Country / State / City) ── */}
+          <div style={{ marginTop: 6 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#444', marginBottom: 2, display: 'block' }}>
+              🌍 Where do you need a candidate?
+            </label>
+            <div className="rm-grid-2" style={{ marginTop: 2 }}>
+              <div className="rm-field">
+                <label>Country *</label>
+                <select
+                  className="rm-input"
+                  value={form.job_country}
+                  onChange={(e) => { setField('job_country', e.target.value); setField('job_state', ''); setField('job_city', ''); }}
+                >
+                  {COUNTRIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="rm-field">
+                <label>State / Province</label>
+                <input
+                  type="text"
+                  className="rm-input"
+                  value={form.job_state}
+                  onChange={(e) => setField('job_state', e.target.value)}
+                  placeholder="e.g. California, Maharashtra"
+                />
+              </div>
+            </div>
+            <div className="rm-grid-2" style={{ marginTop: 4 }}>
+              <div className="rm-field">
+                <label>City</label>
+                <input
+                  type="text"
+                  className="rm-input"
+                  value={form.job_city}
+                  onChange={(e) => setField('job_city', e.target.value)}
+                  placeholder="e.g. San Francisco, Mumbai"
+                />
+              </div>
+              <div />
+            </div>
+          </div>
           <div className="rm-grid-2" style={{ marginTop: 6 }}>
             {showSubType && (
               <div className="rm-field">
@@ -548,42 +614,8 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
         <fieldset className="rm-fieldset">
           <legend>Requirements</legend>
           <p className="pjp-hint">
-            Skills are automatically extracted when you use Smart Paste or when the job is saved.
-            Add any extra skills manually below.
+            Skills are automatically extracted from the job title and description when the job is saved.
           </p>
-          <div className="pjp-skill-row">
-            <input
-              type="text"
-              className="rm-input"
-              value={skillInput}
-              onChange={(e) => setSkillInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSkill(); } }}
-              placeholder="e.g. React, Python, AWS"
-            />
-            <button type="button" className="rm-btn" onClick={addSkill}>
-              + Add Skill
-            </button>
-          </div>
-          <div className="rm-skill-list" style={{ marginTop: 6 }}>
-            {form.skills_required.map((skill) => (
-              <span key={skill} className="rm-skill-tag">
-                {skill}
-                <button
-                  type="button"
-                  onClick={() => removeSkill(skill)}
-                  className="pjp-skill-remove"
-                  aria-label={`Remove ${skill}`}
-                >
-                  ✕
-                </button>
-              </span>
-            ))}
-            {form.skills_required.length === 0 && (
-              <span className="pjp-hint" style={{ marginLeft: 0 }}>
-                No skills added. Use Smart Paste or add manually.
-              </span>
-            )}
-          </div>
           <div className="rm-field rm-field-mt pjp-exp-field">
             <label>Experience Required (Years)</label>
             <input
@@ -632,13 +664,13 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
         <button
           type="submit"
           className="rm-btn rm-btn-primary"
-          disabled={loading || !form.title || !form.description}
+          disabled={loading || !form.title || !form.description || !form.job_country}
           title="Post this job — skills will be auto-extracted from the description"
         >
           {loading ? 'Posting...' : '📤 Post Job'}
         </button>
         <span className="pjp-hint" style={{ alignSelf: 'center', marginLeft: 4 }}>
-          * required fields
+          * Title, Description & Country are required
         </span>
       </div>
     </form>
