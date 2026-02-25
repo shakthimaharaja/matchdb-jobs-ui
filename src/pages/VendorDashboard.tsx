@@ -6,7 +6,9 @@ import DBLayout, { NavGroup } from "../components/DBLayout";
 import DetailModal from "../components/DetailModal";
 import JobPostingModal from "../components/JobPostingModal";
 import PokeEmailModal from "../components/PokeEmailModal";
-import { Job, PokeRecord } from "../store/jobsSlice";
+import { PokesTable } from "../shared";
+import SharedTable, { ColumnDef } from "../shared/SharedTable";
+import { Job } from "../store/jobsSlice";
 import {
   clearPokeState,
   closeJob,
@@ -77,171 +79,169 @@ const POKE_LIMIT: Record<string, number> = {
 };
 
 const COUNTRY_FLAGS: Record<string, string> = {
-  US: '🇺🇸', IN: '🇮🇳', GB: '🇬🇧', CA: '🇨🇦', AU: '🇦🇺',
-  DE: '🇩🇪', SG: '🇸🇬', AE: '🇦🇪', JP: '🇯🇵', NL: '🇳🇱',
-  FR: '🇫🇷', BR: '🇧🇷', MX: '🇲🇽', PH: '🇵🇭', IL: '🇮🇱',
-  IE: '🇮🇪', PL: '🇵🇱', SE: '🇸🇪', CH: '🇨🇭', KR: '🇰🇷',
+  US: "🇺🇸",
+  IN: "🇮🇳",
+  GB: "🇬🇧",
+  CA: "🇨🇦",
+  AU: "🇦🇺",
+  DE: "🇩🇪",
+  SG: "🇸🇬",
+  AE: "🇦🇪",
+  JP: "🇯🇵",
+  NL: "🇳🇱",
+  FR: "🇫🇷",
+  BR: "🇧🇷",
+  MX: "🇲🇽",
+  PH: "🇵🇭",
+  IL: "🇮🇱",
+  IE: "🇮🇪",
+  PL: "🇵🇱",
+  SE: "🇸🇪",
+  CH: "🇨🇭",
+  KR: "🇰🇷",
 };
 
 const COUNTRY_NAMES: Record<string, string> = {
-  US: 'United States', IN: 'India', GB: 'United Kingdom', CA: 'Canada',
-  AU: 'Australia', DE: 'Germany', SG: 'Singapore', AE: 'UAE',
-  JP: 'Japan', NL: 'Netherlands', FR: 'France', BR: 'Brazil',
-  MX: 'Mexico', PH: 'Philippines', IL: 'Israel', IE: 'Ireland',
-  PL: 'Poland', SE: 'Sweden', CH: 'Switzerland', KR: 'South Korea',
+  US: "United States",
+  IN: "India",
+  GB: "United Kingdom",
+  CA: "Canada",
+  AU: "Australia",
+  DE: "Germany",
+  SG: "Singapore",
+  AE: "UAE",
+  JP: "Japan",
+  NL: "Netherlands",
+  FR: "France",
+  BR: "Brazil",
+  MX: "Mexico",
+  PH: "Philippines",
+  IL: "Israel",
+  IE: "Ireland",
+  PL: "Poland",
+  SE: "Sweden",
+  CH: "Switzerland",
+  KR: "South Korea",
 };
 
 type ViewMode =
   | "candidates"
   | "postings"
+  | "active-openings"
   | "pokes-sent"
   | "pokes-received"
   | "mails-sent"
   | "mails-received";
 
-/* ── Inline activity table (pokes or mails, sent or received) ── */
-const SECTION_META: Record<
-  "pokes-sent" | "pokes-received" | "mails-sent" | "mails-received",
-  { icon: string; title: string; toCol: string; emptyMsg: string }
-> = {
-  "pokes-sent": {
-    icon: "⚡",
-    title: "Pokes Sent",
-    toCol: "To (Candidate)",
-    emptyMsg: "No pokes sent yet.",
-  },
-  "pokes-received": {
-    icon: "⚡",
-    title: "Pokes Received",
-    toCol: "From (Candidate)",
-    emptyMsg: "No pokes received yet.",
-  },
-  "mails-sent": {
-    icon: "✉",
-    title: "Mails Sent",
-    toCol: "To (Candidate)",
-    emptyMsg: "No mails sent yet.",
-  },
-  "mails-received": {
-    icon: "✉",
-    title: "Mails Received",
-    toCol: "From (Candidate)",
-    emptyMsg: "No mails received yet.",
-  },
-};
+/** Color badge for count thresholds */
+const countColor = (n: number): string =>
+  n >= 50 ? "#2e7d32" : n >= 25 ? "#b8860b" : n >= 10 ? "#d4600a" : "#bb3333";
+const countBg = (n: number): string =>
+  n >= 50 ? "#e8f5e9" : n >= 25 ? "#fffde6" : n >= 10 ? "#fff3e0" : "#fff5f5";
 
-const PokesTable: React.FC<{
-  pokes: PokeRecord[];
-  loading: boolean;
-  section: "pokes-sent" | "pokes-received" | "mails-sent" | "mails-received";
-}> = ({ pokes, loading, section }) => {
-  const isSent = section === "pokes-sent" || section === "mails-sent";
-  const meta = SECTION_META[section];
-  return (
-    <div className="matchdb-panel">
-      <div className="matchdb-panel-title">
-        <span className="matchdb-panel-title-icon">{meta.icon}</span>
-        <span className="matchdb-panel-title-text">{meta.title}</span>
-        <span className="matchdb-panel-title-meta">
-          {loading
-            ? "Loading..."
-            : `${pokes.length} record${pokes.length !== 1 ? "s" : ""}`}
-        </span>
-      </div>
-      <div className="matchdb-table-wrap">
-        <table className="matchdb-table">
-          <colgroup>
-            <col style={{ width: 28 }} />
-            <col style={{ width: "14%" }} />
-            <col style={{ width: "18%" }} />
-            <col style={{ width: "7%" }} />
-            <col style={{ width: "16%" }} />
-            <col />
-            <col style={{ width: "9%" }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>{meta.toCol}</th>
-              <th>Email</th>
-              <th>Type</th>
-              <th>Job Title</th>
-              <th>Subject / Context</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading &&
-              Array.from({ length: 5 }).map((_, ri) => (
-                <tr key={`sk-${ri}`} className="matchdb-skeleton-row" aria-hidden="true">
-                  {[20, 80, 110, 50, 90, 130, 60].map((w, ci) => (
-                    <td key={ci}><span className="w97-shimmer" style={{ width: w }} /></td>
-                  ))}
-                </tr>
-              ))}
-            {!loading && pokes.length === 0 && (
-              <tr>
-                <td colSpan={7} className="matchdb-empty">
-                  {meta.emptyMsg}
-                </td>
-              </tr>
-            )}
-            {!loading &&
-              pokes.map((p, i) => {
-                const personName = isSent ? p.target_name : p.sender_name;
-                const personEmail = isSent ? p.target_email : p.sender_email;
-                const personType = isSent
-                  ? "Candidate"
-                  : p.sender_type || "Candidate";
-                return (
-                  <tr key={p.id}>
-                    <td
-                      style={{
-                        textAlign: "center",
-                        color: "#808080",
-                        fontSize: 10,
-                      }}
-                    >
-                      {i + 1}
-                    </td>
-                    <td title={personName}>{personName}</td>
-                    <td>
-                      <a
-                        href={`mailto:${personEmail}`}
-                        style={{ color: "#2a5fa0", textDecoration: "none" }}
-                      >
-                        {personEmail}
-                      </a>
-                    </td>
-                    <td>
-                      <span
-                        className="matchdb-type-pill"
-                        style={{ textTransform: "capitalize" }}
-                      >
-                        {personType}
-                      </span>
-                    </td>
-                    <td title={p.job_title || "—"}>{p.job_title || "—"}</td>
-                    <td title={p.subject}>{p.subject}</td>
-                    <td style={{ fontSize: 11 }}>
-                      {new Date(p.created_at).toLocaleDateString()}
-                    </td>
-                  </tr>
-                );
-              })}
-          </tbody>
-        </table>
-      </div>
-      <div className="matchdb-footnote">
-        <span>
-          Showing {pokes.length} record{pokes.length !== 1 ? "s" : ""}
-        </span>
-        <span className="matchdb-footnote-sep">|</span>
-        <span>InnoDB</span>
-      </div>
-    </div>
-  );
-};
+/** Column definitions for the job postings table (widths passed as prop, not hardcoded inline) */
+const POSTINGS_COLUMNS: ColumnDef[] = [
+  {
+    key: "num",
+    header: "#",
+    width: "28px",
+    align: "center",
+    skeletonWidth: 22,
+  },
+  {
+    key: "expand",
+    header: "⊕",
+    width: "22px",
+    align: "center",
+    skeletonWidth: 22,
+    thProps: { title: "Click to view full posting" },
+  },
+  { key: "title", header: "Title", width: "14%", skeletonWidth: 100 },
+  {
+    key: "status",
+    header: "Status",
+    width: "7%",
+    skeletonWidth: 55,
+    thProps: { title: "Whether the job is accepting applications" },
+  },
+  {
+    key: "loc",
+    header: "Location",
+    width: "9%",
+    skeletonWidth: 70,
+    thProps: { title: "Job location" },
+  },
+  {
+    key: "type",
+    header: "Type",
+    width: "10%",
+    skeletonWidth: 80,
+    thProps: { title: "Employment type and sub-type" },
+  },
+  {
+    key: "mode",
+    header: "Mode",
+    width: "6%",
+    skeletonWidth: 50,
+    thProps: { title: "Work arrangement" },
+  },
+  {
+    key: "pay",
+    header: "Pay/Hr",
+    width: "6%",
+    skeletonWidth: 50,
+    thProps: { title: "Pay rate per hour" },
+  },
+  {
+    key: "exp",
+    header: "Exp",
+    width: "5%",
+    skeletonWidth: 40,
+    thProps: { title: "Years of experience required" },
+  },
+  {
+    key: "skills",
+    header: "Skills",
+    width: "5%",
+    skeletonWidth: 40,
+    thProps: { title: "Required skills count" },
+  },
+  {
+    key: "pokes",
+    header: "Pokes",
+    width: "5%",
+    skeletonWidth: 40,
+    thProps: { title: "Pokes sent for this opening" },
+  },
+  {
+    key: "mails",
+    header: "Mails",
+    width: "5%",
+    skeletonWidth: 40,
+    thProps: { title: "Mails sent for this opening" },
+  },
+  {
+    key: "posted",
+    header: "Posted",
+    width: "8%",
+    skeletonWidth: 70,
+    thProps: { title: "Date job was posted" },
+  },
+  {
+    key: "matches",
+    header: "Matches",
+    width: "7%",
+    skeletonWidth: 60,
+    thProps: { title: "View matching candidates for this job" },
+  },
+  {
+    key: "action",
+    header: "Action",
+    width: "8%",
+    skeletonWidth: 60,
+    thProps: { title: "Close or reopen this position" },
+  },
+];
 
 const VendorDashboard: React.FC<Props> = ({
   token,
@@ -282,6 +282,26 @@ const VendorDashboard: React.FC<Props> = ({
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (id) next.set("job", id);
+      else next.delete("job");
+      return next;
+    });
+  };
+  /** Combined setter — avoids stale-searchParams race when both change at once */
+  const navigateToJob = (jobId: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("view", "candidates");
+      if (jobId) next.set("job", jobId);
+      else next.delete("job");
+      return next;
+    });
+  };
+  /** Navigate to a view with an optional job filter */
+  const navigateToView = (mode: ViewMode, jobId?: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("view", mode);
+      if (jobId) next.set("job", jobId);
       else next.delete("job");
       return next;
     });
@@ -341,6 +361,22 @@ const VendorDashboard: React.FC<Props> = ({
     () => pokesSent.filter((p) => p.is_email),
     [pokesSent],
   );
+
+  // Per-job poke and mail counts
+  const pokesPerJob = useMemo(() => {
+    const map: Record<string, number> = {};
+    pokesSentOnly.forEach((p) => {
+      if (p.job_id) map[p.job_id] = (map[p.job_id] || 0) + 1;
+    });
+    return map;
+  }, [pokesSentOnly]);
+  const mailsPerJob = useMemo(() => {
+    const map: Record<string, number> = {};
+    mailsSentOnly.forEach((p) => {
+      if (p.job_id) map[p.job_id] = (map[p.job_id] || 0) + 1;
+    });
+    return map;
+  }, [mailsSentOnly]);
   const pokesReceivedOnly = useMemo(
     () => pokesReceived.filter((p) => !p.is_email),
     [pokesReceived],
@@ -413,7 +449,10 @@ const VendorDashboard: React.FC<Props> = ({
     );
     if (postedCountries.length > 0) {
       const countryLabels = postedCountries
-        .map((code) => `${COUNTRY_FLAGS[code] || ''} ${COUNTRY_NAMES[code] || code}`)
+        .map(
+          (code) =>
+            `${COUNTRY_FLAGS[code] || ""} ${COUNTRY_NAMES[code] || code}`,
+        )
         .join(" · ");
       const text = `Hiring in: ${countryLabels} — ${activeJobs.length} active opening${activeJobs.length !== 1 ? "s" : ""}.`;
       window.dispatchEvent(
@@ -426,6 +465,47 @@ const VendorDashboard: React.FC<Props> = ({
       );
     };
   }, [vendorJobs]);
+
+  // Emit footer info for shell to display
+  useEffect(() => {
+    const count =
+      viewMode === "active-openings"
+        ? activeJobs.length
+        : viewMode === "postings"
+          ? vendorJobs.length
+          : viewMode === "candidates"
+            ? vendorCandidateMatchesTotal
+            : viewMode === "pokes-sent"
+              ? pokesSentOnly.length
+              : viewMode === "pokes-received"
+                ? pokesReceivedOnly.length
+                : viewMode === "mails-sent"
+                  ? mailsSentOnly.length
+                  : viewMode === "mails-received"
+                    ? mailsReceivedOnly.length
+                    : 0;
+    window.dispatchEvent(
+      new CustomEvent("matchdb:footerInfo", {
+        detail: {
+          text: `Showing ${count} row${count !== 1 ? "s" : ""} | InnoDB`,
+        },
+      }),
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("matchdb:footerInfo", { detail: { text: "" } }),
+      );
+    };
+  }, [
+    viewMode,
+    vendorJobs.length,
+    activeJobs.length,
+    vendorCandidateMatchesTotal,
+    pokesSentOnly.length,
+    pokesReceivedOnly.length,
+    mailsSentOnly.length,
+    mailsReceivedOnly.length,
+  ]);
 
   useEffect(() => {
     if (viewMode === "candidates") {
@@ -510,8 +590,20 @@ const VendorDashboard: React.FC<Props> = ({
     );
   }, [vendorJobs, postingSearch]);
 
+  /* ── Filtered active openings (search-aware) ── */
+  const filteredActivePostings = useMemo(() => {
+    const q = postingSearch.trim().toLowerCase();
+    if (!q) return activeJobs;
+    return activeJobs.filter(
+      (j) =>
+        j.title?.toLowerCase().includes(q) ||
+        j.location?.toLowerCase().includes(q) ||
+        j.job_type?.toLowerCase().includes(q),
+    );
+  }, [activeJobs, postingSearch]);
+
   const selectedJobTitle = selectedJobId
-    ? activeJobs.find((j) => j.id === selectedJobId)?.title || "Job"
+    ? vendorJobs.find((j) => j.id === selectedJobId)?.title || "Job"
     : "All Openings";
 
   const handlePoke = (row: MatchRow) => {
@@ -628,14 +720,14 @@ const VendorDashboard: React.FC<Props> = ({
           label: "Matched Candidates",
           count: vendorCandidateMatchesTotal,
           active: viewMode === "candidates",
-          onClick: () => setViewMode("candidates"),
+          onClick: () => navigateToView("candidates"),
         },
         {
           id: "view-postings",
           label: "My Job Postings",
           count: vendorJobsTotal,
           active: viewMode === "postings",
-          onClick: () => setViewMode("postings"),
+          onClick: () => navigateToView("postings"),
         },
       ],
     },
@@ -644,23 +736,17 @@ const VendorDashboard: React.FC<Props> = ({
       icon: "",
       items: [
         {
-          id: "",
+          id: "active-openings",
           label: "All Active Openings",
           count: activeJobs.length,
-          active: viewMode === "candidates" && selectedJobId === "",
-          onClick: () => {
-            setViewMode("candidates");
-            setSelectedJobId("");
-          },
+          active: viewMode === "active-openings",
+          onClick: () => navigateToView("active-openings"),
         },
         ...activeJobs.map((job) => ({
           id: job.id,
           label: job.title,
           active: viewMode === "candidates" && selectedJobId === job.id,
-          onClick: () => {
-            setViewMode("candidates");
-            setSelectedJobId(job.id);
-          },
+          onClick: () => navigateToJob(job.id),
         })),
       ],
     },
@@ -672,21 +758,46 @@ const VendorDashboard: React.FC<Props> = ({
           id: "pokes-sent",
           label: "Pokes Sent",
           count: pokesSentOnly.length,
-          active: viewMode === "pokes-sent",
-          onClick: () => setViewMode("pokes-sent"),
+          active: viewMode === "pokes-sent" && !selectedJobId,
+          onClick: () => navigateToView("pokes-sent"),
         },
         {
           id: "pokes-received",
           label: "Pokes Received",
           count: pokesReceivedOnly.length,
-          active: viewMode === "pokes-received",
-          onClick: () => setViewMode("pokes-received"),
+          active: viewMode === "pokes-received" && !selectedJobId,
+          onClick: () => navigateToView("pokes-received"),
         },
-        ...(isFinite(pokeLimit) ? [{
-          id: "pokes-remaining",
-          label: "Remaining",
-          count: Math.max(0, pokeLimit - pokeCount),
-        }] : []),
+        ...(isFinite(pokeLimit)
+          ? [
+              {
+                id: "pokes-remaining",
+                label: "Remaining",
+                count: Math.max(0, pokeLimit - pokeCount),
+              },
+            ]
+          : []),
+        // Per-job poke sub-items when in pokes view
+        ...(viewMode === "pokes-sent" || viewMode === "pokes-received"
+          ? activeJobs
+              .filter(
+                (job) =>
+                  (pokesPerJob[job.id] || 0) > 0 ||
+                  (viewMode === "pokes-received" &&
+                    pokesReceivedOnly.some((p) => p.job_id === job.id)),
+              )
+              .map((job) => ({
+                id: `poke-job-${job.id}`,
+                label: job.title,
+                count:
+                  viewMode === "pokes-sent"
+                    ? pokesPerJob[job.id] || 0
+                    : pokesReceivedOnly.filter((p) => p.job_id === job.id)
+                        .length,
+                active: selectedJobId === job.id,
+                onClick: () => navigateToView(viewMode, job.id),
+              }))
+          : []),
       ],
     },
     {
@@ -697,15 +808,15 @@ const VendorDashboard: React.FC<Props> = ({
           id: "mails-sent",
           label: "Mails Sent",
           count: mailsSentOnly.length,
-          active: viewMode === "mails-sent",
-          onClick: () => setViewMode("mails-sent"),
+          active: viewMode === "mails-sent" && !selectedJobId,
+          onClick: () => navigateToView("mails-sent"),
         },
         {
           id: "mails-received",
           label: "Mails Received",
           count: mailsReceivedOnly.length,
-          active: viewMode === "mails-received",
-          onClick: () => setViewMode("mails-received"),
+          active: viewMode === "mails-received" && !selectedJobId,
+          onClick: () => navigateToView("mails-received"),
         },
         ...(plan !== "free" && rows.length > 0
           ? [
@@ -720,6 +831,27 @@ const VendorDashboard: React.FC<Props> = ({
                 },
               },
             ]
+          : []),
+        // Per-job mail sub-items when in mails view
+        ...(viewMode === "mails-sent" || viewMode === "mails-received"
+          ? activeJobs
+              .filter(
+                (job) =>
+                  (mailsPerJob[job.id] || 0) > 0 ||
+                  (viewMode === "mails-received" &&
+                    mailsReceivedOnly.some((p) => p.job_id === job.id)),
+              )
+              .map((job) => ({
+                id: `mail-job-${job.id}`,
+                label: job.title,
+                count:
+                  viewMode === "mails-sent"
+                    ? mailsPerJob[job.id] || 0
+                    : mailsReceivedOnly.filter((p) => p.job_id === job.id)
+                        .length,
+                active: selectedJobId === job.id,
+                onClick: () => navigateToView(viewMode, job.id),
+              }))
           : []),
       ],
     },
@@ -771,7 +903,9 @@ const VendorDashboard: React.FC<Props> = ({
             ? ["Vendor Portal", "Mails", "Mails Received"]
             : viewMode === "candidates"
               ? ["Vendor Portal", selectedJobTitle]
-              : ["Vendor Portal", "My Job Postings"];
+              : viewMode === "active-openings"
+                ? ["Vendor Portal", "Active Openings"]
+                : ["Vendor Portal", "My Job Postings"];
 
   return (
     <DBLayout userType="vendor" navGroups={navGroups} breadcrumb={breadcrumb}>
@@ -783,33 +917,106 @@ const VendorDashboard: React.FC<Props> = ({
             : undefined
         }
       >
-        {/* Post Job button */}
-        {onPostJob && (
-          <div style={{ display: "flex", marginBottom: 8 }}>
+        {/* ── Dashboard stat cards ── */}
+        <div className="matchdb-stat-bar">
+          {[
+            {
+              label: "Active Openings",
+              value: activeJobCount,
+              icon: "💼",
+              view: "active-openings" as ViewMode,
+            },
+            {
+              label: "Total Postings",
+              value: vendorJobs.length,
+              icon: "📋",
+              view: "postings" as ViewMode,
+            },
+            {
+              label: "Closed",
+              value: vendorJobs.length - activeJobCount,
+              icon: "🔒",
+            },
+            {
+              label: "Matched Candidates",
+              value: vendorCandidateMatchesTotal,
+              icon: "👥",
+              view: "candidates" as ViewMode,
+            },
+            {
+              label: "Pokes Sent",
+              value: pokesSentOnly.length,
+              icon: "👋",
+              view: "pokes-sent" as ViewMode,
+            },
+            {
+              label: "Pokes In",
+              value: pokesReceivedOnly.length,
+              icon: "📥",
+              view: "pokes-received" as ViewMode,
+            },
+            {
+              label: "Mails Sent",
+              value: mailsSentOnly.length,
+              icon: "📤",
+              view: "mails-sent" as ViewMode,
+            },
+            {
+              label: "Mails In",
+              value: mailsReceivedOnly.length,
+              icon: "📬",
+              view: "mails-received" as ViewMode,
+            },
+          ].map((card) => (
             <button
+              key={card.label}
               type="button"
-              className="matchdb-btn matchdb-btn-primary"
-              onClick={atJobLimit ? openPricingModal : onPostJob}
-              style={{ marginLeft: "auto" }}
+              className={`matchdb-stat-rect${
+                card.view && viewMode === card.view
+                  ? " matchdb-stat-rect-active"
+                  : ""
+              }`}
+              onClick={() => card.view && navigateToView(card.view)}
+              title={card.view ? `View ${card.label}` : card.label}
             >
-              {atJobLimit
-                ? plan === "free"
-                  ? "🔒 Subscribe to Post Jobs"
-                  : "🔒 Upgrade to Post More"
-                : "+ Post New Job"}
+              <span className="matchdb-stat-icon">{card.icon}</span>
+              <span>
+                <span
+                  className="matchdb-stat-value"
+                  style={{
+                    color: countColor(card.value),
+                    background: countBg(card.value),
+                  }}
+                >
+                  {card.value}
+                </span>
+                <span className="matchdb-stat-label">{card.label}</span>
+              </span>
             </button>
-          </div>
-        )}
+          ))}
+        </div>
 
         {/* Error banner */}
         {error && (
-          <div className="w97-alert w97-alert-error" role="alert" aria-live="assertive">
+          <div
+            className="w97-alert w97-alert-error"
+            role="alert"
+            aria-live="assertive"
+          >
             ⚠ Failed to load data: {error}
             <button
               aria-label="Retry loading data"
               onClick={() => {
                 dispatch(fetchVendorJobs({ token }));
-                if (viewMode === "candidates") dispatch(fetchVendorCandidateMatches({ token, jobId: selectedJobId || null, page: currentPage, limit: currentPageSize }));
+                if (viewMode === "candidates")
+                  dispatch(
+                    fetchVendorCandidateMatches({
+                      token,
+                      jobId: selectedJobId || null,
+                      page: currentPage,
+                      limit: currentPageSize,
+                    }),
+                  );
               }}
             >
               ↺ Retry
@@ -817,288 +1024,396 @@ const VendorDashboard: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Job limit warning */}
-        {isFinite(jobLimit) && activeJobCount >= jobLimit - 1 && jobLimit > 0 && (
-          <div className="w97-alert w97-alert-warning" role="status" aria-live="polite">
-            ⚠ {activeJobCount >= jobLimit
-              ? `Job limit reached (${activeJobCount}/${jobLimit}). Upgrade to post more.`
-              : `1 job posting slot remaining on your ${plan} plan.`}
-            <button onClick={openPricingModal} aria-label="View upgrade plans">
-              Upgrade →
-            </button>
-          </div>
-        )}
-
-        {/* Poke limit warning */}
-        {isFinite(pokeLimit) && pokeCount >= Math.floor(pokeLimit * 0.8) && pokeLimit > 0 && (
-          <div className="w97-alert w97-alert-warning" role="status" aria-live="polite">
-            ⚠ Poke limit nearly reached ({pokeCount}/{pokeLimit} this month).
-            <button onClick={openPricingModal} aria-label="View upgrade plans">
-              Upgrade →
-            </button>
-          </div>
-        )}
+        {/* Job info bar — for candidates/pokes/mails with a specific job selected */}
+        {(viewMode === "candidates" ||
+          viewMode === "pokes-sent" ||
+          viewMode === "pokes-received" ||
+          viewMode === "mails-sent" ||
+          viewMode === "mails-received") &&
+        selectedJobId
+          ? (() => {
+              const job = vendorJobs.find((j) => j.id === selectedJobId);
+              if (!job) return null;
+              const typeLabel =
+                TYPE_LABELS[job.job_type] || job.job_type || "-";
+              const subLabel = job.job_sub_type
+                ? SUB_LABELS[job.job_sub_type] || job.job_sub_type
+                : "";
+              const modeLabel = job.work_mode
+                ? MODE_LABELS[job.work_mode] || job.work_mode
+                : "-";
+              const rate = job.pay_per_hour
+                ? `$${Number(job.pay_per_hour).toFixed(0)}/hr`
+                : job.salary_max
+                  ? `$${Number(job.salary_max).toLocaleString()}`
+                  : "-";
+              return (
+                <div
+                  className="w97-alert w97-alert-info"
+                  role="status"
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "6px 16px",
+                    alignItems: "center",
+                    fontSize: 12,
+                  }}
+                >
+                  <strong>💼 {job.title}</strong>
+                  <span>Location: {job.location || "-"}</span>
+                  <span>
+                    Type: {typeLabel}
+                    {subLabel ? ` / ${subLabel}` : ""}
+                  </span>
+                  <span>Mode: {modeLabel}</span>
+                  <span>Rate: {rate}</span>
+                  <span>Exp: {formatExperience(job.experience_required)}</span>
+                  <span
+                    style={{
+                      color: countColor(pokesPerJob[job.id] || 0),
+                      fontWeight: 700,
+                    }}
+                  >
+                    Pokes: {pokesPerJob[job.id] || 0}
+                  </span>
+                  <span
+                    style={{
+                      color: countColor(mailsPerJob[job.id] || 0),
+                      fontWeight: 700,
+                    }}
+                  >
+                    Mails: {mailsPerJob[job.id] || 0}
+                  </span>
+                  <span>Posted: {fmtDate(job.created_at)}</span>
+                  {job.skills_required?.length > 0 && (
+                    <span>
+                      Skills: {job.skills_required.slice(0, 5).join(", ")}
+                      {job.skills_required.length > 5
+                        ? ` +${job.skills_required.length - 5}`
+                        : ""}
+                    </span>
+                  )}
+                </div>
+              );
+            })()
+          : null}
 
         {/* ── POKES SENT VIEW ── */}
         {viewMode === "pokes-sent" && (
           <PokesTable
+            userType="vendor"
             pokes={pokesSentOnly}
             loading={pokesLoading}
             section="pokes-sent"
+            jobId={selectedJobId || undefined}
+            jobTitle={
+              selectedJobId
+                ? activeJobs.find((j) => j.id === selectedJobId)?.title
+                : undefined
+            }
+            onClearJob={() => setSelectedJobId("")}
           />
         )}
 
         {/* ── POKES RECEIVED VIEW ── */}
         {viewMode === "pokes-received" && (
           <PokesTable
+            userType="vendor"
             pokes={pokesReceivedOnly}
             loading={pokesLoading}
             section="pokes-received"
+            jobId={selectedJobId || undefined}
+            jobTitle={
+              selectedJobId
+                ? activeJobs.find((j) => j.id === selectedJobId)?.title
+                : undefined
+            }
+            onClearJob={() => setSelectedJobId("")}
           />
         )}
 
         {/* ── MAILS SENT VIEW ── */}
         {viewMode === "mails-sent" && (
           <PokesTable
+            userType="vendor"
             pokes={mailsSentOnly}
             loading={pokesLoading}
             section="mails-sent"
+            jobId={selectedJobId || undefined}
+            jobTitle={
+              selectedJobId
+                ? activeJobs.find((j) => j.id === selectedJobId)?.title
+                : undefined
+            }
+            onClearJob={() => setSelectedJobId("")}
           />
         )}
 
         {/* ── MAILS RECEIVED VIEW ── */}
         {viewMode === "mails-received" && (
           <PokesTable
+            userType="vendor"
             pokes={mailsReceivedOnly}
             loading={pokesLoading}
             section="mails-received"
+            jobId={selectedJobId || undefined}
+            jobTitle={
+              selectedJobId
+                ? activeJobs.find((j) => j.id === selectedJobId)?.title
+                : undefined
+            }
+            onClearJob={() => setSelectedJobId("")}
           />
         )}
 
-        {/* ── MY JOB POSTINGS VIEW ── */}
-        {viewMode === "postings" && (
-          <>
-            <div className="matchdb-toolbar">
-              <div className="matchdb-toolbar-left">
-                <label className="matchdb-label" htmlFor="posting-search">
-                  Search
-                </label>
-                <input
-                  id="posting-search"
-                  className="matchdb-input"
-                  value={postingSearch}
-                  onChange={(e) => setPostingSearch(e.target.value)}
-                  placeholder="Title, location, type..."
-                />
-                <button
-                  type="button"
-                  className="matchdb-btn"
-                  onClick={() => setPostingSearch("")}
-                >
-                  Reset
-                </button>
-              </div>
-              <div className="matchdb-toolbar-right">
-                <button
-                  type="button"
-                  className="matchdb-btn matchdb-btn-primary"
-                  onClick={() => dispatch(fetchVendorJobs({ token }))}
-                >
-                  ↻ Refresh
-                </button>
-              </div>
-            </div>
-
-            <div className="matchdb-panel">
-              <div className="matchdb-panel-title">
-                <span className="matchdb-panel-title-icon">📋</span>
-                <span className="matchdb-panel-title-text">
-                  My Job Postings
-                </span>
-                <span className="matchdb-panel-title-meta">
-                  {loading
-                    ? "Loading..."
-                    : `${filteredPostings.length} record${filteredPostings.length !== 1 ? "s" : ""}`}
-                </span>
-              </div>
-
-              <div className="matchdb-table-wrap">
-                <table className="matchdb-table">
-                  <colgroup>
-                    <col style={{ width: 28 }} />
-                    <col style={{ width: "17%" }} />
-                    <col style={{ width: "7%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "12%" }} />
-                    <col style={{ width: "6%" }} />
-                    <col style={{ width: "6%" }} />
-                    <col style={{ width: "4%" }} />
-                    <col style={{ width: "6%" }} />
-                    <col style={{ width: "5%" }} />
-                    <col style={{ width: "8%" }} />
-                    <col style={{ width: "7%" }} />
-                    <col style={{ width: "7%" }} />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th title="Click to view full posting">⊕</th>
-                      <th>Title</th>
-                      <th title="Whether the job is accepting applications">
-                        Status
-                      </th>
-                      <th title="Job location">Location</th>
-                      <th title="Employment type and sub-type">Type</th>
-                      <th title="Work arrangement">Mode</th>
-                      <th title="Pay rate per hour">Pay/Hr</th>
-                      <th title="Years of experience required">Exp</th>
-                      <th title="Required skills count">Skills</th>
-                      <th title="Number of applications received">Apps</th>
-                      <th title="Date job was posted">Posted</th>
-                      <th title="View matching candidates for this job">
-                        Matches
-                      </th>
-                      <th title="Close or reopen this position">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading &&
-                      Array.from({ length: 5 }).map((_, ri) => (
-                        <tr key={`sk-${ri}`} className="matchdb-skeleton-row" aria-hidden="true">
-                          {[24, 100, 55, 70, 80, 50, 45, 30, 35, 30, 70, 55, 55].map((w, ci) => (
-                            <td key={ci}><span className="w97-shimmer" style={{ width: w }} /></td>
-                          ))}
-                        </tr>
-                      ))}
-                    {!loading && filteredPostings.length === 0 && (
-                      <tr>
-                        <td colSpan={13} className="matchdb-empty">
-                          {vendorJobs.length === 0
-                            ? 'No job postings yet. Click "+ Post New Job" to get started.'
-                            : "No postings match your search."}
+        {/* ── MY JOB POSTINGS VIEW / ACTIVE OPENINGS VIEW ── */}
+        {(viewMode === "postings" || viewMode === "active-openings") &&
+          (() => {
+            const isActiveView = viewMode === "active-openings";
+            const tableData = isActiveView
+              ? filteredActivePostings
+              : filteredPostings;
+            const totalCount = isActiveView
+              ? activeJobs.length
+              : vendorJobs.length;
+            const panelLabel = isActiveView
+              ? "Active Openings"
+              : "My Job Postings";
+            return (
+              <>
+                <SharedTable<Job>
+                  key={postingSearch}
+                  columns={POSTINGS_COLUMNS}
+                  rows={tableData}
+                  loading={loading}
+                  titleExtra={
+                    <div className="matchdb-title-toolbar">
+                      <input
+                        id="posting-search"
+                        className="matchdb-input matchdb-title-search"
+                        value={postingSearch}
+                        onChange={(e) => setPostingSearch(e.target.value)}
+                        placeholder="Search..."
+                      />
+                      <button
+                        type="button"
+                        className="matchdb-btn matchdb-title-btn"
+                        onClick={() => setPostingSearch("")}
+                      >
+                        Reset
+                      </button>
+                      <span className="matchdb-title-count">
+                        {loading ? "..." : `${tableData.length}/${totalCount}`}
+                      </span>
+                      <button
+                        type="button"
+                        className="matchdb-btn matchdb-title-btn"
+                        onClick={() => dispatch(fetchVendorJobs({ token }))}
+                      >
+                        ↻
+                      </button>
+                      {onPostJob && (
+                        <button
+                          type="button"
+                          className="matchdb-btn matchdb-btn-primary matchdb-title-btn"
+                          onClick={atJobLimit ? openPricingModal : onPostJob}
+                        >
+                          {atJobLimit
+                            ? plan === "free"
+                              ? "🔒 Subscribe"
+                              : "🔒 Upgrade"
+                            : "+ Post"}
+                        </button>
+                      )}
+                    </div>
+                  }
+                  emptyMessage={
+                    isActiveView
+                      ? "No active job openings. Post a new job or reopen a closed one."
+                      : vendorJobs.length === 0
+                        ? 'No job postings yet. Click "+ Post New Job" to get started.'
+                        : "No postings match your search."
+                  }
+                  renderRow={(job, _pIdx, globalIdx) => {
+                    const typeStr =
+                      TYPE_LABELS[job.job_type] || job.job_type || "-";
+                    const subStr = job.job_sub_type
+                      ? ` › ${SUB_LABELS[job.job_sub_type] || job.job_sub_type.toUpperCase()}`
+                      : "";
+                    const n_poke = pokesPerJob[job.id] || 0;
+                    const n_mail = mailsPerJob[job.id] || 0;
+                    return (
+                      <tr
+                        key={job.id}
+                        title={`Click ⊕ to view full posting for "${job.title}"`}
+                      >
+                        <td
+                          style={{
+                            textAlign: "center",
+                            color: "#808080",
+                            fontSize: 10,
+                          }}
+                        >
+                          {globalIdx}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            type="button"
+                            className="matchdb-btn matchdb-btn-expand"
+                            title="View full job posting"
+                            onClick={() => setSelectedJobPosting(job)}
+                          >
+                            ⊕
+                          </button>
+                        </td>
+                        <td title={job.title}>{job.title}</td>
+                        <td>
+                          <span
+                            className={`matchdb-type-pill vdp-status${job.is_active ? "-active" : "-closed"}`}
+                          >
+                            {job.is_active ? "● Active" : "● Closed"}
+                          </span>
+                        </td>
+                        <td title={job.location}>
+                          {job.job_country
+                            ? `${COUNTRY_FLAGS[job.job_country] || ""} ${job.location || COUNTRY_NAMES[job.job_country] || job.job_country}`
+                            : job.location || "—"}
+                        </td>
+                        <td title={`${typeStr}${subStr}`}>
+                          <span className="matchdb-type-pill">
+                            {typeStr}
+                            {subStr}
+                          </span>
+                        </td>
+                        <td>
+                          {job.work_mode
+                            ? MODE_LABELS[job.work_mode] || job.work_mode
+                            : "—"}
+                        </td>
+                        <td>{formatRate(job.pay_per_hour)}</td>
+                        <td>
+                          {job.experience_required != null
+                            ? `${job.experience_required}y`
+                            : "—"}
+                        </td>
+                        <td>{job.skills_required?.length ?? 0}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="matchdb-btn"
+                            style={{
+                              fontSize: 11,
+                              padding: "0 6px",
+                              height: 20,
+                              minWidth: 28,
+                              fontWeight: 700,
+                              color: countColor(n_poke),
+                              background: countBg(n_poke),
+                              border: `1px solid ${countColor(n_poke)}40`,
+                            }}
+                            title={
+                              n_poke > 0
+                                ? `View ${n_poke} poke${n_poke !== 1 ? "s" : ""} sent for "${job.title}"`
+                                : "No pokes sent"
+                            }
+                            onClick={() =>
+                              setSearchParams((prev) => {
+                                const next = new URLSearchParams(prev);
+                                next.set("view", "pokes-sent");
+                                next.set("job", job.id);
+                                return next;
+                              })
+                            }
+                          >
+                            {n_poke}
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="matchdb-btn"
+                            style={{
+                              fontSize: 11,
+                              padding: "0 6px",
+                              height: 20,
+                              minWidth: 28,
+                              fontWeight: 700,
+                              color: countColor(n_mail),
+                              background: countBg(n_mail),
+                              border: `1px solid ${countColor(n_mail)}40`,
+                            }}
+                            title={
+                              n_mail > 0
+                                ? `View ${n_mail} mail${n_mail !== 1 ? "s" : ""} sent for "${job.title}"`
+                                : "No mails sent"
+                            }
+                            onClick={() =>
+                              setSearchParams((prev) => {
+                                const next = new URLSearchParams(prev);
+                                next.set("view", "mails-sent");
+                                next.set("job", job.id);
+                                return next;
+                              })
+                            }
+                          >
+                            {n_mail}
+                          </button>
+                        </td>
+                        <td>{fmtDate(job.created_at)}</td>
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            type="button"
+                            className="matchdb-btn vdp-btn-matches"
+                            disabled={!job.is_active}
+                            title={
+                              job.is_active
+                                ? `View candidates matched to "${job.title}"`
+                                : "Position is closed — reopen to view matches"
+                            }
+                            onClick={() =>
+                              setSearchParams((prev) => {
+                                const next = new URLSearchParams(prev);
+                                next.set("view", "candidates");
+                                next.set("job", job.id);
+                                return next;
+                              })
+                            }
+                          >
+                            👥 View
+                          </button>
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          {job.is_active ? (
+                            <button
+                              type="button"
+                              className="matchdb-btn vdp-btn-close"
+                              disabled={closingJobId === job.id}
+                              onClick={() => handleCloseJob(job.id)}
+                              title="Close this position — stop accepting applications"
+                            >
+                              {closingJobId === job.id ? "..." : "🔒 Close"}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="matchdb-btn vdp-btn-reopen"
+                              disabled={closingJobId === job.id}
+                              onClick={() => handleReopenJob(job.id)}
+                              title="Reopen this position — resume accepting applications"
+                            >
+                              {closingJobId === job.id ? "..." : "✔ Reopen"}
+                            </button>
+                          )}
                         </td>
                       </tr>
-                    )}
-                    {!loading &&
-                      filteredPostings.map((job) => {
-                        const typeStr =
-                          TYPE_LABELS[job.job_type] || job.job_type || "-";
-                        const subStr = job.job_sub_type
-                          ? ` › ${SUB_LABELS[job.job_sub_type] || job.job_sub_type.toUpperCase()}`
-                          : "";
-                        return (
-                          <tr
-                            key={job.id}
-                            title={`Click ⊕ to view full posting for "${job.title}"`}
-                          >
-                            <td style={{ textAlign: "center" }}>
-                              <button
-                                type="button"
-                                className="matchdb-btn matchdb-btn-expand"
-                                title="View full job posting"
-                                onClick={() => setSelectedJobPosting(job)}
-                              >
-                                ⊕
-                              </button>
-                            </td>
-                            <td title={job.title}>{job.title}</td>
-                            <td>
-                              <span
-                                className={`matchdb-type-pill vdp-status${job.is_active ? "-active" : "-closed"}`}
-                              >
-                                {job.is_active ? "● Active" : "● Closed"}
-                              </span>
-                            </td>
-                            <td title={job.location}>
-                              {job.job_country
-                                ? `${COUNTRY_FLAGS[job.job_country] || ''} ${job.location || COUNTRY_NAMES[job.job_country] || job.job_country}`
-                                : job.location || "—"}
-                            </td>
-                            <td title={`${typeStr}${subStr}`}>
-                              <span className="matchdb-type-pill">
-                                {typeStr}
-                                {subStr}
-                              </span>
-                            </td>
-                            <td>
-                              {job.work_mode
-                                ? MODE_LABELS[job.work_mode] || job.work_mode
-                                : "—"}
-                            </td>
-                            <td>{formatRate(job.pay_per_hour)}</td>
-                            <td>
-                              {job.experience_required != null
-                                ? `${job.experience_required}y`
-                                : "—"}
-                            </td>
-                            <td>{job.skills_required?.length ?? 0}</td>
-                            <td>{job.application_count ?? 0}</td>
-                            <td>{fmtDate(job.created_at)}</td>
-                            <td style={{ textAlign: "center" }}>
-                              <button
-                                type="button"
-                                className="matchdb-btn vdp-btn-matches"
-                                disabled={!job.is_active}
-                                title={
-                                  job.is_active
-                                    ? `View candidates matched to "${job.title}"`
-                                    : "Position is closed — reopen to view matches"
-                                }
-                                onClick={() => {
-                                  setSearchParams((prev) => {
-                                    const next = new URLSearchParams(prev);
-                                    next.set("view", "candidates");
-                                    next.set("job", job.id);
-                                    return next;
-                                  });
-                                }}
-                              >
-                                👥 View
-                              </button>
-                            </td>
-                            <td style={{ textAlign: "center" }}>
-                              {job.is_active ? (
-                                <button
-                                  type="button"
-                                  className="matchdb-btn vdp-btn-close"
-                                  disabled={closingJobId === job.id}
-                                  onClick={() => handleCloseJob(job.id)}
-                                  title="Close this position — stop accepting applications"
-                                >
-                                  {closingJobId === job.id ? "..." : "🔒 Close"}
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="matchdb-btn vdp-btn-reopen"
-                                  disabled={closingJobId === job.id}
-                                  onClick={() => handleReopenJob(job.id)}
-                                  title="Reopen this position — resume accepting applications"
-                                >
-                                  {closingJobId === job.id ? "..." : "✔ Reopen"}
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="matchdb-footnote">
-                <span>
-                  Showing {filteredPostings.length} of {vendorJobs.length}{" "}
-                  posting
-                  {vendorJobs.length !== 1 ? "s" : ""}
-                </span>
-                <span className="matchdb-footnote-sep">|</span>
-                <span>Active: {activeJobs.length}</span>
-                <span className="matchdb-footnote-sep">|</span>
-                <span>InnoDB</span>
-              </div>
-            </div>
-          </>
-        )}
+                    );
+                  }}
+                  title={panelLabel}
+                  titleIcon={isActiveView ? "🔓" : "📋"}
+                />
+              </>
+            );
+          })()}
 
         {/* ── MATCHED CANDIDATES VIEW ── */}
         {viewMode === "candidates" && (
@@ -1145,73 +1460,61 @@ const VendorDashboard: React.FC<Props> = ({
 
             {plan !== "free" && (
               <>
-                <div className="matchdb-toolbar">
-                  <div className="matchdb-toolbar-left">
-                    <label
-                      className="matchdb-label"
-                      htmlFor="vendor-job-filter"
-                    >
-                      Opening
-                    </label>
-                    <select
-                      id="vendor-job-filter"
-                      className="matchdb-select"
-                      value={selectedJobId}
-                      onChange={(e) => setSelectedJobId(e.target.value)}
-                    >
-                      <option value="">All Active Openings</option>
-                      {activeJobs.map((job) => (
-                        <option key={job.id} value={job.id}>
-                          {job.title}
-                        </option>
-                      ))}
-                    </select>
-                    <label className="matchdb-label" htmlFor="vendor-search">
-                      Search
-                    </label>
-                    <input
-                      id="vendor-search"
-                      className="matchdb-input"
-                      value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
-                      placeholder="Name, role, location..."
-                    />
-                    <button
-                      type="button"
-                      className="matchdb-btn"
-                      onClick={() => {
-                        setSelectedJobId("");
-                        setSearchText("");
-                      }}
-                    >
-                      Reset
-                    </button>
-                  </div>
-                  <div className="matchdb-toolbar-right">
-                    <button
-                      type="button"
-                      className="matchdb-btn matchdb-btn-primary"
-                      onClick={() => {
-                        setCurrentPage(1);
-                        dispatch(fetchVendorJobs({ token }));
-                        dispatch(
-                          fetchVendorCandidateMatches({
-                            token,
-                            jobId: selectedJobId || null,
-                            page: 1,
-                            limit: currentPageSize,
-                          }),
-                        );
-                      }}
-                    >
-                      ↻ Refresh
-                    </button>
-                  </div>
-                </div>
-
                 <MatchDataTable
                   title="Related Candidate Profiles"
                   titleIcon="👥"
+                  titleExtra={
+                    <div className="matchdb-title-toolbar">
+                      <select
+                        id="vendor-job-filter"
+                        className="matchdb-select matchdb-title-select"
+                        value={selectedJobId}
+                        onChange={(e) => setSelectedJobId(e.target.value)}
+                      >
+                        <option value="">All Openings</option>
+                        {activeJobs.map((job) => (
+                          <option key={job.id} value={job.id}>
+                            {job.title}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        id="vendor-search"
+                        className="matchdb-input matchdb-title-search"
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        placeholder="Search..."
+                      />
+                      <button
+                        type="button"
+                        className="matchdb-btn matchdb-title-btn"
+                        onClick={() => {
+                          setSelectedJobId("");
+                          setSearchText("");
+                        }}
+                      >
+                        Reset
+                      </button>
+                      <button
+                        type="button"
+                        className="matchdb-btn matchdb-title-btn"
+                        onClick={() => {
+                          setCurrentPage(1);
+                          dispatch(fetchVendorJobs({ token }));
+                          dispatch(
+                            fetchVendorCandidateMatches({
+                              token,
+                              jobId: selectedJobId || null,
+                              page: 1,
+                              limit: currentPageSize,
+                            }),
+                          );
+                        }}
+                      >
+                        ↻
+                      </button>
+                    </div>
+                  }
                   rows={rows}
                   loading={loading}
                   error={error}

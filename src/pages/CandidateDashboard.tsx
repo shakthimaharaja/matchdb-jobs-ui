@@ -5,6 +5,7 @@ import DBLayout, { NavGroup } from "../components/DBLayout";
 import DetailModal from "../components/DetailModal";
 import PokeEmailModal from "../components/PokeEmailModal";
 import CandidateProfile from "./CandidateProfile";
+import { PokesTable } from "../shared";
 import {
   clearPokeState,
   fetchCandidateMatches,
@@ -12,7 +13,6 @@ import {
   fetchPokesReceived,
   fetchProfile,
   sendPoke,
-  PokeRecord,
 } from "../store/jobsSlice";
 
 interface Props {
@@ -35,6 +35,13 @@ type ActiveView =
 const formatRate = (value?: number | null) =>
   value ? `$${Number(value).toFixed(0)}` : "-";
 const formatExperience = (value?: number | null) => `${Number(value || 0)} yrs`;
+
+/** Color badge for count thresholds — red when < 10 */
+const countColor = (n: number): string =>
+  n >= 50 ? "#2e7d32" : n >= 25 ? "#b8860b" : n >= 10 ? "#d4600a" : "#bb3333";
+const countBg = (n: number): string =>
+  n >= 50 ? "#e8f5e9" : n >= 25 ? "#fffde6" : n >= 10 ? "#fff3e0" : "#fff5f5";
+
 const companyFromEmail = (email?: string) => {
   if (!email) return "-";
   const domain = email.split("@")[1] || "";
@@ -81,162 +88,49 @@ const POKE_LIMIT: Record<string, number> = {
 };
 
 const COUNTRY_FLAGS: Record<string, string> = {
-  US: '🇺🇸', IN: '🇮🇳', GB: '🇬🇧', CA: '🇨🇦', AU: '🇦🇺',
-  DE: '🇩🇪', SG: '🇸🇬', AE: '🇦🇪', JP: '🇯🇵', NL: '🇳🇱',
-  FR: '🇫🇷', BR: '🇧🇷', MX: '🇲🇽', PH: '🇵🇭', IL: '🇮🇱',
-  IE: '🇮🇪', PL: '🇵🇱', SE: '🇸🇪', CH: '🇨🇭', KR: '🇰🇷',
+  US: "🇺🇸",
+  IN: "🇮🇳",
+  GB: "🇬🇧",
+  CA: "🇨🇦",
+  AU: "🇦🇺",
+  DE: "🇩🇪",
+  SG: "🇸🇬",
+  AE: "🇦🇪",
+  JP: "🇯🇵",
+  NL: "🇳🇱",
+  FR: "🇫🇷",
+  BR: "🇧🇷",
+  MX: "🇲🇽",
+  PH: "🇵🇭",
+  IL: "🇮🇱",
+  IE: "🇮🇪",
+  PL: "🇵🇱",
+  SE: "🇸🇪",
+  CH: "🇨🇭",
+  KR: "🇰🇷",
 };
 
 const COUNTRY_NAMES: Record<string, string> = {
-  US: 'United States', IN: 'India', GB: 'United Kingdom', CA: 'Canada',
-  AU: 'Australia', DE: 'Germany', SG: 'Singapore', AE: 'UAE',
-  JP: 'Japan', NL: 'Netherlands', FR: 'France', BR: 'Brazil',
-  MX: 'Mexico', PH: 'Philippines', IL: 'Israel', IE: 'Ireland',
-  PL: 'Poland', SE: 'Sweden', CH: 'Switzerland', KR: 'South Korea',
-};
-
-/* ── Inline activity table (pokes or mails, sent or received) ── */
-const SECTION_META: Record<
-  "pokes-sent" | "pokes-received" | "mails-sent" | "mails-received",
-  { icon: string; title: string; toCol: string; emptyMsg: string }
-> = {
-  "pokes-sent": {
-    icon: "⚡",
-    title: "Pokes Sent",
-    toCol: "To (Recruiter)",
-    emptyMsg: "No pokes sent yet.",
-  },
-  "pokes-received": {
-    icon: "⚡",
-    title: "Pokes Received",
-    toCol: "From (Vendor)",
-    emptyMsg: "No pokes received yet.",
-  },
-  "mails-sent": {
-    icon: "✉",
-    title: "Mails Sent",
-    toCol: "To (Recruiter)",
-    emptyMsg: "No mails sent yet.",
-  },
-  "mails-received": {
-    icon: "✉",
-    title: "Mails Received",
-    toCol: "From (Vendor)",
-    emptyMsg: "No mails received yet.",
-  },
-};
-
-const PokesTable: React.FC<{
-  pokes: PokeRecord[];
-  loading: boolean;
-  section: "pokes-sent" | "pokes-received" | "mails-sent" | "mails-received";
-}> = ({ pokes, loading, section }) => {
-  const isSent = section === "pokes-sent" || section === "mails-sent";
-  const meta = SECTION_META[section];
-  return (
-    <div className="matchdb-panel">
-      <div className="matchdb-panel-title">
-        <span className="matchdb-panel-title-icon">{meta.icon}</span>
-        <span className="matchdb-panel-title-text">{meta.title}</span>
-        <span className="matchdb-panel-title-meta">
-          {loading
-            ? "Loading..."
-            : `${pokes.length} record${pokes.length !== 1 ? "s" : ""}`}
-        </span>
-      </div>
-      <div className="matchdb-table-wrap">
-        <table className="matchdb-table">
-          <colgroup>
-            <col style={{ width: 28 }} />
-            <col style={{ width: "14%" }} />
-            <col style={{ width: "18%" }} />
-            <col style={{ width: "7%" }} />
-            <col style={{ width: "16%" }} />
-            <col />
-            <col style={{ width: "9%" }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>{meta.toCol}</th>
-              <th>Email</th>
-              <th>Type</th>
-              <th>Job Title</th>
-              <th>Subject / Context</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading &&
-              Array.from({ length: 5 }).map((_, ri) => (
-                <tr key={`sk-${ri}`} className="matchdb-skeleton-row" aria-hidden="true">
-                  {[20, 80, 110, 50, 90, 130, 60].map((w, ci) => (
-                    <td key={ci}><span className="w97-shimmer" style={{ width: w }} /></td>
-                  ))}
-                </tr>
-              ))}
-            {!loading && pokes.length === 0 && (
-              <tr>
-                <td colSpan={7} className="matchdb-empty">
-                  {meta.emptyMsg}
-                </td>
-              </tr>
-            )}
-            {!loading &&
-              pokes.map((p, i) => {
-                const personName = isSent ? p.target_name : p.sender_name;
-                const personEmail = isSent ? p.target_email : p.sender_email;
-                const personType = isSent
-                  ? "Recruiter"
-                  : p.sender_type || "Vendor";
-                return (
-                  <tr key={p.id}>
-                    <td
-                      style={{
-                        textAlign: "center",
-                        color: "#808080",
-                        fontSize: 10,
-                      }}
-                    >
-                      {i + 1}
-                    </td>
-                    <td title={personName}>{personName}</td>
-                    <td>
-                      <a
-                        href={`mailto:${personEmail}`}
-                        style={{ color: "#2a5fa0", textDecoration: "none" }}
-                      >
-                        {personEmail}
-                      </a>
-                    </td>
-                    <td>
-                      <span
-                        className="matchdb-type-pill"
-                        style={{ textTransform: "capitalize" }}
-                      >
-                        {personType}
-                      </span>
-                    </td>
-                    <td title={p.job_title || "—"}>{p.job_title || "—"}</td>
-                    <td title={p.subject}>{p.subject}</td>
-                    <td style={{ fontSize: 11 }}>
-                      {new Date(p.created_at).toLocaleDateString()}
-                    </td>
-                  </tr>
-                );
-              })}
-          </tbody>
-        </table>
-      </div>
-      <div className="matchdb-footnote">
-        <span>
-          Showing {pokes.length} record{pokes.length !== 1 ? "s" : ""}
-        </span>
-        <span className="matchdb-footnote-sep">|</span>
-        <span>InnoDB</span>
-      </div>
-    </div>
-  );
+  US: "United States",
+  IN: "India",
+  GB: "United Kingdom",
+  CA: "Canada",
+  AU: "Australia",
+  DE: "Germany",
+  SG: "Singapore",
+  AE: "UAE",
+  JP: "Japan",
+  NL: "Netherlands",
+  FR: "France",
+  BR: "Brazil",
+  MX: "Mexico",
+  PH: "Philippines",
+  IL: "Israel",
+  IE: "Ireland",
+  PL: "Poland",
+  SE: "Sweden",
+  CH: "Switzerland",
+  KR: "South Korea",
 };
 
 const CandidateDashboard: React.FC<Props> = ({
@@ -440,7 +334,7 @@ const CandidateDashboard: React.FC<Props> = ({
     // Show subscription country with flag
     const country = profile?.profile_country;
     if (country) {
-      const flag = COUNTRY_FLAGS[country] || '';
+      const flag = COUNTRY_FLAGS[country] || "";
       const name = COUNTRY_NAMES[country] || country;
       parts.push(`${flag} ${name}`);
     }
@@ -469,6 +363,41 @@ const CandidateDashboard: React.FC<Props> = ({
       );
     };
   }, [membershipConfig, profile?.profile_country]);
+
+  // Emit footer info for shell to display
+  useEffect(() => {
+    const count =
+      activeView === "matches"
+        ? candidateMatchesTotal
+        : activeView === "pokes-sent"
+          ? pokesSentOnly.length
+          : activeView === "pokes-received"
+            ? pokesReceivedOnly.length
+            : activeView === "mails-sent"
+              ? mailsSentOnly.length
+              : activeView === "mails-received"
+                ? mailsReceivedOnly.length
+                : 0;
+    window.dispatchEvent(
+      new CustomEvent("matchdb:footerInfo", {
+        detail: {
+          text: `Showing ${count} row${count !== 1 ? "s" : ""} | InnoDB`,
+        },
+      }),
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("matchdb:footerInfo", { detail: { text: "" } }),
+      );
+    };
+  }, [
+    activeView,
+    candidateMatchesTotal,
+    pokesSentOnly.length,
+    pokesReceivedOnly.length,
+    mailsSentOnly.length,
+    mailsReceivedOnly.length,
+  ]);
 
   const handlePageChange = (page: number, pageSize: number) => {
     setCurrentPage(page);
@@ -840,11 +769,15 @@ const CandidateDashboard: React.FC<Props> = ({
           active: activeView === "pokes-received",
           onClick: () => setActiveView("pokes-received"),
         },
-        ...(isFinite(pokeLimit) ? [{
-          id: "pokes-remaining",
-          label: "Remaining",
-          count: Math.max(0, pokeLimit - pokeCount),
-        }] : []),
+        ...(isFinite(pokeLimit)
+          ? [
+              {
+                id: "pokes-remaining",
+                label: "Remaining",
+                count: Math.max(0, pokeLimit - pokeCount),
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -1007,19 +940,108 @@ const CandidateDashboard: React.FC<Props> = ({
         ) : (
           /* ── UNLOCKED STATE ── */
           <>
-
             {/* Error banner */}
             {error && (
-              <div className="w97-alert w97-alert-error" role="alert" aria-live="assertive">
+              <div
+                className="w97-alert w97-alert-error"
+                role="alert"
+                aria-live="assertive"
+              >
                 ⚠ Failed to load matches: {error}
                 <button
                   aria-label="Retry loading matches"
-                  onClick={() => dispatch(fetchCandidateMatches({ token, page: currentPage, limit: currentPageSize }))}
+                  onClick={() =>
+                    dispatch(
+                      fetchCandidateMatches({
+                        token,
+                        page: currentPage,
+                        limit: currentPageSize,
+                      }),
+                    )
+                  }
                 >
                   ↺ Retry
                 </button>
               </div>
             )}
+
+            {/* ── Dashboard stat rectangles ── */}
+            <div className="matchdb-stat-bar">
+              {[
+                {
+                  label: "Matched Jobs",
+                  value: candidateMatchesTotal,
+                  icon: "📌",
+                  view: "matches" as ActiveView,
+                },
+                {
+                  label: "Pokes Sent",
+                  value: pokesSentOnly.length,
+                  icon: "👋",
+                  view: "pokes-sent" as ActiveView,
+                },
+                {
+                  label: "Pokes In",
+                  value: pokesReceivedOnly.length,
+                  icon: "📥",
+                  view: "pokes-received" as ActiveView,
+                },
+                {
+                  label: "Mails Sent",
+                  value: mailsSentOnly.length,
+                  icon: "📤",
+                  view: "mails-sent" as ActiveView,
+                },
+                {
+                  label: "Mails In",
+                  value: mailsReceivedOnly.length,
+                  icon: "📬",
+                  view: "mails-received" as ActiveView,
+                },
+                {
+                  label: "Visibility",
+                  value: hasPurchasedVisibility ? 1 : 0,
+                  icon: hasPurchasedVisibility ? "🟢" : "🔴",
+                  customLabel: hasPurchasedVisibility ? "Active" : "Off",
+                },
+              ].map((card: any) => (
+                <button
+                  key={card.label}
+                  type="button"
+                  className={`matchdb-stat-rect${
+                    card.view && activeView === card.view
+                      ? " matchdb-stat-rect-active"
+                      : ""
+                  }`}
+                  onClick={() => {
+                    if (card.view) {
+                      setActiveView(card.view);
+                      if (card.view === "matches") {
+                        setFilterType("");
+                        setFilterSubType("");
+                      }
+                    }
+                  }}
+                  title={card.view ? `View ${card.label}` : card.label}
+                >
+                  {card.icon && (
+                    <span className="matchdb-stat-icon">{card.icon}</span>
+                  )}
+                  <span>
+                    <span
+                      className="matchdb-stat-value"
+                      style={{
+                        color: countColor(card.value),
+                        background: countBg(card.value),
+                      }}
+                    >
+                      {card.customLabel ?? card.value}
+                    </span>
+                    <span className="matchdb-stat-label">{card.label}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
 
             {/* Pokes Sent view */}
             {activeView === "pokes-sent" && (
@@ -1027,6 +1049,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 pokes={pokesSentOnly}
                 loading={pokesLoading}
                 section="pokes-sent"
+                userType="candidate"
               />
             )}
 
@@ -1036,6 +1059,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 pokes={pokesReceivedOnly}
                 loading={pokesLoading}
                 section="pokes-received"
+                userType="candidate"
               />
             )}
 
@@ -1045,6 +1069,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 pokes={mailsSentOnly}
                 loading={pokesLoading}
                 section="mails-sent"
+                userType="candidate"
               />
             )}
 
@@ -1054,60 +1079,50 @@ const CandidateDashboard: React.FC<Props> = ({
                 pokes={mailsReceivedOnly}
                 loading={pokesLoading}
                 section="mails-received"
+                userType="candidate"
               />
             )}
 
             {/* Matched Jobs view */}
             {activeView === "matches" && (
               <>
-                {/* Toolbar */}
-                <div className="matchdb-toolbar">
-                  <div className="matchdb-toolbar-left">
-                    <label className="matchdb-label" htmlFor="candidate-search">
-                      Search
-                    </label>
-                    <input
-                      id="candidate-search"
-                      className="matchdb-input"
-                      value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
-                      placeholder="Title, company, location..."
-                    />
-                    <label className="matchdb-label" htmlFor="candidate-type">
-                      Type
-                    </label>
-                    <select
-                      id="candidate-type"
-                      className="matchdb-select"
-                      value={filterType}
-                      onChange={(e) => {
-                        setFilterType(e.target.value);
-                        setFilterSubType("");
-                      }}
-                    >
-                      <option value="">All</option>
-                      {JOB_TYPES.filter((t) => showType(t.value)).map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                    {(filterType === "contract" ||
-                      filterType === "full_time") && (
-                      <>
-                        <label
-                          className="matchdb-label"
-                          htmlFor="candidate-subtype"
-                        >
-                          Sub
-                        </label>
+                <MatchDataTable
+                  title="Related Job Openings"
+                  titleIcon="📌"
+                  titleExtra={
+                    <div className="matchdb-title-toolbar">
+                      <input
+                        id="candidate-search"
+                        className="matchdb-input matchdb-title-search"
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        placeholder="Search..."
+                      />
+                      <select
+                        id="candidate-type"
+                        className="matchdb-select matchdb-title-select"
+                        value={filterType}
+                        onChange={(e) => {
+                          setFilterType(e.target.value);
+                          setFilterSubType("");
+                        }}
+                      >
+                        <option value="">All Types</option>
+                        {JOB_TYPES.filter((t) => showType(t.value)).map((t) => (
+                          <option key={t.value} value={t.value}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                      {(filterType === "contract" ||
+                        filterType === "full_time") && (
                         <select
                           id="candidate-subtype"
-                          className="matchdb-select"
+                          className="matchdb-select matchdb-title-select"
                           value={filterSubType}
                           onChange={(e) => setFilterSubType(e.target.value)}
                         >
-                          <option value="">All</option>
+                          <option value="">All Sub</option>
                           {(filterType === "contract"
                             ? CONTRACT_SUB_TYPES
                             : FULL_TIME_SUB_TYPES
@@ -1119,63 +1134,50 @@ const CandidateDashboard: React.FC<Props> = ({
                               </option>
                             ))}
                         </select>
-                      </>
-                    )}
-                    <label
-                      className="matchdb-label"
-                      htmlFor="candidate-workmode"
-                    >
-                      Mode
-                    </label>
-                    <select
-                      id="candidate-workmode"
-                      className="matchdb-select"
-                      value={filterWorkMode}
-                      onChange={(e) => setFilterWorkMode(e.target.value)}
-                    >
-                      <option value="">All</option>
-                      {WORK_MODES.map((wm) => (
-                        <option key={wm.value} value={wm.value}>
-                          {wm.label}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      className="matchdb-btn"
-                      onClick={() => {
-                        setSearchText("");
-                        setFilterType("");
-                        setFilterSubType("");
-                        setFilterWorkMode("");
-                      }}
-                    >
-                      Reset
-                    </button>
-                  </div>
-                  <div className="matchdb-toolbar-right">
-                    <button
-                      type="button"
-                      className="matchdb-btn matchdb-btn-primary"
-                      onClick={() => {
-                        setCurrentPage(1);
-                        dispatch(
-                          fetchCandidateMatches({
-                            token,
-                            page: 1,
-                            limit: currentPageSize,
-                          }),
-                        );
-                      }}
-                    >
-                      ↻ Refresh
-                    </button>
-                  </div>
-                </div>
-
-                <MatchDataTable
-                  title="Related Job Openings"
-                  titleIcon="📌"
+                      )}
+                      <select
+                        id="candidate-workmode"
+                        className="matchdb-select matchdb-title-select"
+                        value={filterWorkMode}
+                        onChange={(e) => setFilterWorkMode(e.target.value)}
+                      >
+                        <option value="">All Modes</option>
+                        {WORK_MODES.map((wm) => (
+                          <option key={wm.value} value={wm.value}>
+                            {wm.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="matchdb-btn matchdb-title-btn"
+                        onClick={() => {
+                          setSearchText("");
+                          setFilterType("");
+                          setFilterSubType("");
+                          setFilterWorkMode("");
+                        }}
+                      >
+                        Reset
+                      </button>
+                      <button
+                        type="button"
+                        className="matchdb-btn matchdb-title-btn"
+                        onClick={() => {
+                          setCurrentPage(1);
+                          dispatch(
+                            fetchCandidateMatches({
+                              token,
+                              page: 1,
+                              limit: currentPageSize,
+                            }),
+                          );
+                        }}
+                      >
+                        ↻
+                      </button>
+                    </div>
+                  }
                   rows={rows}
                   loading={loading}
                   error={error}

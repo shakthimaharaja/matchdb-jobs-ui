@@ -6,7 +6,6 @@ import { store } from "./store";
 import CandidateDashboard from "./pages/CandidateDashboard";
 import VendorDashboard from "./pages/VendorDashboard";
 import PostJobPage from "./pages/PostJobPage";
-import PublicLanding from "./pages/PublicLanding";
 
 export interface JobsAppProps {
   token: string | null;
@@ -33,16 +32,7 @@ const JobsApp: React.FC<JobsAppProps> = ({
 }) => {
   const [showPostJob, setShowPostJob] = useState(false);
 
-  /* ---- Not logged in  →  Public split view ---- */
-  if (!token) {
-    return (
-      <Provider store={store}>
-        <PublicLanding />
-      </Provider>
-    );
-  }
-
-  /* ---- Authenticated view ---- */
+  /* ---- Authenticated view (pre-login handled by shell's PublicJobsView) ---- */
   return (
     <Provider store={store}>
       <div
