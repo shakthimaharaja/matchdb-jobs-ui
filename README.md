@@ -116,11 +116,11 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 
 ## Routing (JobsApp.tsx)
 
-| Condition                  | Component Rendered   | URL Paths                              |
-| -------------------------- | -------------------- | -------------------------------------- |
+| Condition                  | Component Rendered   | URL Paths                                  |
+| -------------------------- | -------------------- | ------------------------------------------ |
 | Not logged in              | `PublicJobsView`     | `/jobs`, `/jobs/candidate`, `/jobs/vendor` |
-| Logged in as **candidate** | `CandidateDashboard` |                                        |
-| Logged in as **vendor**    | `VendorDashboard`    |                                        |
+| Logged in as **candidate** | `CandidateDashboard` |                                            |
+| Logged in as **vendor**    | `VendorDashboard`    |                                            |
 
 ---
 
@@ -172,12 +172,12 @@ Poke email composer for sending poke notifications to candidates or vendors.
 
 ## Inter-MFE Events (CustomEvent)
 
-| Event Name              | Direction    | Purpose                                       |
-| ----------------------- | ------------ | --------------------------------------------- |
-| `matchdb:subnav`        | Jobs → Shell | Send subnav groups to shell sidebar           |
-| `matchdb:breadcrumb`    | Jobs → Shell | Send breadcrumb label to shell header         |
-| `matchdb:openLogin`     | Jobs → Shell | Request login modal from shell                |
-| `matchdb:jobTypeFilter` | Shell → Jobs | Filter jobs by type in dashboards             |
+| Event Name              | Direction    | Purpose                                        |
+| ----------------------- | ------------ | ---------------------------------------------- |
+| `matchdb:subnav`        | Jobs → Shell | Send subnav groups to shell sidebar            |
+| `matchdb:breadcrumb`    | Jobs → Shell | Send breadcrumb label to shell header          |
+| `matchdb:openLogin`     | Jobs → Shell | Request login modal from shell                 |
+| `matchdb:jobTypeFilter` | Shell → Jobs | Filter jobs by type in dashboards              |
 | `matchdb:loginContext`  | Shell → Jobs | Tell PublicJobsView which login type is active |
 
 ---
@@ -200,18 +200,18 @@ When running inside the shell host, the shell's own CSS variables override these
 
 Shared utility functions (`fmtCurrency`, `fmtDate`, `authHeader`, `downloadBlob`, `TYPE_LABELS`, `SUB_LABELS`, etc.) have been extracted to the **matchdb-component-library** package. The remaining local utility is:
 
-| Export               | Description                           |
-| -------------------- | ------------------------------------- |
+| Export                | Description                           |
+| --------------------- | ------------------------------------- |
 | `generateResumePDF()` | Resume PDF generation utility (jsPDF) |
 
 ---
 
 ## Hooks (`src/hooks/`)
 
-| Hook                    | Description                                                                                          |
-| ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| `useDraftCache`         | Persists form draft state to localStorage                                                            |
-| `useAutoRefreshFlash`   | Tracks data diffs on a 30 s interval, produces `flashIds` (yellow) and `deleteFlashIds` (red) Sets   |
+| Hook                  | Description                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------- |
+| `useDraftCache`       | Persists form draft state to localStorage                                                          |
+| `useAutoRefreshFlash` | Tracks data diffs on a 30 s interval, produces `flashIds` (yellow) and `deleteFlashIds` (red) Sets |
 
 ---
 
