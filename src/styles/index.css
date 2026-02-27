@@ -4,5 +4,6 @@
    available across the entire application.
    ============================================================================= */
 
-@import "./w97-theme.css";
-@import "./w97-base.css";
+@import "matchdb-component-library/src/styles/w97-theme.css";
+@import "matchdb-component-library/src/styles/w97-base.css";
+@import "matchdb-component-library/src/styles/components.css";

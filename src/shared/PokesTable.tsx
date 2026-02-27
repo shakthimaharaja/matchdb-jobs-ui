@@ -1,5 +1,6 @@
 import React from "react";
-import SharedTable, { ColumnDef } from "./SharedTable";
+import { DataTable } from "matchdb-component-library";
+import type { DataTableColumn } from "matchdb-component-library";
 import { PokeRecord } from "../store/jobsSlice";
 
 type SectionKey =
@@ -62,14 +63,84 @@ const DEFAULT_PERSON_TYPE: Record<
   candidate: { sent: "Recruiter", received: "Vendor" },
 };
 
-const buildColumns = (personColLabel: string): ColumnDef[] => [
-  { key: "num", header: "#", width: 28, align: "center", skeletonWidth: 20 },
-  { key: "person", header: personColLabel, width: "14%", skeletonWidth: 80 },
-  { key: "email", header: "Email", width: "18%", skeletonWidth: 110 },
-  { key: "type", header: "Type", width: "7%", skeletonWidth: 50 },
-  { key: "job", header: "Job Title", width: "16%", skeletonWidth: 90 },
-  { key: "subject", header: "Subject / Context", skeletonWidth: 130 },
-  { key: "date", header: "Date", width: "9%", skeletonWidth: 60 },
+const buildColumns = (
+  personColLabel: string,
+  isSent: boolean,
+  defaults: { sent: string; received: string },
+): DataTableColumn<PokeRecord>[] => [
+  {
+    key: "person",
+    header: personColLabel,
+    width: "14%",
+    skeletonWidth: 80,
+    render: (p: PokeRecord) => {
+      const personName = isSent ? p.target_name : p.sender_name;
+      return <>{personName}</>;
+    },
+    tooltip: (p: PokeRecord) => (isSent ? p.target_name : p.sender_name),
+  },
+  {
+    key: "email",
+    header: "Email",
+    width: "18%",
+    skeletonWidth: 110,
+    render: (p: PokeRecord) => {
+      const personEmail = isSent ? p.target_email : p.sender_email;
+      return (
+        <a
+          href={`mailto:${personEmail}`}
+          style={{ color: "#2a5fa0", textDecoration: "none" }}
+        >
+          {personEmail}
+        </a>
+      );
+    },
+  },
+  {
+    key: "type",
+    header: "Type",
+    width: "7%",
+    skeletonWidth: 50,
+    render: (p: PokeRecord) => {
+      const personType = isSent
+        ? defaults.sent
+        : p.sender_type || defaults.received;
+      return (
+        <span
+          className="matchdb-type-pill"
+          style={{ textTransform: "capitalize" }}
+        >
+          {personType}
+        </span>
+      );
+    },
+  },
+  {
+    key: "job",
+    header: "Job Title",
+    width: "16%",
+    skeletonWidth: 90,
+    render: (p: PokeRecord) => <>{p.job_title || "—"}</>,
+    tooltip: (p: PokeRecord) => p.job_title || "—",
+  },
+  {
+    key: "subject",
+    header: "Subject / Context",
+    skeletonWidth: 130,
+    render: (p: PokeRecord) => <>{p.subject}</>,
+    tooltip: (p: PokeRecord) => p.subject,
+  },
+  {
+    key: "date",
+    header: "Date",
+    width: "9%",
+    skeletonWidth: 60,
+    render: (p: PokeRecord) => (
+      <span style={{ fontSize: 11 }}>
+        {new Date(p.created_at).toLocaleDateString()}
+      </span>
+    ),
+  },
 ];
 
 export interface PokesTableProps {
@@ -81,6 +152,9 @@ export interface PokesTableProps {
   jobId?: string;
   jobTitle?: string;
   onClearJob?: () => void;
+  // Row flash animations (update = yellow, delete = red)
+  flashIds?: Set<string>;
+  deleteFlashIds?: Set<string>;
 }
 
 const PokesTable: React.FC<PokesTableProps> = ({
@@ -91,6 +165,8 @@ const PokesTable: React.FC<PokesTableProps> = ({
   jobId,
   jobTitle,
   onClearJob,
+  flashIds,
+  deleteFlashIds,
 }) => {
   const isSent = section === "pokes-sent" || section === "mails-sent";
   const meta = SECTION_META[section];
@@ -104,7 +180,7 @@ const PokesTable: React.FC<PokesTableProps> = ({
     ? `No ${section.includes("mail") ? "mails" : "pokes"} for this job opening.`
     : meta.emptyMsg;
 
-  const columns = buildColumns(personColLabel);
+  const columns = buildColumns(personColLabel, isSent, defaults);
 
   const titleExtra =
     jobId && onClearJob ? (
@@ -128,51 +204,18 @@ const PokesTable: React.FC<PokesTableProps> = ({
     ) : undefined;
 
   return (
-    <SharedTable<PokeRecord>
+    <DataTable<PokeRecord>
       columns={columns}
-      rows={filtered}
+      data={filtered}
+      keyExtractor={(p) => p.id}
       loading={loading}
+      paginate
       title={titleText}
       titleIcon={meta.icon}
       titleExtra={titleExtra}
       emptyMessage={emptyMessage}
-      renderRow={(p, _pageIdx, globalIdx) => {
-        const personName = isSent ? p.target_name : p.sender_name;
-        const personEmail = isSent ? p.target_email : p.sender_email;
-        const personType = isSent
-          ? defaults.sent
-          : p.sender_type || defaults.received;
-
-        return (
-          <tr key={p.id}>
-            <td style={{ textAlign: "center", color: "#808080", fontSize: 10 }}>
-              {globalIdx}
-            </td>
-            <td title={personName}>{personName}</td>
-            <td>
-              <a
-                href={`mailto:${personEmail}`}
-                style={{ color: "#2a5fa0", textDecoration: "none" }}
-              >
-                {personEmail}
-              </a>
-            </td>
-            <td>
-              <span
-                className="matchdb-type-pill"
-                style={{ textTransform: "capitalize" }}
-              >
-                {personType}
-              </span>
-            </td>
-            <td title={p.job_title || "—"}>{p.job_title || "—"}</td>
-            <td title={p.subject}>{p.subject}</td>
-            <td style={{ fontSize: 11 }}>
-              {new Date(p.created_at).toLocaleDateString()}
-            </td>
-          </tr>
-        );
-      }}
+      flashIds={flashIds}
+      deleteFlashIds={deleteFlashIds}
     />
   );
 };

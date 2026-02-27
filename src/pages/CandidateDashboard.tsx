@@ -1,11 +1,20 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useAppDispatch, useAppSelector } from "../store";
-import MatchDataTable, { MatchRow } from "../components/MatchDataTable";
+import { MatchRow } from "../components/MatchDataTable";
+import { DataTable } from "matchdb-component-library";
+import type { DataTableColumn } from "matchdb-component-library";
 import DBLayout, { NavGroup } from "../components/DBLayout";
 import DetailModal from "../components/DetailModal";
 import PokeEmailModal from "../components/PokeEmailModal";
 import CandidateProfile from "./CandidateProfile";
 import { PokesTable } from "../shared";
+import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
 import {
   clearPokeState,
   fetchCandidateMatches,
@@ -35,6 +44,33 @@ type ActiveView =
 const formatRate = (value?: number | null) =>
   value ? `$${Number(value).toFixed(0)}` : "-";
 const formatExperience = (value?: number | null) => `${Number(value || 0)} yrs`;
+
+// ── Sorting helpers ──
+type SortKey =
+  | "name"
+  | "company"
+  | "role"
+  | "type"
+  | "matchPercentage"
+  | "location";
+type SortDir = "asc" | "desc";
+
+const MAIL_MATCH_THRESHOLD = 75;
+const POKE_MATCH_THRESHOLD = 25;
+const POKE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+const formatType = (value: string) => value.replace(/_/g, " ");
+
+const getMeterClass = (pct: number) => {
+  if (pct >= 75) return "matchdb-meter-fill matchdb-meter-fill-high";
+  if (pct >= 45) return "matchdb-meter-fill matchdb-meter-fill-mid";
+  return "matchdb-meter-fill matchdb-meter-fill-low";
+};
+
+const sortValue = (row: MatchRow, key: SortKey): string | number => {
+  if (key === "matchPercentage") return row.matchPercentage;
+  return (row[key] || "").toLowerCase();
+};
 
 /** Color badge for count thresholds — red when < 10 */
 const countColor = (n: number): string =>
@@ -159,19 +195,29 @@ const CandidateDashboard: React.FC<Props> = ({
     pokesLoading,
   } = useAppSelector((state) => state.jobs);
 
-  // Server-side pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [currentPageSize, setCurrentPageSize] = useState(25);
-
   const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterSubType, setFilterSubType] = useState("");
   const [filterWorkMode, setFilterWorkMode] = useState("");
   const [activeView, setActiveView] = useState<ActiveView>("matches");
-  const [selectedJob, setSelectedJob] = useState<Record<string, any> | null>(
-    null,
-  );
+
+  // Server-side pagination state — keyed by activeView so each section remembers
+  const [paginationMap, setPaginationMap] = useState<
+    Record<string, { page: number; pageSize: number }>
+  >({});
+  const currentPage = paginationMap[activeView]?.page ?? 1;
+  const currentPageSize = paginationMap[activeView]?.pageSize ?? 25;
+
+  const [selectedJob, setSelectedJob] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [urlCopied, setUrlCopied] = useState(false);
+
+  // Sorting state (for DataTable columns)
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileRequired, setProfileRequired] = useState(false);
@@ -203,7 +249,7 @@ const CandidateDashboard: React.FC<Props> = ({
     [pokesSent],
   );
 
-  // target_id → poke created_at (for 24h mail cooldown in MatchDataTable)
+  // target_id → poke created_at (for 24h mail cooldown)
   const pokedAtMap = useMemo(
     () =>
       new Map(
@@ -293,19 +339,46 @@ const CandidateDashboard: React.FC<Props> = ({
     return Object.keys(membershipConfig);
   }, [membershipConfig]);
 
+  // Debounce search text to avoid spamming the server on every keystroke
   useEffect(() => {
-    dispatch(
-      fetchCandidateMatches({
-        token,
-        page: currentPage,
-        limit: currentPageSize,
-        types: membershipTypes,
-      }),
-    );
+    const t = setTimeout(() => setDebouncedSearch(searchText), 350);
+    return () => clearTimeout(t);
+  }, [searchText]);
+
+  // Helper: build the filter payload for fetchCandidateMatches calls
+  const buildFilterPayload = (page: number, pageSize: number) => ({
+    token,
+    page,
+    limit: pageSize,
+    types: membershipTypes,
+    filter_type: filterType || undefined,
+    sub_type: filterSubType || undefined,
+    work_mode: filterWorkMode || undefined,
+    search: debouncedSearch.trim() || undefined,
+  });
+
+  useEffect(() => {
+    dispatch(fetchCandidateMatches(buildFilterPayload(1, 25)));
     dispatch(fetchProfile(token));
     dispatch(fetchPokesSent(token));
     dispatch(fetchPokesReceived(token));
   }, [dispatch, token]);
+
+  // Re-fetch when type / subtype / work-mode / search filters change
+  const filtersInitialized = useRef(false);
+  useEffect(() => {
+    if (!filtersInitialized.current) {
+      filtersInitialized.current = true;
+      return; // skip the initial mount
+    }
+    // Reset page to 1 for the current view
+    setPaginationMap((prev) => ({
+      ...prev,
+      [activeView]: { page: 1, pageSize: currentPageSize },
+    }));
+    dispatch(fetchCandidateMatches(buildFilterPayload(1, currentPageSize)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterType, filterSubType, filterWorkMode, debouncedSearch]);
 
   useEffect(() => {
     if (profileChecked.current) return;
@@ -351,7 +424,9 @@ const CandidateDashboard: React.FC<Props> = ({
     }
 
     if (parts.length > 0) {
-      const text = `Visible in: ${parts.join(" — ")} — expand your reach by adding more subdomains.`;
+      const text = `Visible in: ${parts.join(
+        " — ",
+      )} — expand your reach by adding more subdomains.`;
       window.dispatchEvent(
         new CustomEvent("matchdb:visibleIn", { detail: { text } }),
       );
@@ -370,14 +445,14 @@ const CandidateDashboard: React.FC<Props> = ({
       activeView === "matches"
         ? candidateMatchesTotal
         : activeView === "pokes-sent"
-          ? pokesSentOnly.length
-          : activeView === "pokes-received"
-            ? pokesReceivedOnly.length
-            : activeView === "mails-sent"
-              ? mailsSentOnly.length
-              : activeView === "mails-received"
-                ? mailsReceivedOnly.length
-                : 0;
+        ? pokesSentOnly.length
+        : activeView === "pokes-received"
+        ? pokesReceivedOnly.length
+        : activeView === "mails-sent"
+        ? mailsSentOnly.length
+        : activeView === "mails-received"
+        ? mailsReceivedOnly.length
+        : 0;
     window.dispatchEvent(
       new CustomEvent("matchdb:footerInfo", {
         detail: {
@@ -400,16 +475,11 @@ const CandidateDashboard: React.FC<Props> = ({
   ]);
 
   const handlePageChange = (page: number, pageSize: number) => {
-    setCurrentPage(page);
-    setCurrentPageSize(pageSize);
-    dispatch(
-      fetchCandidateMatches({
-        token,
-        page,
-        limit: pageSize,
-        types: membershipTypes,
-      }),
-    );
+    setPaginationMap((prev) => ({
+      ...prev,
+      [activeView]: { page, pageSize },
+    }));
+    dispatch(fetchCandidateMatches(buildFilterPayload(page, pageSize)));
   };
 
   const hasMembership =
@@ -428,82 +498,415 @@ const CandidateDashboard: React.FC<Props> = ({
     };
   }, [dispatch]);
 
-  const rows = useMemo<MatchRow[]>(() => {
-    return candidateMatches
-      .filter((job) => {
-        if (hasMembership) {
-          const type = job.job_type || "";
-          if (!showType(type)) return false;
-          const sub = job.job_sub_type || "";
-          if (sub && !showSubtype(type, sub)) return false;
-        }
-        const typePass = filterType ? job.job_type === filterType : true;
-        const subTypePass = filterSubType
-          ? (job.job_sub_type || "") === filterSubType
-          : true;
-        const workModePass = filterWorkMode
-          ? (job.work_mode || "") === filterWorkMode
-          : true;
-        const q = searchText.trim().toLowerCase();
-        const textPass =
-          !q ||
-          job.title?.toLowerCase().includes(q) ||
-          job.location?.toLowerCase().includes(q) ||
-          job.vendor_email?.toLowerCase().includes(q);
-        return typePass && subTypePass && workModePass && textPass;
-      })
-      .map((job) => ({
-        id: job.id,
-        name: job.recruiter_name || "Recruiter",
-        company: companyFromEmail(job.vendor_email),
-        email: job.vendor_email || "-",
-        phone: job.recruiter_phone || "-",
-        role: job.title,
-        type: job.job_sub_type
-          ? `${job.job_type || "-"} (${job.job_sub_type.toUpperCase()})`
-          : job.job_type || "-",
-        payPerHour: formatRate(job.pay_per_hour),
-        experience: formatExperience(job.experience_required),
-        matchPercentage: job.match_percentage || 0,
-        location: job.location || "-",
-        workMode: job.work_mode || "-",
-        pokeTargetEmail: job.vendor_email || "",
-        pokeTargetName: job.recruiter_name || "Vendor",
-        pokeSubjectContext: job.title || "Job opening",
-        rawData: job as Record<string, any>,
-      }));
-  }, [candidateMatches, filterType, filterSubType, filterWorkMode, searchText]);
-
-  const handlePoke = (row: MatchRow) => {
-    if (!row.pokeTargetEmail) return;
-    if (isFinite(pokeLimit) && pokeCount >= pokeLimit) return;
-    dispatch(clearPokeState());
+  /* ── Auto-refresh + flash animations (30 s cycle) ── */
+  const refreshAll = useCallback(() => {
     dispatch(
-      sendPoke({
-        token,
-        to_email: row.pokeTargetEmail,
-        to_name: row.pokeTargetName,
-        subject_context: row.pokeSubjectContext,
-        target_id: row.id,
-        target_vendor_id: row.rawData?.vendor_id,
-        is_email: false,
-        sender_name: profile?.name || userEmail || "Candidate",
-        sender_email: userEmail || "",
-        job_id: row.id,
-        job_title: row.role,
-      }),
-    ).then((result) => {
-      if (sendPoke.fulfilled.match(result)) {
-        dispatch(fetchPokesSent(token));
-      }
-    });
-  };
+      fetchCandidateMatches(buildFilterPayload(currentPage, currentPageSize)),
+    );
+    dispatch(fetchPokesSent(token));
+    dispatch(fetchPokesReceived(token));
+  }, [
+    dispatch,
+    token,
+    currentPage,
+    currentPageSize,
+    filterType,
+    filterSubType,
+    filterWorkMode,
+    debouncedSearch,
+  ]);
 
-  const handlePokeEmail = (row: MatchRow) => {
-    dispatch(clearPokeState());
-    setPokeEmailSentSuccess(false);
-    setPokeEmailRow(row);
-  };
+  const matchesFlash = useAutoRefreshFlash({
+    data: candidateMatches,
+    keyExtractor: (j) => j.id,
+    refresh: refreshAll,
+  });
+  const pokesFlash = useAutoRefreshFlash({
+    data: pokesSent,
+    keyExtractor: (p) => p.id,
+    refresh: refreshAll,
+    enabled: false,
+  });
+  const pokesRecvFlash = useAutoRefreshFlash({
+    data: pokesReceived,
+    keyExtractor: (p) => p.id,
+    refresh: refreshAll,
+    enabled: false,
+  });
+
+  const rows = useMemo<MatchRow[]>(() => {
+    return candidateMatches.map((job) => ({
+      id: job.id,
+      name: job.recruiter_name || "Recruiter",
+      company: companyFromEmail(job.vendor_email),
+      email: job.vendor_email || "-",
+      phone: job.recruiter_phone || "-",
+      role: job.title,
+      type: job.job_sub_type
+        ? `${job.job_type || "-"} (${job.job_sub_type.toUpperCase()})`
+        : job.job_type || "-",
+      payPerHour: formatRate(job.pay_per_hour),
+      experience: formatExperience(job.experience_required),
+      matchPercentage: job.match_percentage || 0,
+      location: job.location || "-",
+      workMode: job.work_mode || "-",
+      pokeTargetEmail: job.vendor_email || "",
+      pokeTargetName: job.recruiter_name || "Vendor",
+      pokeSubjectContext: job.title || "Job opening",
+      rawData: job as unknown as Record<string, unknown>,
+    }));
+  }, [candidateMatches]);
+
+  // ── Poke / Mail handlers (before columns so they can be referenced) ──
+  const handlePoke = useCallback(
+    (row: MatchRow) => {
+      if (!row.pokeTargetEmail) return;
+      if (isFinite(pokeLimit) && pokeCount >= pokeLimit) return;
+      dispatch(clearPokeState());
+      dispatch(
+        sendPoke({
+          token,
+          to_email: row.pokeTargetEmail,
+          to_name: row.pokeTargetName,
+          subject_context: row.pokeSubjectContext,
+          target_id: row.id,
+          target_vendor_id: row.rawData?.vendor_id as string | undefined,
+          is_email: false,
+          sender_name: profile?.name || userEmail || "Candidate",
+          sender_email: userEmail || "",
+          job_id: row.id,
+          job_title: row.role,
+        }),
+      ).then((result) => {
+        if (sendPoke.fulfilled.match(result)) {
+          dispatch(fetchPokesSent(token));
+        }
+      });
+    },
+    [dispatch, token, pokeLimit, pokeCount, profile?.name, userEmail],
+  );
+
+  const handlePokeEmail = useCallback(
+    (row: MatchRow) => {
+      dispatch(clearPokeState());
+      setPokeEmailSentSuccess(false);
+      setPokeEmailRow(row);
+    },
+    [dispatch],
+  );
+
+  // ── Sorted rows (client-side sort on current page) ──
+  const sortedRows = useMemo(() => {
+    if (!sortKey) return rows;
+    return [...rows].sort((a, b) => {
+      const av = sortValue(a, sortKey);
+      const bv = sortValue(b, sortKey);
+      const cmp =
+        typeof av === "number" && typeof bv === "number"
+          ? av - bv
+          : String(av).localeCompare(String(bv));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [rows, sortKey, sortDir]);
+
+  // ── Column definitions (DataTableColumn from library) ──
+  const matchColumns = useMemo<DataTableColumn<MatchRow>[]>(() => {
+    const indicator = (key: SortKey) =>
+      sortKey !== key ? (
+        <span className="th-sort" style={{ opacity: 0.3 }}>
+          ⇅
+        </span>
+      ) : (
+        <span className="th-sort">{sortDir === "asc" ? "▲" : "▼"}</span>
+      );
+
+    const onSort = (key: SortKey) => {
+      if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      else {
+        setSortKey(key);
+        setSortDir("asc");
+      }
+    };
+
+    const ariaSort = (key: SortKey): "ascending" | "descending" | "none" =>
+      sortKey === key
+        ? sortDir === "asc"
+          ? "ascending"
+          : "descending"
+        : "none";
+
+    const onRowClick = (row: MatchRow) => setSelectedJob(row.rawData || null);
+
+    return [
+      {
+        key: "expand",
+        header: "⊕",
+        width: "22px",
+        align: "center" as const,
+        skeletonWidth: 22,
+        render: (row: MatchRow) => (
+          <button
+            type="button"
+            className="matchdb-btn matchdb-btn-expand"
+            title="View details (or double-click row)"
+            onClick={() => onRowClick(row)}
+          >
+            ⊕
+          </button>
+        ),
+      },
+      {
+        key: "name",
+        header: <>Name {indicator("name")}</>,
+        width: "11%",
+        className: "matchdb-th-sortable",
+        thProps: {
+          onClick: () => onSort("name"),
+          "aria-sort": ariaSort("name"),
+        },
+        skeletonWidth: 100,
+        render: (row: MatchRow) => <>{row.name}</>,
+        tooltip: (row: MatchRow) => row.name,
+      },
+      {
+        key: "company",
+        header: <>Company {indicator("company")}</>,
+        width: "10%",
+        className: "col-company matchdb-th-sortable",
+        thProps: {
+          onClick: () => onSort("company"),
+          "aria-sort": ariaSort("company"),
+        },
+        skeletonWidth: 90,
+        render: (row: MatchRow) => <>{row.company}</>,
+        tooltip: (row: MatchRow) => row.company,
+      },
+      {
+        key: "email",
+        header: "Mail ID",
+        width: "11%",
+        className: "col-email",
+        skeletonWidth: 110,
+        thProps: { title: "Contact email" },
+        render: (row: MatchRow) => (
+          <a
+            href={`mailto:${row.email}`}
+            style={{ color: "#2a5fa0", textDecoration: "none" }}
+          >
+            {row.email}
+          </a>
+        ),
+        tooltip: (row: MatchRow) => row.email,
+      },
+      {
+        key: "phone",
+        header: "Ph No",
+        width: "9%",
+        className: "col-phone",
+        skeletonWidth: 80,
+        thProps: { title: "Contact phone" },
+        render: (row: MatchRow) => <>{row.phone}</>,
+        tooltip: (row: MatchRow) => row.phone,
+      },
+      {
+        key: "role",
+        header: <>Role {indicator("role")}</>,
+        width: "11%",
+        className: "matchdb-th-sortable",
+        thProps: {
+          onClick: () => onSort("role"),
+          "aria-sort": ariaSort("role"),
+        },
+        skeletonWidth: 100,
+        render: (row: MatchRow) => <>{row.role}</>,
+        tooltip: (row: MatchRow) => row.role,
+      },
+      {
+        key: "type",
+        header: <>Type {indicator("type")}</>,
+        width: "8%",
+        className: "matchdb-th-sortable",
+        thProps: {
+          onClick: () => onSort("type"),
+          "aria-sort": ariaSort("type"),
+        },
+        skeletonWidth: 60,
+        render: (row: MatchRow) => (
+          <span className="matchdb-type-pill">{formatType(row.type)}</span>
+        ),
+      },
+      {
+        key: "mode",
+        header: "Mode",
+        width: "6%",
+        className: "col-mode",
+        skeletonWidth: 50,
+        thProps: { title: "Work arrangement" },
+        render: (row: MatchRow) => <>{row.workMode || "-"}</>,
+      },
+      {
+        key: "pay",
+        header: "Pay/Hr",
+        width: "6%",
+        className: "col-pay",
+        skeletonWidth: 50,
+        thProps: { title: "Pay rate/hr" },
+        render: (row: MatchRow) => <>{row.payPerHour}</>,
+      },
+      {
+        key: "exp",
+        header: "Exp",
+        width: "5%",
+        className: "col-experience",
+        skeletonWidth: 40,
+        thProps: { title: "Years of experience" },
+        render: (row: MatchRow) => <>{row.experience}</>,
+      },
+      {
+        key: "match",
+        header: <>Match {indicator("matchPercentage")}</>,
+        width: "10%",
+        className: "matchdb-th-sortable",
+        thProps: {
+          onClick: () => onSort("matchPercentage"),
+          "aria-sort": ariaSort("matchPercentage"),
+        },
+        skeletonWidth: 100,
+        render: (row: MatchRow) => {
+          const safePct = Math.max(0, Math.min(100, row.matchPercentage));
+          return (
+            <div className="matchdb-meter">
+              <div className="matchdb-meter-row">
+                <span className="matchdb-meter-label">
+                  {row.matchPercentage}%
+                </span>
+                <span className="matchdb-meter-track">
+                  <span
+                    className={getMeterClass(safePct)}
+                    style={{ width: `${safePct}%` }}
+                  />
+                </span>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        key: "location",
+        header: <>Location {indicator("location")}</>,
+        width: "7%",
+        className: "col-location matchdb-th-sortable",
+        thProps: {
+          onClick: () => onSort("location"),
+          "aria-sort": ariaSort("location"),
+        },
+        skeletonWidth: 70,
+        render: (row: MatchRow) => <>{row.location}</>,
+        tooltip: (row: MatchRow) => row.location,
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        width: "8%",
+        skeletonWidth: 70,
+        thProps: {
+          title: "Actions: Poke (quick notify) · Mail Template (compose)",
+        },
+        render: (row: MatchRow) => {
+          const alreadyPoked = pokedRowIds?.has(row.id) ?? false;
+          const alreadyEmailed = emailedRowIds?.has(row.id) ?? false;
+
+          const mailMatchTooLow = row.matchPercentage < MAIL_MATCH_THRESHOLD;
+          const pokeMatchTooLow = row.matchPercentage < POKE_MATCH_THRESHOLD;
+
+          const pokeAt = pokedAtMap?.get(row.id);
+          const pokeTooRecent =
+            !!pokeAt &&
+            Date.now() - new Date(pokeAt).getTime() < POKE_COOLDOWN_MS;
+
+          const pokeDisabled =
+            pokeLoading || alreadyPoked || alreadyEmailed || pokeMatchTooLow;
+          const mailDisabled =
+            alreadyEmailed || mailMatchTooLow || pokeTooRecent;
+
+          const pokeTitle = pokeMatchTooLow
+            ? `Match below ${POKE_MATCH_THRESHOLD}% — not eligible to poke`
+            : alreadyEmailed
+            ? `Already emailed ${row.pokeTargetName} — cannot also poke`
+            : alreadyPoked
+            ? `Already poked ${row.pokeTargetName}`
+            : `Quick poke — notify ${row.pokeTargetName} by email`;
+          const mailTitle = mailMatchTooLow
+            ? `Match below ${MAIL_MATCH_THRESHOLD}% — not eligible to send mail template`
+            : alreadyEmailed
+            ? `Already sent a mail template to ${row.pokeTargetName}`
+            : pokeTooRecent
+            ? `Mail unlocks 24 h after poking (poked at ${new Date(
+                pokeAt!,
+              ).toLocaleTimeString()})`
+            : `Compose mail template to ${row.pokeTargetName}`;
+
+          return (
+            <div style={{ display: "flex", gap: 2 }}>
+              <button
+                className="matchdb-btn matchdb-btn-poke"
+                type="button"
+                disabled={pokeDisabled}
+                onClick={() => !pokeDisabled && handlePoke(row)}
+                title={pokeTitle}
+                aria-label={pokeTitle}
+                style={{
+                  flex: 1,
+                  ...(pokeMatchTooLow
+                    ? {
+                        background: "var(--w97-red, #bb3333)",
+                        borderColor: "#fff #404040 #404040 #fff",
+                        cursor: "not-allowed",
+                      }
+                    : alreadyPoked || alreadyEmailed
+                    ? { opacity: 0.45, cursor: "not-allowed" }
+                    : {}),
+                }}
+              >
+                {alreadyPoked ? "✓" : pokeLoading ? "…" : "Poke"}
+              </button>
+              <button
+                className="matchdb-btn matchdb-btn-email"
+                type="button"
+                disabled={mailDisabled}
+                onClick={() => !mailDisabled && handlePokeEmail(row)}
+                title={mailTitle}
+                aria-label={mailTitle}
+                style={{
+                  flex: 1,
+                  ...(mailMatchTooLow
+                    ? {
+                        background: "var(--w97-red, #bb3333)",
+                        borderColor: "#fff #404040 #404040 #fff",
+                        cursor: "not-allowed",
+                      }
+                    : alreadyEmailed || pokeTooRecent
+                    ? { opacity: 0.4, cursor: "not-allowed" }
+                    : {}),
+                }}
+              >
+                {alreadyEmailed ? "✓" : "✉"}
+              </button>
+            </div>
+          );
+        },
+      },
+    ];
+  }, [
+    sortKey,
+    sortDir,
+    pokeLoading,
+    pokedRowIds,
+    emailedRowIds,
+    pokedAtMap,
+    handlePoke,
+    handlePokeEmail,
+  ]);
 
   const handlePokeEmailSend = async (params: {
     to_email: string;
@@ -521,7 +924,7 @@ const CandidateDashboard: React.FC<Props> = ({
         subject_context: params.subject_context,
         email_body: params.email_body,
         target_id: pokeEmailRow.id,
-        target_vendor_id: pokeEmailRow.rawData?.vendor_id,
+        target_vendor_id: pokeEmailRow.rawData?.vendor_id as string | undefined,
         is_email: true,
         sender_name: profile?.name || userEmail || "Candidate",
         sender_email: userEmail || "",
@@ -605,12 +1008,20 @@ const CandidateDashboard: React.FC<Props> = ({
     return map;
   }, [candidateMatches, candidateMatchesSubTypeCounts]);
 
+  // Grand total across all types — for the "Matched Jobs" top-level nav count
+  const grandTotal = useMemo(() => {
+    const tc = candidateMatchesTypeCounts;
+    if (Object.keys(tc).length > 0)
+      return Object.values(tc).reduce((a, b) => a + b, 0);
+    return candidateMatchesTotal;
+  }, [candidateMatchesTypeCounts, candidateMatchesTotal]);
+
   const jobTypeNavItems = useMemo(() => {
     const items: NavGroup["items"] = [
       {
         id: "matched-jobs",
         label: "Matched Jobs",
-        count: candidateMatchesTotal,
+        count: grandTotal,
         active:
           activeView === "matches" && filterType === "" && filterSubType === "",
         onClick: () => {
@@ -711,6 +1122,7 @@ const CandidateDashboard: React.FC<Props> = ({
   }, [
     membershipConfig,
     candidateMatches.length,
+    grandTotal,
     countByType,
     countBySubType,
     filterType,
@@ -739,8 +1151,8 @@ const CandidateDashboard: React.FC<Props> = ({
             isProfileLocked && !premiumUnlocked
               ? "Edit company, experience & bio — costs $3, pay at billing"
               : isProfileLocked
-                ? "Premium fields unlocked — all editable"
-                : "Edit your profile details",
+              ? "Premium fields unlocked — all editable"
+              : "Edit your profile details",
           active: false,
           onClick: () => setProfileOpen(true),
         },
@@ -822,9 +1234,12 @@ const CandidateDashboard: React.FC<Props> = ({
           id: "refresh",
           label: "Refresh Data",
           onClick: () => {
-            setCurrentPage(1);
+            setPaginationMap((prev) => ({
+              ...prev,
+              [activeView]: { page: 1, pageSize: currentPageSize },
+            }));
             dispatch(
-              fetchCandidateMatches({ token, page: 1, limit: currentPageSize }),
+              fetchCandidateMatches(buildFilterPayload(1, currentPageSize)),
             );
             dispatch(fetchPokesSent(token));
             dispatch(fetchPokesReceived(token));
@@ -874,12 +1289,12 @@ const CandidateDashboard: React.FC<Props> = ({
     activeView === "pokes-sent"
       ? ["Candidate Portal", "Pokes", "Pokes Sent"]
       : activeView === "pokes-received"
-        ? ["Candidate Portal", "Pokes", "Pokes Received"]
-        : activeView === "mails-sent"
-          ? ["Candidate Portal", "Mails", "Mails Sent"]
-          : activeView === "mails-received"
-            ? ["Candidate Portal", "Mails", "Mails Received"]
-            : ["Candidate Portal", "Matched Jobs", filterLabel];
+      ? ["Candidate Portal", "Pokes", "Pokes Received"]
+      : activeView === "mails-sent"
+      ? ["Candidate Portal", "Mails", "Mails Sent"]
+      : activeView === "mails-received"
+      ? ["Candidate Portal", "Mails", "Mails Received"]
+      : ["Candidate Portal", "Matched Jobs", filterLabel];
 
   return (
     <DBLayout
@@ -952,11 +1367,9 @@ const CandidateDashboard: React.FC<Props> = ({
                   aria-label="Retry loading matches"
                   onClick={() =>
                     dispatch(
-                      fetchCandidateMatches({
-                        token,
-                        page: currentPage,
-                        limit: currentPageSize,
-                      }),
+                      fetchCandidateMatches(
+                        buildFilterPayload(currentPage, currentPageSize),
+                      ),
                     )
                   }
                 >
@@ -970,7 +1383,7 @@ const CandidateDashboard: React.FC<Props> = ({
               {[
                 {
                   label: "Matched Jobs",
-                  value: candidateMatchesTotal,
+                  value: grandTotal,
                   icon: "📌",
                   view: "matches" as ActiveView,
                 },
@@ -1086,7 +1499,15 @@ const CandidateDashboard: React.FC<Props> = ({
             {/* Matched Jobs view */}
             {activeView === "matches" && (
               <>
-                <MatchDataTable
+                <DataTable<MatchRow>
+                  columns={matchColumns}
+                  data={sortedRows}
+                  keyExtractor={(r) => r.id}
+                  loading={loading}
+                  paginate
+                  emptyMessage="MySQL returned an empty result set (i.e. zero rows)."
+                  alertSuccess={pokeSuccessMessage}
+                  alertErrors={[pokeError, error]}
                   title="Related Job Openings"
                   titleIcon="📌"
                   titleExtra={
@@ -1164,13 +1585,17 @@ const CandidateDashboard: React.FC<Props> = ({
                         type="button"
                         className="matchdb-btn matchdb-title-btn"
                         onClick={() => {
-                          setCurrentPage(1);
-                          dispatch(
-                            fetchCandidateMatches({
-                              token,
+                          setPaginationMap((prev) => ({
+                            ...prev,
+                            [activeView]: {
                               page: 1,
-                              limit: currentPageSize,
-                            }),
+                              pageSize: currentPageSize,
+                            },
+                          }));
+                          dispatch(
+                            fetchCandidateMatches(
+                              buildFilterPayload(1, currentPageSize),
+                            ),
                           );
                         }}
                       >
@@ -1178,25 +1603,16 @@ const CandidateDashboard: React.FC<Props> = ({
                       </button>
                     </div>
                   }
-                  rows={rows}
-                  loading={loading}
-                  error={error}
                   serverTotal={candidateMatchesTotal}
                   serverPage={currentPage}
                   serverPageSize={currentPageSize}
                   onPageChange={handlePageChange}
-                  pokeLoading={pokeLoading}
-                  pokeSuccessMessage={pokeSuccessMessage}
-                  pokeError={pokeError}
-                  isVendor={false}
-                  pokedRowIds={pokedRowIds}
-                  emailedRowIds={emailedRowIds}
-                  pokedAtMap={pokedAtMap}
-                  onPoke={handlePoke}
-                  onPokeEmail={handlePokeEmail}
-                  onRowClick={(row) => setSelectedJob(row.rawData || null)}
                   onDownload={handleDownloadCSV}
                   downloadLabel="Download CSV"
+                  pageResetKey={`${sortKey ?? ""}-${sortDir}`}
+                  onRowDoubleClick={(row) =>
+                    setSelectedJob(row.rawData || null)
+                  }
                 />
               </>
             )}
@@ -1293,7 +1709,7 @@ const CandidateDashboard: React.FC<Props> = ({
         onClose={() => setSelectedJob(null)}
         type="job"
         data={selectedJob}
-        matchPercentage={selectedJob?.match_percentage}
+        matchPercentage={selectedJob?.match_percentage as number | undefined}
       />
     </DBLayout>
   );

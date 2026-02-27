@@ -28,12 +28,54 @@ interface DBLayoutProps {
  * Instead it emits CustomEvents so the Shell can render nav + breadcrumb:
  *   matchdb:subnav      — sidebar nav groups
  *   matchdb:breadcrumb  — breadcrumb segments (string[])
+ *
+ * NOTE: React runs child effects before parent effects. Because ShellLayout
+ * (parent) registers its event listener in useEffect, and DBLayout (child)
+ * dispatches in useEffect, the very first dispatch can be lost. We work
+ * around this by deferring the first dispatch with setTimeout(0) so the
+ * parent listener is guaranteed to be registered.
  */
-const DBLayout: React.FC<DBLayoutProps> = ({ navGroups, breadcrumb, children }) => {
+const DBLayout: React.FC<DBLayoutProps> = ({
+  navGroups,
+  breadcrumb,
+  children,
+}) => {
   const prevJson = useRef("");
   const prevBc = useRef("");
+  const mountedRef = useRef(false);
+  const navGroupsRef = useRef(navGroups);
+  navGroupsRef.current = navGroups;
+
+  // Deferred first dispatch — guarantees the Shell listener is ready
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      mountedRef.current = true;
+      // Force-dispatch whatever navGroups we have right now
+      const json = JSON.stringify(
+        navGroupsRef.current.map((g) => ({
+          label: g.label,
+          icon: g.icon,
+          items: g.items.map((i) => ({
+            id: i.id,
+            label: i.label,
+            count: i.count,
+            active: i.active,
+            depth: i.depth,
+            tooltip: i.tooltip,
+          })),
+        })),
+      );
+      prevJson.current = json;
+      window.dispatchEvent(
+        new CustomEvent("matchdb:subnav", { detail: navGroupsRef.current }),
+      );
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
+    // Skip until the deferred mount dispatch has run
+    if (!mountedRef.current) return;
     // Only dispatch when navGroups actually change (avoid infinite loops)
     const json = JSON.stringify(
       navGroups.map((g) => ({
@@ -74,7 +116,9 @@ const DBLayout: React.FC<DBLayoutProps> = ({ navGroups, breadcrumb, children }) 
     return () => {
       // Clear sub-nav + breadcrumb when this component unmounts
       window.dispatchEvent(new CustomEvent("matchdb:subnav", { detail: [] }));
-      window.dispatchEvent(new CustomEvent("matchdb:breadcrumb", { detail: [] }));
+      window.dispatchEvent(
+        new CustomEvent("matchdb:breadcrumb", { detail: [] }),
+      );
     };
   }, []);
 

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
-import SharedTable, { ColumnDef } from "../shared/SharedTable";
-import "./MatchDataTable.css";
+import { DataTable } from "matchdb-component-library";
+import type { DataTableColumn } from "matchdb-component-library";
 
 export interface MatchRow {
   id: string;
@@ -18,7 +18,7 @@ export interface MatchRow {
   pokeTargetEmail: string;
   pokeTargetName: string;
   pokeSubjectContext: string;
-  rawData?: Record<string, any>;
+  rawData?: Record<string, unknown>;
 }
 
 type SortKey =
@@ -58,6 +58,9 @@ export interface MatchDataTableProps {
   serverPage?: number;
   serverPageSize?: number;
   onPageChange?: (page: number, pageSize: number) => void;
+  // Row flash animations (update = yellow, delete = red)
+  flashIds?: Set<string>;
+  deleteFlashIds?: Set<string>;
 }
 
 const formatType = (value: string) => value.replace(/_/g, " ");
@@ -96,6 +99,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
   serverPage,
   serverPageSize,
   onPageChange,
+  flashIds,
+  deleteFlashIds,
 }) => {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -113,8 +118,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
     });
   }, [rows, sortKey, sortDir]);
 
-  // Build column definitions with sort-aware headers
-  const columns = useMemo<ColumnDef[]>(() => {
+  // Build column definitions with sort-aware headers and per-column render
+  const columns = useMemo<DataTableColumn<MatchRow>[]>(() => {
     const indicator = (key: SortKey) =>
       sortKey !== key ? (
         <span className="th-sort" style={{ opacity: 0.3 }}>
@@ -141,18 +146,24 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
 
     return [
       {
-        key: "row",
-        header: "#",
-        width: "28px",
-        align: "center",
-        skeletonWidth: 22,
-      },
-      {
         key: "expand",
         header: "⊕",
         width: "22px",
-        align: "center",
+        align: "center" as const,
         skeletonWidth: 22,
+        render: (row: MatchRow) =>
+          onRowClick ? (
+            <button
+              type="button"
+              className="matchdb-btn matchdb-btn-expand"
+              title="View details (or double-click row)"
+              onClick={() => onRowClick(row)}
+            >
+              ⊕
+            </button>
+          ) : (
+            <span style={{ color: "#c0c0c0", fontSize: 13 }}>⊕</span>
+          ),
       },
       {
         key: "name",
@@ -164,6 +175,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
           "aria-sort": ariaSort("name"),
         },
         skeletonWidth: 100,
+        render: (row: MatchRow) => <>{row.name}</>,
+        tooltip: (row: MatchRow) => row.name,
       },
       {
         key: "company",
@@ -175,6 +188,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
           "aria-sort": ariaSort("company"),
         },
         skeletonWidth: 90,
+        render: (row: MatchRow) => <>{row.company}</>,
+        tooltip: (row: MatchRow) => row.company,
       },
       {
         key: "email",
@@ -183,6 +198,15 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         className: "col-email",
         skeletonWidth: 110,
         thProps: { title: "Contact email" },
+        render: (row: MatchRow) => (
+          <a
+            href={`mailto:${row.email}`}
+            style={{ color: "#2a5fa0", textDecoration: "none" }}
+          >
+            {row.email}
+          </a>
+        ),
+        tooltip: (row: MatchRow) => row.email,
       },
       {
         key: "phone",
@@ -191,6 +215,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         className: "col-phone",
         skeletonWidth: 80,
         thProps: { title: "Contact phone" },
+        render: (row: MatchRow) => <>{row.phone}</>,
+        tooltip: (row: MatchRow) => row.phone,
       },
       {
         key: "role",
@@ -202,6 +228,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
           "aria-sort": ariaSort("role"),
         },
         skeletonWidth: 100,
+        render: (row: MatchRow) => <>{row.role}</>,
+        tooltip: (row: MatchRow) => row.role,
       },
       {
         key: "type",
@@ -213,6 +241,9 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
           "aria-sort": ariaSort("type"),
         },
         skeletonWidth: 60,
+        render: (row: MatchRow) => (
+          <span className="matchdb-type-pill">{formatType(row.type)}</span>
+        ),
       },
       {
         key: "mode",
@@ -221,6 +252,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         className: "col-mode",
         skeletonWidth: 50,
         thProps: { title: "Work arrangement" },
+        render: (row: MatchRow) => <>{row.workMode || "-"}</>,
       },
       {
         key: "pay",
@@ -229,6 +261,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         className: "col-pay",
         skeletonWidth: 50,
         thProps: { title: "Pay rate/hr" },
+        render: (row: MatchRow) => <>{row.payPerHour}</>,
       },
       {
         key: "exp",
@@ -237,6 +270,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         className: "col-experience",
         skeletonWidth: 40,
         thProps: { title: "Years of experience" },
+        render: (row: MatchRow) => <>{row.experience}</>,
       },
       {
         key: "match",
@@ -248,6 +282,24 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
           "aria-sort": ariaSort("matchPercentage"),
         },
         skeletonWidth: 100,
+        render: (row: MatchRow) => {
+          const safePct = Math.max(0, Math.min(100, row.matchPercentage));
+          return (
+            <div className="matchdb-meter">
+              <div className="matchdb-meter-row">
+                <span className="matchdb-meter-label">
+                  {row.matchPercentage}%
+                </span>
+                <span className="matchdb-meter-track">
+                  <span
+                    className={getMeterClass(safePct)}
+                    style={{ width: `${safePct}%` }}
+                  />
+                </span>
+              </div>
+            </div>
+          );
+        },
       },
       {
         key: "location",
@@ -259,6 +311,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
           "aria-sort": ariaSort("location"),
         },
         skeletonWidth: 70,
+        render: (row: MatchRow) => <>{row.location}</>,
+        tooltip: (row: MatchRow) => row.location,
       },
       {
         key: "actions",
@@ -268,170 +322,115 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         thProps: {
           title: "Actions: Poke (quick notify) · Mail Template (compose)",
         },
-      },
-    ];
-  }, [sortKey, sortDir]);
+        render: (row: MatchRow) => {
+          const alreadyPoked = pokedRowIds?.has(row.id) ?? false;
+          const alreadyEmailed = emailedRowIds?.has(row.id) ?? false;
 
-  const renderRow = (row: MatchRow, _pageIdx: number, globalIdx: number) => {
-    const safePct = Math.max(0, Math.min(100, row.matchPercentage));
-    const alreadyPoked = pokedRowIds?.has(row.id) ?? false;
-    const alreadyEmailed = emailedRowIds?.has(row.id) ?? false;
+          const mailMatchTooLow =
+            !isVendor && row.matchPercentage < MAIL_MATCH_THRESHOLD;
+          const pokeMatchTooLow =
+            !isVendor && row.matchPercentage < POKE_MATCH_THRESHOLD;
 
-    const mailMatchTooLow =
-      !isVendor && row.matchPercentage < MAIL_MATCH_THRESHOLD;
-    const pokeMatchTooLow =
-      !isVendor && row.matchPercentage < POKE_MATCH_THRESHOLD;
+          const pokeAt = pokedAtMap?.get(row.id);
+          const pokeTooRecent =
+            !!pokeAt &&
+            Date.now() - new Date(pokeAt).getTime() < POKE_COOLDOWN_MS;
 
-    const pokeAt = pokedAtMap?.get(row.id);
-    const pokeTooRecent =
-      !!pokeAt && Date.now() - new Date(pokeAt).getTime() < POKE_COOLDOWN_MS;
+          const pokeDisabled =
+            pokeLoading || alreadyPoked || alreadyEmailed || pokeMatchTooLow;
+          const mailDisabled =
+            alreadyEmailed || mailMatchTooLow || pokeTooRecent;
 
-    const pokeDisabled =
-      pokeLoading || alreadyPoked || alreadyEmailed || pokeMatchTooLow;
-    const mailDisabled = alreadyEmailed || mailMatchTooLow || pokeTooRecent;
+          const pokeTitle = pokeMatchTooLow
+            ? `Match below ${POKE_MATCH_THRESHOLD}% — not eligible to poke`
+            : alreadyEmailed
+            ? `Already emailed ${row.pokeTargetName} — cannot also poke`
+            : alreadyPoked
+            ? `Already poked ${row.pokeTargetName}`
+            : `Quick poke — notify ${row.pokeTargetName} by email`;
+          const mailTitle = mailMatchTooLow
+            ? `Match below ${MAIL_MATCH_THRESHOLD}% — not eligible to send mail template`
+            : alreadyEmailed
+            ? `Already sent a mail template to ${row.pokeTargetName}`
+            : pokeTooRecent
+            ? `Mail unlocks 24 h after poking (poked at ${new Date(
+                pokeAt!,
+              ).toLocaleTimeString()})`
+            : `Compose mail template to ${row.pokeTargetName}`;
 
-    const pokeTitle = pokeMatchTooLow
-      ? `Match below ${POKE_MATCH_THRESHOLD}% — not eligible to poke`
-      : alreadyEmailed
-        ? `Already emailed ${row.pokeTargetName} — cannot also poke`
-        : alreadyPoked
-          ? `Already poked ${row.pokeTargetName}`
-          : `Quick poke — notify ${row.pokeTargetName} by email`;
-    const mailTitle = mailMatchTooLow
-      ? `Match below ${MAIL_MATCH_THRESHOLD}% — not eligible to send mail template`
-      : alreadyEmailed
-        ? `Already sent a mail template to ${row.pokeTargetName}`
-        : pokeTooRecent
-          ? `Mail unlocks 24 h after poking (poked at ${new Date(pokeAt!).toLocaleTimeString()})`
-          : `Compose mail template to ${row.pokeTargetName}`;
-
-    return (
-      <tr key={row.id} onDoubleClick={() => onRowClick?.(row)}>
-        <td
-          style={{
-            textAlign: "center",
-            color: "#808080",
-            fontSize: 10,
-            cursor: "default",
-          }}
-          title={`Row ${globalIdx}`}
-        >
-          {globalIdx}
-        </td>
-        <td style={{ textAlign: "center" }}>
-          {onRowClick ? (
-            <button
-              type="button"
-              className="matchdb-btn matchdb-btn-expand"
-              title="View details (or double-click row)"
-              onClick={() => onRowClick(row)}
-            >
-              ⊕
-            </button>
-          ) : (
-            <span style={{ color: "#c0c0c0", fontSize: 13 }}>⊕</span>
-          )}
-        </td>
-        <td title={row.name}>{row.name}</td>
-        <td className="col-company" title={row.company}>
-          {row.company}
-        </td>
-        <td className="col-email" title={row.email}>
-          <a
-            href={`mailto:${row.email}`}
-            style={{ color: "#2a5fa0", textDecoration: "none" }}
-          >
-            {row.email}
-          </a>
-        </td>
-        <td className="col-phone" title={row.phone}>
-          {row.phone}
-        </td>
-        <td title={row.role}>{row.role}</td>
-        <td>
-          <span className="matchdb-type-pill">{formatType(row.type)}</span>
-        </td>
-        <td className="col-mode">{row.workMode || "-"}</td>
-        <td className="col-pay">{row.payPerHour}</td>
-        <td className="col-experience">{row.experience}</td>
-        <td>
-          <div className="matchdb-meter">
-            <div className="matchdb-meter-row">
-              <span className="matchdb-meter-label">
-                {row.matchPercentage}%
-              </span>
-              <span className="matchdb-meter-track">
-                <span
-                  className={getMeterClass(safePct)}
-                  style={{ width: `${safePct}%` }}
-                />
-              </span>
-            </div>
-          </div>
-        </td>
-        <td className="col-location" title={row.location}>
-          {row.location}
-        </td>
-        <td>
-          <div style={{ display: "flex", gap: 2 }}>
-            <button
-              className="matchdb-btn matchdb-btn-poke"
-              type="button"
-              disabled={pokeDisabled}
-              onClick={() => !pokeDisabled && onPoke(row)}
-              title={pokeTitle}
-              aria-label={pokeTitle}
-              style={{
-                flex: 1,
-                ...(pokeMatchTooLow
-                  ? {
-                      background: "var(--w97-red, #bb3333)",
-                      borderColor: "#fff #404040 #404040 #fff",
-                      cursor: "not-allowed",
-                    }
-                  : alreadyPoked || alreadyEmailed
-                    ? { opacity: 0.45, cursor: "not-allowed" }
-                    : {}),
-              }}
-            >
-              {alreadyPoked ? "✓" : pokeLoading ? "…" : "Poke"}
-            </button>
-            {onPokeEmail && (
+          return (
+            <div style={{ display: "flex", gap: 2 }}>
               <button
-                className="matchdb-btn matchdb-btn-email"
+                className="matchdb-btn matchdb-btn-poke"
                 type="button"
-                disabled={mailDisabled}
-                onClick={() => !mailDisabled && onPokeEmail(row)}
-                title={mailTitle}
-                aria-label={mailTitle}
+                disabled={pokeDisabled}
+                onClick={() => !pokeDisabled && onPoke(row)}
+                title={pokeTitle}
+                aria-label={pokeTitle}
                 style={{
                   flex: 1,
-                  ...(mailMatchTooLow
+                  ...(pokeMatchTooLow
                     ? {
                         background: "var(--w97-red, #bb3333)",
                         borderColor: "#fff #404040 #404040 #fff",
                         cursor: "not-allowed",
                       }
-                    : alreadyEmailed || pokeTooRecent
-                      ? { opacity: 0.4, cursor: "not-allowed" }
-                      : {}),
+                    : alreadyPoked || alreadyEmailed
+                    ? { opacity: 0.45, cursor: "not-allowed" }
+                    : {}),
                 }}
               >
-                {alreadyEmailed ? "✓" : "✉"}
+                {alreadyPoked ? "✓" : pokeLoading ? "…" : "Poke"}
               </button>
-            )}
-          </div>
-        </td>
-      </tr>
-    );
-  };
+              {onPokeEmail && (
+                <button
+                  className="matchdb-btn matchdb-btn-email"
+                  type="button"
+                  disabled={mailDisabled}
+                  onClick={() => !mailDisabled && onPokeEmail(row)}
+                  title={mailTitle}
+                  aria-label={mailTitle}
+                  style={{
+                    flex: 1,
+                    ...(mailMatchTooLow
+                      ? {
+                          background: "var(--w97-red, #bb3333)",
+                          borderColor: "#fff #404040 #404040 #fff",
+                          cursor: "not-allowed",
+                        }
+                      : alreadyEmailed || pokeTooRecent
+                      ? { opacity: 0.4, cursor: "not-allowed" }
+                      : {}),
+                  }}
+                >
+                  {alreadyEmailed ? "✓" : "✉"}
+                </button>
+              )}
+            </div>
+          );
+        },
+      },
+    ];
+  }, [
+    sortKey,
+    sortDir,
+    pokeLoading,
+    pokedRowIds,
+    emailedRowIds,
+    pokedAtMap,
+    isVendor,
+    onPoke,
+    onPokeEmail,
+    onRowClick,
+  ]);
 
   return (
-    <SharedTable<MatchRow>
+    <DataTable<MatchRow>
       columns={columns}
-      rows={sortedRows}
-      renderRow={renderRow}
+      data={sortedRows}
+      keyExtractor={(r) => r.id}
       loading={loading}
+      paginate
       emptyMessage="MySQL returned an empty result set (i.e. zero rows)."
       alertSuccess={pokeSuccessMessage}
       alertErrors={[pokeError, error]}
@@ -445,6 +444,9 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       onDownload={onDownload}
       downloadLabel={downloadLabel}
       pageResetKey={`${sortKey ?? ""}-${sortDir}`}
+      onRowDoubleClick={onRowClick}
+      flashIds={flashIds}
+      deleteFlashIds={deleteFlashIds}
     />
   );
 };

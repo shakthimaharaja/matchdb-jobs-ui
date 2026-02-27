@@ -1,0 +1,627 @@
+/* ===================================================================
+   PublicJobsView — Windows 97 DB Table Viewer
+   Three views: TwinView (/jobs), CandView (/jobs/candidate),
+                VendorView (/jobs/vendor)
+
+   Design: mirrors MatchDataTable visual style from matchdb-jobs-ui
+   • .matchdb-panel / .matchdb-panel-title gradient header
+   • .matchdb-table-wrap / .matchdb-table W97 3D bordered cells
+   • .matchdb-footnote bottom status bar per table
+   • No pagination · No scroll (overflow hidden)
+   • Changed rows flash gold 2.5s via WebSocket diff every 30 seconds
+   =================================================================== */
+
+/* ── Root ─────────────────────────────────────────────────────────── */
+.pub-landing {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Verdana, Arial,
+    sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Outer W97 window frame ───────────────────────────────────────── */
+.pub-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 2px solid var(--w97-btn-highlight, #fff);
+  border-left: 2px solid var(--w97-btn-highlight, #fff);
+  border-right: 2px solid var(--w97-btn-dark, #404040);
+  border-bottom: 2px solid var(--w97-btn-dark, #404040);
+  background: var(--w97-window, #c0c0c0);
+}
+
+/* ── Section title bar (outer) ────────────────────────────────────── */
+.pub-section-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  background: linear-gradient(
+    to right,
+    var(--w97-titlebar-from, #235a81),
+    var(--w97-titlebar-to, #1a4565)
+  );
+  flex-shrink: 0;
+}
+
+.pub-section-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.pub-section-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--w97-titlebar-text, #fff);
+  flex: 1;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+  font-family: "Courier New", monospace;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pub-join-badge {
+  font-size: 14px;
+  font-family: serif;
+  opacity: 0.85;
+  margin: 0 3px;
+}
+
+.pub-filter-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  background: var(--w97-yellow, #ffd700);
+  color: #000;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: "MS Sans Serif", sans-serif;
+  vertical-align: middle;
+}
+
+.pub-titlebar-auth {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+/* ── SQL query strip ──────────────────────────────────────────────── */
+.pub-query-strip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  background: var(--w97-window, #c0c0c0);
+  border-bottom: 1px solid var(--w97-btn-shadow, #808080);
+  box-shadow: inset 1px 1px 0 var(--w97-btn-shadow, #808080);
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.pub-qs-label {
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--w97-blue, #235a81);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pub-qs-text {
+  flex: 1;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  color: var(--w97-text, #000);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.pub-qs-run {
+  font-size: 10px;
+  color: #005000;
+  font-weight: 700;
+  cursor: default;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* ── Login warning bar ────────────────────────────────────────────── */
+.pub-login-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #fff3cd;
+  border-bottom: 1px solid #d4a017;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.pub-login-warning-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.pub-login-warning-text {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #664d03;
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, sans-serif;
+}
+
+.pub-login-warning-cta {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #235a81;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: default;
+}
+
+[data-theme="dark"] .pub-login-warning {
+  background: #332b00;
+  border-bottom-color: #7a6a00;
+}
+
+[data-theme="dark"] .pub-login-warning-text {
+  color: #ffd700;
+}
+
+[data-theme="dark"] .pub-login-warning-cta {
+  color: #6cb4ee;
+}
+
+/* ── Typewriter count ────────────────────────────────────────────── */
+.pub-typewriter-count {
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.pub-typewriter-cursor {
+  display: inline-block;
+  margin-left: 1px;
+  font-weight: 400;
+  animation: pub-blink 0.7s step-end infinite;
+}
+
+@keyframes pub-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ── Twin panels layout (TwinView) ───────────────────────────────── */
+.pub-twin-panels {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  margin: 2px;
+  gap: 2px;
+  overflow: hidden;
+}
+
+/* ── Panel / table base styles are in shared/DataTable.css ────────── */
+
+/* Public landing tables fill the viewport; scoped to avoid leaking into MFE */
+.pub-landing .matchdb-table {
+  height: 100%;
+}
+
+/* ── Footnote ─────────────────────────────────────────────────────── */
+.matchdb-footnote {
+  border-top: 1px solid var(--w97-btn-shadow, #808080);
+  background: var(--w97-btn-face, #c0c0c0);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--w97-text, #000);
+  padding: 2px 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.1px;
+  font-family: "MS Sans Serif", Tahoma, sans-serif;
+}
+
+.matchdb-footnote-sep {
+  color: var(--w97-btn-shadow, #808080);
+}
+
+/* ── Row-number & empty-row styles are in shared/DataTable.css ────── */
+
+.pub-sort {
+  font-size: 11px;
+  opacity: 0.5;
+  margin-left: 2px;
+}
+
+/* ── Numeric / right-aligned ──────────────────────────────────────── */
+.pub-num {
+  text-align: right;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.pub-cand-count {
+  font-size: 11px;
+  color: var(--w97-blue, #235a81);
+  font-weight: 700;
+  text-align: left !important;
+}
+
+/* ── Job title ────────────────────────────────────────────────────── */
+.pub-job-title {
+  font-weight: 700;
+  color: var(--w97-blue, #235a81);
+  white-space: nowrap;
+}
+[data-theme="dark"] .pub-job-title {
+  color: #b0c8e0;
+}
+
+/* ── Truncated text cell ──────────────────────────────────────────── */
+.pub-cell-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Work mode cell ───────────────────────────────────────────────── */
+.pub-mode-cell {
+  text-transform: capitalize;
+  font-size: 11px;
+  color: var(--w97-text-secondary, #4e4e4e);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Job type badge ───────────────────────────────────────────────── */
+.pub-type-badge {
+  display: inline-block;
+  padding: 1px 4px;
+  width: 76px;
+  text-align: center;
+  box-sizing: border-box;
+  background: var(--w97-btn-face, #c0c0c0);
+  color: var(--w97-navy, #235a81);
+  font-size: 11px;
+  font-weight: 700;
+  border-top: 1px solid var(--w97-btn-highlight, #fff);
+  border-left: 1px solid var(--w97-btn-highlight, #fff);
+  border-right: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: 1px solid var(--w97-btn-dark, #404040);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+[data-theme="dark"] .pub-type-badge {
+  background: #444;
+  color: #a8d4f0;
+  border-top-color: #666;
+  border-left-color: #666;
+  border-right-color: #222;
+  border-bottom-color: #222;
+}
+
+/* ── Skills ───────────────────────────────────────────────────────── */
+.pub-skills-cell {
+  overflow: hidden;
+  max-width: 0;
+}
+
+.pub-skills {
+  display: flex;
+  gap: 2px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.pub-match-cell {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.pub-skill-tag {
+  display: inline-block;
+  padding: 0 3px;
+  background: var(--w97-window, #c0c0c0);
+  color: var(--w97-text, #000);
+  font-size: 11px;
+  border: 1px solid var(--w97-btn-shadow, #808080);
+  white-space: nowrap;
+}
+
+.pub-skill-more {
+  font-size: 11px;
+  color: var(--w97-text-secondary, #4e4e4e);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── Match / Fit bar ──────────────────────────────────────────────── */
+.pub-fit-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pub-fit-bar {
+  width: 44px;
+  height: 7px;
+  background: var(--w97-border-light, #d4d0c8);
+  border: 1px solid var(--w97-btn-shadow, #808080);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.pub-fit-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--w97-blue, #235a81);
+}
+.pub-fit-fill.pub-fit-high {
+  background: #1a6b2a;
+}
+.pub-fit-fill.pub-fit-good {
+  background: #2e7d32;
+}
+
+.pub-fit-pct {
+  font-size: 11px;
+  font-family: "Courier New", monospace;
+  color: var(--w97-text, #000);
+  white-space: nowrap;
+  min-width: 28px;
+  text-align: right;
+}
+
+/* ── Status bar (bottom of section) ──────────────────────────────── */
+.pub-statusbar {
+  display: flex;
+  align-items: center;
+  padding: 1px 3px;
+  gap: 2px;
+  background: var(--w97-window, #c0c0c0);
+  border-top: 1px solid var(--w97-btn-shadow, #808080);
+  flex-shrink: 0;
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.pub-sb-cell {
+  padding: 1px 6px;
+  color: var(--w97-text, #000);
+  border-top: 1px solid var(--w97-btn-shadow, #808080);
+  border-left: 1px solid var(--w97-btn-shadow, #808080);
+  border-right: 1px solid var(--w97-btn-highlight, #fff);
+  border-bottom: 1px solid var(--w97-btn-highlight, #fff);
+  white-space: nowrap;
+}
+
+.pub-sb-right {
+  margin-left: auto;
+}
+
+/* ── Live poll indicator (status bar) ────────────────────────────── */
+.pub-poll-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #005000;
+  font-weight: 700;
+  background: #e0ffe0;
+  border-top-color: #008000;
+  border-left-color: #008000;
+  border-right-color: #004000;
+  border-bottom-color: #004000;
+}
+.pub-poll-live::before {
+  content: "●";
+  font-size: 8px;
+  color: #008000;
+}
+[data-theme="dark"] .pub-poll-live {
+  background: #1a3a1a;
+  color: #6f6;
+  border-color: #4a4;
+}
+
+/* ── Last sync timer ─────────────────────────────────────────────── */
+.pub-sb-sync {
+  color: #336;
+  font-variant-numeric: tabular-nums;
+}
+[data-theme="dark"] .pub-sb-sync {
+  color: #99b;
+}
+
+/* ── Live poll indicator (footnote) ──────────────────────────────── */
+.pub-poll-live-fn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #005000;
+  font-weight: 700;
+  background: #e0ffe0;
+  padding: 0 4px;
+  border-top: 1px solid #008000;
+  border-left: 1px solid #008000;
+  border-right: 1px solid #004000;
+  border-bottom: 1px solid #004000;
+  font-size: 11px;
+}
+.pub-poll-live-fn::before {
+  content: "●";
+  font-size: 8px;
+  color: #008000;
+}
+[data-theme="dark"] .pub-poll-live-fn {
+  background: #1a3a1a;
+  color: #6f6;
+  border-color: #4a4;
+}
+
+/* ── Win97 3D buttons ─────────────────────────────────────────────── */
+.pub-btn {
+  padding: 2px 8px;
+  height: 24px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, sans-serif;
+  background: var(--w97-btn-face, #c0c0c0);
+  color: var(--w97-text, #000);
+  border-top: 2px solid var(--w97-btn-highlight, #fff);
+  border-left: 2px solid var(--w97-btn-highlight, #fff);
+  border-right: 2px solid var(--w97-btn-dark, #404040);
+  border-bottom: 2px solid var(--w97-btn-dark, #404040);
+  white-space: nowrap;
+}
+.pub-btn:hover {
+  background: #d4d4d4;
+}
+.pub-btn:active {
+  border-top-color: var(--w97-btn-dark, #404040);
+  border-left-color: var(--w97-btn-dark, #404040);
+  border-right-color: var(--w97-btn-highlight, #fff);
+  border-bottom-color: var(--w97-btn-highlight, #fff);
+}
+.pub-btn-primary {
+  font-weight: 800;
+  outline: 1px dotted var(--w97-text, #000);
+  outline-offset: -4px;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────── */
+.pub-loading,
+.pub-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  color: var(--w97-text-secondary, #4e4e4e);
+  letter-spacing: 0.3px;
+}
+
+/* ── Row flash & table dark-mode overrides are in shared/DataTable.css ── */
+
+/* ── WebSocket disconnected indicator ─────────────────────────────── */
+.pub-ws-disconnected {
+  background: #fff0f0 !important;
+  color: #900 !important;
+  border-color: #c00 !important;
+}
+.pub-ws-disconnected::before {
+  content: "●" !important;
+  color: #c00 !important;
+}
+[data-theme="dark"] .pub-ws-disconnected {
+  background: #3a1a1a !important;
+  color: #f66 !important;
+  border-color: #844 !important;
+}
+[data-theme="dark"] .pub-ws-disconnected::before {
+  color: #f66 !important;
+}
+
+/* ── Dark mode — PublicJobsView-specific ──────────────────────────── */
+[data-theme="dark"] .matchdb-footnote {
+  background: #333;
+  color: #999;
+  border-top-color: #555;
+}
+[data-theme="dark"] .pub-skill-tag {
+  background: #333;
+  color: #ccc;
+  border-color: #555;
+}
+[data-theme="dark"] .pub-statusbar {
+  background: #333;
+  border-top-color: #555;
+}
+[data-theme="dark"] .pub-sb-cell {
+  color: #ccc;
+  border-color: #555 #333 #333 #555;
+}
+[data-theme="dark"] .pub-section {
+  background: #2a2a2a;
+  border-color: #555 #333 #333 #555;
+}
+[data-theme="dark"] .pub-query-strip {
+  background: #2a2a2a;
+  border-bottom-color: #555;
+}
+[data-theme="dark"] .pub-qs-label {
+  color: #80b0d0;
+}
+[data-theme="dark"] .pub-qs-text {
+  color: #ccc;
+}
+[data-theme="dark"] .pub-fit-pct {
+  color: #ccc;
+}
+[data-theme="dark"] .pub-fit-bar {
+  background: #444;
+  border-color: #555;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .pub-twin-panels {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .pub-section-titlebar {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 600px) {
+  .pub-section-titlebar {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .pub-titlebar-auth {
+    width: 100%;
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+  .pub-btn {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+  .pub-query-strip {
+    display: none;
+  }
+  .pub-statusbar {
+    flex-wrap: wrap;
+  }
+}

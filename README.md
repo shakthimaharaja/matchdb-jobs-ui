@@ -13,7 +13,10 @@ Remote microfrontend for the MatchDB staffing platform. Exposes the Jobs applica
 | State        | Redux Toolkit (`jobsSlice`)                           |
 | Routing      | React Router v6                                       |
 | UI Libraries | MUI 5, PrimeReact 10, Tailwind CSS 3                  |
+| UI Shared    | matchdb-component-library (local npm link)            |
 | HTTP         | Axios                                                 |
+| Realtime     | WebSocket (native browser API) — live data feeds      |
+| PDF          | jsPDF                                                 |
 | Proxy Server | Express + http-proxy-middleware (port 4001)           |
 | Theme        | Inherits Windows 97 theme from the shell              |
 
@@ -34,9 +37,8 @@ matchdb-jobs-ui/
 │   ├── JobsApp.tsx              # Exposed MFE component — routing entry
 │   ├── components/
 │   │   ├── index.ts             # Barrel export (all components + types)
-│   │   ├── DBLayout.tsx         # phpMyAdmin-style panel with subnav events
-│   │   ├── MatchDataTable.tsx   # Data table with sort, checkbox, poke
-│   │   ├── MatchDataTable.css
+│   │   ├── DBLayout.tsx         # phpMyAdmin-style panel with subnav + breadcrumb events
+│   │   ├── MatchDataTable.tsx   # DataTable wrapper with flash animations & server-side pagination
 │   │   ├── DetailModal.tsx      # Job/profile detail viewer with PDF download
 │   │   ├── DetailModal.css
 │   │   ├── ResumeModal.tsx      # Candidate profile create/edit modal
@@ -45,8 +47,8 @@ matchdb-jobs-ui/
 │   │   ├── JobPostingModal.css
 │   │   └── PokeEmailModal.tsx   # Poke email composer modal
 │   ├── pages/
-│   │   ├── PublicLanding.tsx    # Pre-login view — single table + title-bar auth
-│   │   ├── PublicLanding.css
+│   │   ├── PublicJobsView.tsx   # Pre-login view — live WebSocket tables (jobs & profiles)
+│   │   ├── PublicJobsView.css
 │   │   ├── CandidateDashboard.tsx  # Candidate view — profile, matched jobs, visibility
 │   │   ├── VendorDashboard.tsx     # Vendor view — post jobs, browse candidates
 │   │   ├── CandidateProfile.tsx    # Candidate profile edit form
@@ -55,15 +57,16 @@ matchdb-jobs-ui/
 │   │   └── LegacyForms.css        # Form styling shared between pages
 │   ├── store/
 │   │   ├── index.ts             # Redux store config
-│   │   └── jobsSlice.ts         # Jobs state, CRUD thunks
+│   │   └── jobsSlice.ts         # Jobs state, CRUD thunks, poke thunks
 │   ├── hooks/
-│   │   └── useDraftCache.ts     # Draft form persistence hook
+│   │   ├── useDraftCache.ts     # Draft form persistence hook
+│   │   └── useAutoRefreshFlash.ts # Auto-refresh + row flash animation hook
+│   ├── shared/
+│   │   ├── index.ts             # Re-exports DataTable & types from component library
+│   │   └── PokesTable.tsx       # Poke interactions table
 │   ├── styles/
-│   │   ├── index.css            # Barrel — imports w97-theme + w97-base
-│   │   ├── w97-theme.css        # 50+ --w97-* CSS custom properties (light + dark)
-│   │   └── w97-base.css         # Shared utility classes (raised, sunken, titlebar, scroll)
+│   │   └── index.css            # Barrel — imports theme, base & component styles from library
 │   └── utils/
-│       ├── index.ts             # Shared helpers (fmtCurrency, fmtDate, authHeader, downloadBlob, TYPE_LABELS, SUB_LABELS)
 │       └── generateResumePDF.ts # Resume PDF generation utility
 ├── env/
 │   └── .env.development         # Local env vars
@@ -113,11 +116,11 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 
 ## Routing (JobsApp.tsx)
 
-| Condition                  | Component Rendered   |
-| -------------------------- | -------------------- |
-| Not logged in              | `PublicLanding`      |
-| Logged in as **candidate** | `CandidateDashboard` |
-| Logged in as **vendor**    | `VendorDashboard`    |
+| Condition                  | Component Rendered   | URL Paths                              |
+| -------------------------- | -------------------- | -------------------------------------- |
+| Not logged in              | `PublicJobsView`     | `/jobs`, `/jobs/candidate`, `/jobs/vendor` |
+| Logged in as **candidate** | `CandidateDashboard` |                                        |
+| Logged in as **vendor**    | `VendorDashboard`    |                                        |
 
 ---
 
@@ -126,13 +129,28 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 - **Locked state (🔒):** When `hasPurchasedVisibility` is `false`, shows a blurred/locked panel prompting the candidate to purchase a Visibility Package (starting at $13, one-time). CTA button opens the shell's Pricing modal.
 - **Unlocked state:** When visibility is purchased, shows:
   - **Visibility coverage alert** — displays purchased domains/subdomains (e.g., "contract (C2C, C2H) · full_time (W2)") with an "Add More" button
-  - **Matched jobs table** — ranked job matches based on profile skills, preferences, and visibility config
+  - **Matched jobs table** — ranked job matches with auto-refresh flash animations (yellow for new/changed, red for removed)
   - **Shareable profile URL** — displays `{origin}/resume/{username}` with a "Copy" button (clipboard integration)
   - Plan badge + poke counter
 
 ---
 
+## PublicJobsView (Pre-login)
+
+Replaces the previous `PublicLanding` component. Three sub-views by URL path (`/jobs`, `/jobs/candidate`, `/jobs/vendor`). Connects to two WebSocket endpoints:
+
+- `/ws/public-data` — receives full job + profile snapshots every 30 s with diff tracking (changedIds, deletedIds). Drives row flash animations (yellow for changed, red for deleted).
+- `/ws/counts` — receives live job and profile counts for the status bar.
+
+No HTTP polling is used — all data is pushed via WebSocket.
+
+---
+
 ## Components
+
+### MatchDataTable
+
+Wraps the `DataTable` component from `matchdb-component-library`. Adds flash animation props (`flashIds` for yellow new/changed rows, `deleteFlashIds` for red removed rows) and server-side pagination support (`serverTotal`, `serverPage`, `serverPageSize`, `onPageChange`).
 
 ### DetailModal
 
@@ -157,9 +175,10 @@ Poke email composer for sending poke notifications to candidates or vendors.
 | Event Name              | Direction    | Purpose                                       |
 | ----------------------- | ------------ | --------------------------------------------- |
 | `matchdb:subnav`        | Jobs → Shell | Send subnav groups to shell sidebar           |
+| `matchdb:breadcrumb`    | Jobs → Shell | Send breadcrumb label to shell header         |
 | `matchdb:openLogin`     | Jobs → Shell | Request login modal from shell                |
 | `matchdb:jobTypeFilter` | Shell → Jobs | Filter jobs by type in dashboards             |
-| `matchdb:loginContext`  | Shell → Jobs | Tell PublicLanding which login type is active |
+| `matchdb:loginContext`  | Shell → Jobs | Tell PublicJobsView which login type is active |
 
 ---
 
@@ -179,17 +198,20 @@ When running inside the shell host, the shell's own CSS variables override these
 
 ## Utilities (`src/utils/`)
 
-| Export               | Description                                               |
-| -------------------- | --------------------------------------------------------- |
-| `fmtCurrency()`      | Formats a number as currency or returns "—"               |
-| `fmtDate()`          | Formats an ISO date string to short readable form         |
-| `fmtList()`          | Joins an array with commas                                |
-| `fmtVal()`           | Returns a displayable value or "—"                        |
-| `formatExperience()` | Formats years of experience                               |
-| `TYPE_LABELS`        | Map: full_time → "Full Time", contract → "Contract", etc. |
-| `SUB_LABELS`         | Map: c2c → "C2C", direct_hire → "Direct Hire", etc.       |
-| `authHeader()`       | Builds `{ Authorization: 'Bearer …' }` header             |
-| `downloadBlob()`     | Triggers a file download from a Blob response             |
+Shared utility functions (`fmtCurrency`, `fmtDate`, `authHeader`, `downloadBlob`, `TYPE_LABELS`, `SUB_LABELS`, etc.) have been extracted to the **matchdb-component-library** package. The remaining local utility is:
+
+| Export               | Description                           |
+| -------------------- | ------------------------------------- |
+| `generateResumePDF()` | Resume PDF generation utility (jsPDF) |
+
+---
+
+## Hooks (`src/hooks/`)
+
+| Hook                    | Description                                                                                          |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `useDraftCache`         | Persists form draft state to localStorage                                                            |
+| `useAutoRefreshFlash`   | Tracks data diffs on a 30 s interval, produces `flashIds` (yellow) and `deleteFlashIds` (red) Sets   |
 
 ---
 

@@ -193,18 +193,43 @@ export const fetchCandidateMatches = createAsyncThunk(
       page?: number;
       limit?: number;
       types?: string[];
+      filter_type?: string;
+      sub_type?: string;
+      work_mode?: string;
+      search?: string;
     },
     { rejectWithValue },
   ) => {
     try {
-      const { token, page, limit, types } = payload;
-      const params: any = {};
+      const {
+        token,
+        page,
+        limit,
+        types,
+        filter_type,
+        sub_type,
+        work_mode,
+        search,
+      } = payload;
+      const params: Record<string, string | number> = {};
       if (page !== undefined) {
         params.page = page;
         params.limit = limit || 25;
       }
       if (types && types.length > 0) {
         params.types = types.join(",");
+      }
+      if (filter_type) {
+        params.filter_type = filter_type;
+      }
+      if (sub_type) {
+        params.sub_type = sub_type;
+      }
+      if (work_mode) {
+        params.work_mode = work_mode;
+      }
+      if (search) {
+        params.search = search;
       }
       const res = await axios.get("/api/jobs/jobmatches", {
         ...getAxiosConfig(token),
