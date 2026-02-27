@@ -29,8 +29,7 @@ matchdb-jobs-ui/
 ├── public/
 │   └── index.html               # HTML template (standalone fallback)
 ├── server/
-│   ├── index.ts                 # Express proxy server (port 4001)
-│   └── index.js                 # Compiled proxy (fallback)
+│   └── index.ts                 # Express proxy server (port 4001)
 ├── src/
 │   ├── index.ts                 # Webpack entry point
 │   ├── bootstrap.tsx            # React root render (standalone mode)
@@ -104,9 +103,9 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 | Prop                     | Type                              | Description                    |
 | ------------------------ | --------------------------------- | ------------------------------ |
 | `token`                  | `string \| null`                  | JWT access token               |
-| `userType`               | `string \| null`                  | `candidate` or `vendor`        |
-| `userId`                 | `string \| null`                  | User ID                        |
-| `userEmail`              | `string \| null`                  | User email                     |
+| `userType`               | `string \| undefined`             | `candidate` or `vendor`        |
+| `userId`                 | `string \| undefined`             | User ID                        |
+| `userEmail`              | `string \| undefined`             | User email                     |
 | `username`               | `string \| undefined`             | Username slug for profile URLs |
 | `plan`                   | `string \| undefined`             | Subscription plan              |
 | `membershipConfig`       | `Record<string,string[]> \| null` | Purchased visibility domains   |
@@ -184,13 +183,20 @@ Poke email composer for sending poke notifications to candidates or vendors.
 
 ## Global Styles (`src/styles/`)
 
-The Windows 97 theme is centralized into global style files imported once in `bootstrap.tsx`:
+The Windows 97 theme CSS has been extracted to the **matchdb-component-library** package. The Jobs UI imports theme, base, and component styles from the library:
 
-| File            | Purpose                                                                    |
-| --------------- | -------------------------------------------------------------------------- |
-| `w97-theme.css` | 50+ `--w97-*` CSS custom properties for light & dark mode (`[data-theme]`) |
-| `w97-base.css`  | Shared utility classes: `.w97-raised`, `.w97-sunken`, `.w97-scroll`, etc.  |
-| `index.css`     | Barrel — imports both theme and base CSS in one import                     |
+```css
+/* src/styles/index.css */
+@import "matchdb-component-library/src/styles/w97-theme.css";
+@import "matchdb-component-library/src/styles/w97-base.css";
+@import "matchdb-component-library/src/styles/components.css";
+```
+
+| File             | Purpose                                                                    |
+| ---------------- | -------------------------------------------------------------------------- |
+| `w97-theme.css`  | 50+ `--w97-*` CSS custom properties for light & dark mode (`[data-theme]`) |
+| `w97-base.css`   | Shared utility classes: `.w97-raised`, `.w97-sunken`, `.w97-scroll`, etc.  |
+| `components.css` | Component-level styles (DataTable, Panel, Toolbar, etc.)                   |
 
 When running inside the shell host, the shell's own CSS variables override these defaults.
 
@@ -239,13 +245,7 @@ NODE_SERVER_PORT=4001
 # 1. Install dependencies
 npm install
 
-# 2. Start the proxy server (port 4001)
-npm run server
-
-# 3. Start webpack dev server (port 3001) — in a second terminal
-npm start
-
-# Or run both concurrently:
+# 2. Start both webpack dev server + proxy server concurrently
 npm run dev
 ```
 
@@ -257,12 +257,12 @@ When running standalone (not inside the shell), the app renders with its own `bo
 
 ## Scripts
 
-| Script           | Description                       |
-| ---------------- | --------------------------------- |
-| `npm start`      | Webpack dev server on port 3001   |
-| `npm run server` | Express proxy server on port 4001 |
-| `npm run dev`    | Both webpack + proxy concurrently |
-| `npm run build`  | Production build to `dist/`       |
+| Script                   | Description                                   |
+| ------------------------ | --------------------------------------------- |
+| `npm run dev`            | Both webpack + proxy concurrently             |
+| `npm run dev:standalone` | Webpack dev server only (port 3001, no proxy) |
+| `npm start`              | Proxy server only (port 4001)                 |
+| `npm run build`          | Production build to `dist/`                   |
 
 ---
 
