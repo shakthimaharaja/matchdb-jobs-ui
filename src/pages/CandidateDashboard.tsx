@@ -5,7 +5,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useAppDispatch, useAppSelector } from "../store";
 import { MatchRow } from "../components/MatchDataTable";
 import { DataTable } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
@@ -16,13 +15,18 @@ import CandidateProfile from "./CandidateProfile";
 import { PokesTable } from "../shared";
 import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
 import {
-  clearPokeState,
-  fetchCandidateMatches,
-  fetchPokesSent,
-  fetchPokesReceived,
-  fetchProfile,
-  sendPoke,
-} from "../store/jobsSlice";
+  useGetCandidateMatchesQuery,
+  useGetProfileQuery,
+  useGetPokesSentQuery,
+  useGetPokesReceivedQuery,
+  useSendPokeMutation,
+  type Job,
+  type CandidateProfile as CandidateProfileType,
+  type PokeRecord,
+  type PaginatedResponse,
+  type CandidateMatchesArgs,
+  type SendPokeArgs,
+} from "../api/jobsApi";
 
 interface Props {
   token: string | null;
@@ -177,24 +181,6 @@ const CandidateDashboard: React.FC<Props> = ({
   membershipConfig,
   hasPurchasedVisibility = false,
 }) => {
-  const dispatch = useAppDispatch();
-  const {
-    candidateMatches,
-    candidateMatchesTotal,
-    candidateMatchesTypeCounts,
-    candidateMatchesSubTypeCounts,
-    loading,
-    error,
-    pokeLoading,
-    pokeSuccessMessage,
-    pokeError,
-    profile,
-    profileLoading,
-    pokesSent,
-    pokesReceived,
-    pokesLoading,
-  } = useAppSelector((state) => state.jobs);
-
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -229,53 +215,80 @@ const CandidateDashboard: React.FC<Props> = ({
 
   // Premium profile editing unlock ($3 payment gate)
   const [premiumUnlocked, setPremiumUnlocked] = useState(false);
+
+  // ── RTK Query data hooks ───────────────────────────────────────────────────
+  const [matchFilters, setMatchFilters] = useState<CandidateMatchesArgs>({});
+  const { data: matchesData, isLoading: matchesLoading, error: matchesError, refetch: refetchMatches } = useGetCandidateMatchesQuery(matchFilters);
+  const { data: profileData, isLoading: profileLoading } = useGetProfileQuery();
+  const { data: pokesSentData = [], isLoading: pokesSentLoading, refetch: refetchPokesSent } = useGetPokesSentQuery();
+  const { data: pokesReceivedData = [], refetch: refetchPokesReceived } = useGetPokesReceivedQuery();
+  const [sendPoke, { isLoading: pokeLoading, isSuccess: pokeSent, isError: pokeError, reset: clearPokeState }] = useSendPokeMutation();
+
+  // Derive flat arrays and metadata from RTK Query responses
+  const candidateMatches: Job[] = Array.isArray(matchesData)
+    ? matchesData
+    : (matchesData as PaginatedResponse<Job>)?.data ?? [];
+  const candidateMatchesTotal: number = Array.isArray(matchesData)
+    ? matchesData.length
+    : (matchesData as PaginatedResponse<Job>)?.total ?? 0;
+  const candidateMatchesTypeCounts: Record<string, number> = Array.isArray(matchesData)
+    ? {}
+    : (matchesData as PaginatedResponse<Job>)?.typeCounts ?? {};
+  const candidateMatchesSubTypeCounts: Record<string, Record<string, number>> = Array.isArray(matchesData)
+    ? {}
+    : (matchesData as PaginatedResponse<Job>)?.subTypeCounts ?? {};
+  const error: string | null = matchesError
+    ? (matchesError as any)?.data?.message || (matchesError as any)?.error || "Failed to load matches"
+    : null;
+
+  const profile = profileData ?? null;
   const isProfileLocked = !!profile?.profile_locked;
 
-  // Derive poke/email tracking from server-side pokesSent data
+  // Derive poke/email tracking from server-side pokesSentData data
   const pokedRowIds = useMemo(
-    () => new Set(pokesSent.filter((p) => !p.is_email).map((p) => p.target_id)),
-    [pokesSent],
+    () => new Set(pokesSentData.filter((p) => !p.is_email).map((p) => p.target_id)),
+    [pokesSentData],
   );
   const emailedRowIds = useMemo(
-    () => new Set(pokesSent.filter((p) => p.is_email).map((p) => p.target_id)),
-    [pokesSent],
+    () => new Set(pokesSentData.filter((p) => p.is_email).map((p) => p.target_id)),
+    [pokesSentData],
   );
   const pokeCount = useMemo(
-    () => pokesSent.filter((p) => !p.is_email).length,
-    [pokesSent],
+    () => pokesSentData.filter((p) => !p.is_email).length,
+    [pokesSentData],
   );
   const emailCount = useMemo(
-    () => pokesSent.filter((p) => p.is_email).length,
-    [pokesSent],
+    () => pokesSentData.filter((p) => p.is_email).length,
+    [pokesSentData],
   );
 
   // target_id → poke created_at (for 24h mail cooldown)
   const pokedAtMap = useMemo(
     () =>
       new Map(
-        pokesSent
+        pokesSentData
           .filter((p) => !p.is_email)
           .map((p) => [p.target_id, p.created_at]),
       ),
-    [pokesSent],
+    [pokesSentData],
   );
 
   // Pre-filtered lists for Pokes / Mails sections
   const pokesSentOnly = useMemo(
-    () => pokesSent.filter((p) => !p.is_email),
-    [pokesSent],
+    () => pokesSentData.filter((p) => !p.is_email),
+    [pokesSentData],
   );
   const mailsSentOnly = useMemo(
-    () => pokesSent.filter((p) => p.is_email),
-    [pokesSent],
+    () => pokesSentData.filter((p) => p.is_email),
+    [pokesSentData],
   );
   const pokesReceivedOnly = useMemo(
-    () => pokesReceived.filter((p) => !p.is_email),
-    [pokesReceived],
+    () => pokesReceivedData.filter((p) => !p.is_email),
+    [pokesReceivedData],
   );
   const mailsReceivedOnly = useMemo(
-    () => pokesReceived.filter((p) => p.is_email),
-    [pokesReceived],
+    () => pokesReceivedData.filter((p) => p.is_email),
+    [pokesReceivedData],
   );
 
   const profileUrl =
@@ -345,24 +358,16 @@ const CandidateDashboard: React.FC<Props> = ({
     return () => clearTimeout(t);
   }, [searchText]);
 
-  // Helper: build the filter payload for fetchCandidateMatches calls
-  const buildFilterPayload = (page: number, pageSize: number) => ({
-    token,
+  // Helper: build the filter payload for RTK Query matchFilters
+  const buildFilterArgs = (page: number, pageSize: number): CandidateMatchesArgs => ({
     page,
     limit: pageSize,
-    types: membershipTypes,
+    types: membershipTypes ? membershipTypes.join(",") : undefined,
     filter_type: filterType || undefined,
     sub_type: filterSubType || undefined,
     work_mode: filterWorkMode || undefined,
     search: debouncedSearch.trim() || undefined,
   });
-
-  useEffect(() => {
-    dispatch(fetchCandidateMatches(buildFilterPayload(1, 25)));
-    dispatch(fetchProfile(token));
-    dispatch(fetchPokesSent(token));
-    dispatch(fetchPokesReceived(token));
-  }, [dispatch, token]);
 
   // Re-fetch when type / subtype / work-mode / search filters change
   const filtersInitialized = useRef(false);
@@ -376,7 +381,7 @@ const CandidateDashboard: React.FC<Props> = ({
       ...prev,
       [activeView]: { page: 1, pageSize: currentPageSize },
     }));
-    dispatch(fetchCandidateMatches(buildFilterPayload(1, currentPageSize)));
+    setMatchFilters(buildFilterArgs(1, currentPageSize));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterType, filterSubType, filterWorkMode, debouncedSearch]);
 
@@ -405,7 +410,7 @@ const CandidateDashboard: React.FC<Props> = ({
     const parts: string[] = [];
 
     // Show subscription country with flag
-    const country = profile?.profile_country;
+    const country = (profile as any)?.profile_country;
     if (country) {
       const flag = COUNTRY_FLAGS[country] || "";
       const name = COUNTRY_NAMES[country] || country;
@@ -437,7 +442,7 @@ const CandidateDashboard: React.FC<Props> = ({
         new CustomEvent("matchdb:visibleIn", { detail: { text: "" } }),
       );
     };
-  }, [membershipConfig, profile?.profile_country]);
+  }, [membershipConfig, (profile as any)?.profile_country]);
 
   // Emit footer info for shell to display
   useEffect(() => {
@@ -479,7 +484,7 @@ const CandidateDashboard: React.FC<Props> = ({
       ...prev,
       [activeView]: { page, pageSize },
     }));
-    dispatch(fetchCandidateMatches(buildFilterPayload(page, pageSize)));
+    setMatchFilters(buildFilterArgs(page, pageSize));
   };
 
   const hasMembership =
@@ -494,26 +499,19 @@ const CandidateDashboard: React.FC<Props> = ({
 
   useEffect(() => {
     return () => {
-      dispatch(clearPokeState());
+      clearPokeState();
     };
-  }, [dispatch]);
+  }, []);
 
   /* ── Auto-refresh + flash animations (30 s cycle) ── */
   const refreshAll = useCallback(() => {
-    dispatch(
-      fetchCandidateMatches(buildFilterPayload(currentPage, currentPageSize)),
-    );
-    dispatch(fetchPokesSent(token));
-    dispatch(fetchPokesReceived(token));
+    refetchMatches();
+    refetchPokesSent();
+    refetchPokesReceived();
   }, [
-    dispatch,
-    token,
-    currentPage,
-    currentPageSize,
-    filterType,
-    filterSubType,
-    filterWorkMode,
-    debouncedSearch,
+    refetchMatches,
+    refetchPokesSent,
+    refetchPokesReceived,
   ]);
 
   const matchesFlash = useAutoRefreshFlash({
@@ -522,13 +520,13 @@ const CandidateDashboard: React.FC<Props> = ({
     refresh: refreshAll,
   });
   const pokesFlash = useAutoRefreshFlash({
-    data: pokesSent,
+    data: pokesSentData,
     keyExtractor: (p) => p.id,
     refresh: refreshAll,
     enabled: false,
   });
   const pokesRecvFlash = useAutoRefreshFlash({
-    data: pokesReceived,
+    data: pokesReceivedData,
     keyExtractor: (p) => p.id,
     refresh: refreshAll,
     enabled: false,
@@ -562,37 +560,32 @@ const CandidateDashboard: React.FC<Props> = ({
     (row: MatchRow) => {
       if (!row.pokeTargetEmail) return;
       if (isFinite(pokeLimit) && pokeCount >= pokeLimit) return;
-      dispatch(clearPokeState());
-      dispatch(
-        sendPoke({
-          token,
-          to_email: row.pokeTargetEmail,
-          to_name: row.pokeTargetName,
-          subject_context: row.pokeSubjectContext,
-          target_id: row.id,
-          target_vendor_id: row.rawData?.vendor_id as string | undefined,
-          is_email: false,
-          sender_name: profile?.name || userEmail || "Candidate",
-          sender_email: userEmail || "",
-          job_id: row.id,
-          job_title: row.role,
-        }),
-      ).then((result) => {
-        if (sendPoke.fulfilled.match(result)) {
-          dispatch(fetchPokesSent(token));
-        }
+      clearPokeState();
+      sendPoke({
+        to_email: row.pokeTargetEmail,
+        to_name: row.pokeTargetName,
+        subject_context: row.pokeSubjectContext,
+        target_id: row.id,
+        target_vendor_id: row.rawData?.vendor_id as string | undefined,
+        is_email: false,
+        sender_name: profile?.name || userEmail || "Candidate",
+        sender_email: userEmail || "",
+        job_id: row.id,
+        job_title: row.role,
+      }).then(() => {
+        refetchPokesSent();
       });
     },
-    [dispatch, token, pokeLimit, pokeCount, profile?.name, userEmail],
+    [sendPoke, clearPokeState, refetchPokesSent, pokeLimit, pokeCount, profile?.name, userEmail],
   );
 
   const handlePokeEmail = useCallback(
     (row: MatchRow) => {
-      dispatch(clearPokeState());
+      clearPokeState();
       setPokeEmailSentSuccess(false);
       setPokeEmailRow(row);
     },
-    [dispatch],
+    [clearPokeState],
   );
 
   // ── Sorted rows (client-side sort on current page) ──
@@ -916,27 +909,25 @@ const CandidateDashboard: React.FC<Props> = ({
     pdf_data?: string;
   }) => {
     if (!pokeEmailRow) return;
-    const result = await dispatch(
-      sendPoke({
-        token,
-        to_email: params.to_email,
-        to_name: params.to_name,
-        subject_context: params.subject_context,
-        email_body: params.email_body,
-        target_id: pokeEmailRow.id,
-        target_vendor_id: pokeEmailRow.rawData?.vendor_id as string | undefined,
-        is_email: true,
-        sender_name: profile?.name || userEmail || "Candidate",
-        sender_email: userEmail || "",
-        pdf_attachment: params.pdf_data,
-        job_id: pokeEmailRow.id,
-        job_title: pokeEmailRow.role,
-      }),
-    );
-    if (sendPoke.fulfilled.match(result)) {
+    await sendPoke({
+      to_email: params.to_email,
+      to_name: params.to_name,
+      subject_context: params.subject_context,
+      email_body: params.email_body,
+      target_id: pokeEmailRow.id,
+      target_vendor_id: pokeEmailRow.rawData?.vendor_id as string | undefined,
+      is_email: true,
+      sender_name: profile?.name || userEmail || "Candidate",
+      sender_email: userEmail || "",
+      pdf_attachment: params.pdf_data,
+      job_id: pokeEmailRow.id,
+      job_title: pokeEmailRow.role,
+    }).unwrap().then(() => {
       setPokeEmailSentSuccess(true);
-      dispatch(fetchPokesSent(token));
-    }
+      refetchPokesSent();
+    }).catch(() => {
+      // pokeError state is handled by useSendPokeMutation
+    });
   };
 
   const handleDownloadCSV = () => {
@@ -1238,11 +1229,9 @@ const CandidateDashboard: React.FC<Props> = ({
               ...prev,
               [activeView]: { page: 1, pageSize: currentPageSize },
             }));
-            dispatch(
-              fetchCandidateMatches(buildFilterPayload(1, currentPageSize)),
-            );
-            dispatch(fetchPokesSent(token));
-            dispatch(fetchPokesReceived(token));
+            setMatchFilters(buildFilterArgs(1, currentPageSize));
+            refetchPokesSent();
+            refetchPokesReceived();
           },
         },
         {
@@ -1365,13 +1354,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 ⚠ Failed to load matches: {error}
                 <button
                   aria-label="Retry loading matches"
-                  onClick={() =>
-                    dispatch(
-                      fetchCandidateMatches(
-                        buildFilterPayload(currentPage, currentPageSize),
-                      ),
-                    )
-                  }
+                  onClick={() => refetchMatches()}
                 >
                   ↺ Retry
                 </button>
@@ -1460,7 +1443,7 @@ const CandidateDashboard: React.FC<Props> = ({
             {activeView === "pokes-sent" && (
               <PokesTable
                 pokes={pokesSentOnly}
-                loading={pokesLoading}
+                loading={pokesSentLoading}
                 section="pokes-sent"
                 userType="candidate"
               />
@@ -1470,7 +1453,7 @@ const CandidateDashboard: React.FC<Props> = ({
             {activeView === "pokes-received" && (
               <PokesTable
                 pokes={pokesReceivedOnly}
-                loading={pokesLoading}
+                loading={pokesSentLoading}
                 section="pokes-received"
                 userType="candidate"
               />
@@ -1480,7 +1463,7 @@ const CandidateDashboard: React.FC<Props> = ({
             {activeView === "mails-sent" && (
               <PokesTable
                 pokes={mailsSentOnly}
-                loading={pokesLoading}
+                loading={pokesSentLoading}
                 section="mails-sent"
                 userType="candidate"
               />
@@ -1490,7 +1473,7 @@ const CandidateDashboard: React.FC<Props> = ({
             {activeView === "mails-received" && (
               <PokesTable
                 pokes={mailsReceivedOnly}
-                loading={pokesLoading}
+                loading={pokesSentLoading}
                 section="mails-received"
                 userType="candidate"
               />
@@ -1503,11 +1486,11 @@ const CandidateDashboard: React.FC<Props> = ({
                   columns={matchColumns}
                   data={sortedRows}
                   keyExtractor={(r) => r.id}
-                  loading={loading}
+                  loading={matchesLoading}
                   paginate
                   emptyMessage="MySQL returned an empty result set (i.e. zero rows)."
-                  alertSuccess={pokeSuccessMessage}
-                  alertErrors={[pokeError, error]}
+                  alertSuccess={pokeSent ? "Poke sent successfully!" : undefined}
+                  alertErrors={[pokeError ? "Failed to send poke." : null, error]}
                   title="Related Job Openings"
                   titleIcon="📌"
                   titleExtra={
@@ -1592,11 +1575,7 @@ const CandidateDashboard: React.FC<Props> = ({
                               pageSize: currentPageSize,
                             },
                           }));
-                          dispatch(
-                            fetchCandidateMatches(
-                              buildFilterPayload(1, currentPageSize),
-                            ),
-                          );
+                          setMatchFilters(buildFilterArgs(1, currentPageSize));
                         }}
                       >
                         ↻

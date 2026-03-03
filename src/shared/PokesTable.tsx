@@ -1,7 +1,7 @@
 import React from "react";
 import { DataTable } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
-import { PokeRecord } from "../store/jobsSlice";
+import { PokeRecord } from "../api/jobsApi";
 
 type SectionKey =
   | "pokes-sent"

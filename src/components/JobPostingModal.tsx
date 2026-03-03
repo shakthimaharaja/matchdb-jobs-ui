@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Job } from '../store/jobsSlice';
+import { Job } from '../api/jobsApi';
 import './ResumeModal.css';
 import './JobPostingModal.css';
 

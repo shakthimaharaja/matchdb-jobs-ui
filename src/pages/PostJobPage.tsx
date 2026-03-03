@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '../store';
-import { postJob } from '../store/jobsSlice';
+import { usePostJobMutation } from '../api/jobsApi';
 import useDraftCache from '../hooks/useDraftCache';
 import '../components/ResumeModal.css';
 import './PostJobPage.css';
@@ -243,14 +242,14 @@ const EMPTY: FormState = {
 };
 
 interface Props {
-  token: string | null;
+  token?: string | null;
   onPosted?: () => void;
 }
 
 /* ── Component ──────────────────────────────────────────────── */
-const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
-  const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector((state) => state.jobs);
+const PostJobPage: React.FC<Props> = ({ onPosted }) => {
+  const [postJob, { isLoading: loading, error: rawError }] = usePostJobMutation();
+  const error = rawError ? ((rawError as any).data?.error ?? 'Failed to post job.') : null;
   const { saveDraft, getDraft, clearDraft, hasDraft } = useDraftCache<FormState>('matchdb_draft_post_job');
   const [form, setForm] = useState<FormState>(EMPTY);
   const [success, setSuccess] = useState(false);
@@ -301,9 +300,8 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSuccess(false);
-    const result = await dispatch(postJob({
-      token,
-      data: {
+    try {
+      await postJob({
         title: form.title,
         description: form.description,
         location: form.location,
@@ -320,10 +318,7 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
         experience_required: form.experience_required ?? undefined,
         recruiter_name: form.recruiter_name || undefined,
         recruiter_phone: form.recruiter_phone || undefined,
-      },
-    }));
-
-    if (postJob.fulfilled.match(result)) {
+      }).unwrap();
       clearDraft();
       setSuccess(true);
       setForm(EMPTY);
@@ -331,6 +326,8 @@ const PostJobPage: React.FC<Props> = ({ token, onPosted }) => {
       setParseResult(null);
       setShowDraftBanner(false);
       if (onPosted) onPosted();
+    } catch {
+      // error is read from rawError via the hook
     }
   };
 

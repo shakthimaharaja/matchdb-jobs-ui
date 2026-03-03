@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { CandidateProfile } from '../store/jobsSlice';
+import { CandidateProfile } from '../api/jobsApi';
 
 /**
  * Generates a resume PDF from a CandidateProfile using jsPDF.

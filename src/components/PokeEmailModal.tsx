@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { MatchRow } from "./MatchDataTable";
-import { CandidateProfile } from "../store/jobsSlice";
+import { CandidateProfile } from "../api/jobsApi";
 import { generateResumePDF } from "../utils/generateResumePDF";
 import "./ResumeModal.css";
 

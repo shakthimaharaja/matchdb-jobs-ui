@@ -1,6 +1,7 @@
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const ModuleFederationPlugin = require("webpack/lib/container/ModuleFederationPlugin");
-const Dotenv = require("dotenv-webpack");
+const { DefinePlugin } = require("webpack");
+const dotenv = require("dotenv");
 const path = require("path");
 const deps = require("./package.json").dependencies;
 
@@ -15,6 +16,16 @@ module.exports = (env = {}) => {
   const envFile = path.resolve(__dirname, `env/.env.${envName}`);
 
   const isDev = envName === "local" || envName === "development";
+  const useHttps = Boolean(env.https);
+
+  // Read .env file vars manually — skip NODE_ENV to avoid conflicting with
+  // webpack's own mode-based DefinePlugin definition.
+  const envVars = dotenv.config({ path: envFile }).parsed || {};
+  const envDefines = Object.fromEntries(
+    Object.entries(envVars)
+      .filter(([key]) => key !== "NODE_ENV")
+      .map(([key, val]) => [`process.env.${key}`, JSON.stringify(val)]),
+  );
 
   return {
     entry: "./src/index.ts",
@@ -44,7 +55,7 @@ module.exports = (env = {}) => {
       ],
     },
     plugins: [
-      new Dotenv({ path: envFile, safe: false, systemvars: true }),
+      new DefinePlugin(envDefines),
       new ModuleFederationPlugin({
         name: "matchdbJobs",
         filename: "remoteEntry.js",
@@ -75,6 +86,8 @@ module.exports = (env = {}) => {
     ],
     devServer: {
       port: 3001,
+      // Pass --env https to enable HTTPS (uses webpack-dev-server's built-in cert)
+      server: useHttps ? "https" : "http",
       historyApiFallback: true,
       hot: true,
       headers: { "Access-Control-Allow-Origin": "*" },
@@ -88,8 +101,9 @@ module.exports = (env = {}) => {
       proxy: [
         {
           context: ["/api/jobs"],
-          target: "http://localhost:8001",
+          target: useHttps ? "https://localhost:4001" : "http://localhost:4001",
           changeOrigin: true,
+          secure: false,
         },
         {
           context: ["/ws"],

@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./components/ResumeModal.css";
 import { Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "./store";
+import { setToken } from "./store/authSlice";
 import CandidateDashboard from "./pages/CandidateDashboard";
 import VendorDashboard from "./pages/VendorDashboard";
 import PostJobPage from "./pages/PostJobPage";
@@ -32,6 +33,12 @@ const JobsApp: React.FC<JobsAppProps> = ({
   hasPurchasedVisibility = false,
 }) => {
   const [showPostJob, setShowPostJob] = useState(false);
+
+  // Keep jobs-ui Redux store in sync with the token prop from shell.
+  // jobsApi's prepareHeaders reads from this store so it auto-injects the JWT.
+  useEffect(() => {
+    store.dispatch(setToken(token ?? null));
+  }, [token]);
 
   /* ---- Pre-login: show public live data tables ---- */
   if (!token) {

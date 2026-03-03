@@ -1,25 +1,59 @@
 import express from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
-import path from "path";
+import cors from "cors";
+import compression from "compression";
+import helmet from "helmet";
+import path from "node:path";
 import dotenv from "dotenv";
+import http from "node:http";
+import https from "node:https";
 
+// ─── Load env file before importing config ─────────────────────────────────────
 const ENV = process.env.NODE_ENV || "local";
 dotenv.config({ path: path.resolve(__dirname, "../env", `.env.${ENV}`) });
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-const app = express();
-const PORT = parseInt(process.env.NODE_SERVER_PORT || "4001", 10);
-const JOBS_SERVICES_URL =
-  process.env.JOBS_SERVICES_URL || "http://localhost:8001";
+import config from "../db/config";
 
-// Proxy /api/jobs/* -> jobs-services
-// Express strips the mount path in req.url, so we re-prepend /api/jobs.
+const app = express();
+
+// ─── Security headers ──────────────────────────────────────────────────────────
+// CSP disabled — Module Federation injects inline scripts; handled per-env by nginx.
+// crossOriginEmbedderPolicy disabled to allow MFE embedding from shell host.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }),
+);
+
+// ─── CORS ──────────────────────────────────────────────────────────────────────
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow server-to-server (no origin) and whitelisted origins
+      if (!origin || config.corsOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin '${origin}' not allowed`));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+
+// ─── Compression ───────────────────────────────────────────────────────────────
+app.use(compression());
+
+// ─── Proxy: /api/jobs/* → jobs-services ───────────────────────────────────────
 app.use(
   "/api/jobs",
   createProxyMiddleware({
-    target: JOBS_SERVICES_URL,
+    target: config.jobsServicesUrl,
     changeOrigin: true,
-    pathRewrite: (path) => `/api/jobs${path}`,
+    pathRewrite: (reqPath) => `/api/jobs${reqPath}`,
     on: {
       error: (_err: Error, _req: express.Request, res: express.Response) => {
         (res as express.Response)
@@ -32,16 +66,19 @@ app.use(
 
 app.use(express.json());
 
+// ─── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
     service: "matchdb-jobs-ui-server",
-    port: PORT,
-    jobsService: JOBS_SERVICES_URL,
+    port: config.port,
+    protocol: config.useHttps ? "https" : "http",
+    env: config.env,
+    jobsService: config.jobsServicesUrl,
   });
 });
 
-// Serve static files from webpack build
+// ─── Static files (webpack build) ─────────────────────────────────────────────
 const distPath = path.resolve(__dirname, "../dist");
 app.use(express.static(distPath));
 
@@ -50,8 +87,23 @@ app.get("*", (_req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`[matchdb-jobs-ui] Node server running on port ${PORT} (${ENV})`);
-  console.log(`[matchdb-jobs-ui] Proxying /api/jobs → ${JOBS_SERVICES_URL}`);
-  console.log(`[matchdb-jobs-ui] Serving static files from ${distPath}`);
-});
+// ─── Start server ──────────────────────────────────────────────────────────────
+function logStartup() {
+  const proto = config.useHttps ? "https" : "http";
+  console.log(
+    `[matchdb-jobs-ui] ${proto.toUpperCase()} server on port ${config.port} (${config.env})`,
+  );
+  console.log(`[matchdb-jobs-ui] /api/jobs → ${config.jobsServicesUrl}`);
+  console.log(`[matchdb-jobs-ui] Static: ${distPath}`);
+  console.log(
+    `[matchdb-jobs-ui] CORS origins: ${config.corsOrigins.join(", ")}`,
+  );
+}
+
+if (config.useHttps) {
+  const { getSSLOptions } = require("./ssl");
+  const sslOptions = getSSLOptions();
+  https.createServer(sslOptions, app).listen(config.port, logStartup);
+} else {
+  http.createServer(app).listen(config.port, logStartup);
+}

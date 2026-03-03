@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useAppDispatch, useAppSelector } from "../store";
 import MatchDataTable, { MatchRow } from "../components/MatchDataTable";
 import DBLayout, { NavGroup } from "../components/DBLayout";
 import DetailModal from "../components/DetailModal";
@@ -9,18 +8,23 @@ import PokeEmailModal from "../components/PokeEmailModal";
 import { PokesTable } from "../shared";
 import { DataTable } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
-import { Job } from "../store/jobsSlice";
 import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
 import {
-  clearPokeState,
-  closeJob,
-  fetchPokesSent,
-  fetchPokesReceived,
-  fetchVendorCandidateMatches,
-  fetchVendorJobs,
-  reopenJob,
-  sendPoke,
-} from "../store/jobsSlice";
+  useGetVendorJobsQuery,
+  useGetVendorCandidateMatchesQuery,
+  useGetPokesSentQuery,
+  useGetPokesReceivedQuery,
+  useSendPokeMutation,
+  useCloseJobMutation,
+  useReopenJobMutation,
+  type Job,
+  type CandidateProfileMatch,
+  type PokeRecord,
+  type PaginatedResponse,
+  type VendorJobsArgs,
+  type VendorCandidateMatchesArgs,
+  type SendPokeArgs,
+} from "../api/jobsApi";
 
 interface Props {
   token: string | null;
@@ -150,21 +154,37 @@ const VendorDashboard: React.FC<Props> = ({
   plan = "free",
   onPostJob,
 }) => {
-  const dispatch = useAppDispatch();
-  const {
-    vendorJobs,
-    vendorCandidateMatches,
-    vendorCandidateMatchesTotal,
-    vendorJobsTotal,
-    loading,
-    error,
-    pokeLoading,
-    pokeSuccessMessage,
-    pokeError,
-    pokesSent,
-    pokesReceived,
-    pokesLoading,
-  } = useAppSelector((state) => state.jobs);
+  // ── RTK Query data hooks ───────────────────────────────────────────────────
+  const [jobsArgs, setJobsArgs] = useState<VendorJobsArgs>({});
+  const [matchArgs, setMatchArgs] = useState<VendorCandidateMatchesArgs>({});
+  const { data: jobsData, isLoading: jobsLoading, refetch: refetchJobs } = useGetVendorJobsQuery(jobsArgs);
+  const { data: matchesData, isLoading: matchesLoading, refetch: refetchMatches } = useGetVendorCandidateMatchesQuery(matchArgs);
+  const { data: pokesSentData = [], isLoading: pokesSentLoading, refetch: refetchPokesSent } = useGetPokesSentQuery();
+  const { data: pokesReceivedData = [], refetch: refetchPokesReceived } = useGetPokesReceivedQuery();
+  const [sendPoke, { isLoading: pokeLoading, isSuccess: pokeSent, isError: pokeError, reset: clearPokeState }] = useSendPokeMutation();
+  const [closeJobMutation] = useCloseJobMutation();
+  const [reopenJobMutation] = useReopenJobMutation();
+
+  // Derive flat arrays from paginated-or-array responses
+  const vendorJobs: Job[] = Array.isArray(jobsData)
+    ? jobsData
+    : (jobsData as PaginatedResponse<Job>)?.data ?? [];
+  const vendorJobsTotal: number = Array.isArray(jobsData)
+    ? jobsData.length
+    : (jobsData as PaginatedResponse<Job>)?.total ?? 0;
+  const vendorCandidateMatches: CandidateProfileMatch[] = Array.isArray(matchesData)
+    ? matchesData
+    : (matchesData as PaginatedResponse<CandidateProfileMatch>)?.data ?? [];
+  const vendorCandidateMatchesTotal: number = Array.isArray(matchesData)
+    ? matchesData.length
+    : (matchesData as PaginatedResponse<CandidateProfileMatch>)?.total ?? 0;
+
+  const pokesSent: PokeRecord[] = pokesSentData;
+  const pokesReceived: PokeRecord[] = pokesReceivedData;
+  const pokesLoading = pokesSentLoading;
+
+  // Derive a string message for MatchDataTable's pokeSuccessMessage prop
+  const pokeSuccessMessage: string | null = pokeSent ? "Poke sent!" : null;
 
   // URL-driven navigation — browser back/forward for free
   const [searchParams, setSearchParams] = useSearchParams();
@@ -303,14 +323,11 @@ const VendorDashboard: React.FC<Props> = ({
   const handlePageChange = (page: number, pageSize: number) => {
     setCurrentPage(page);
     setCurrentPageSize(pageSize);
-    dispatch(
-      fetchVendorCandidateMatches({
-        token,
-        jobId: selectedJobId || null,
-        page,
-        limit: pageSize,
-      }),
-    );
+    setMatchArgs({
+      job_id: selectedJobId || undefined,
+      page,
+      limit: pageSize,
+    });
   };
 
   const jobLimit = JOB_LIMIT[plan] ?? 0;
@@ -318,12 +335,6 @@ const VendorDashboard: React.FC<Props> = ({
   const activeJobs = vendorJobs.filter((j) => j.is_active);
   const activeJobCount = activeJobs.length;
   const atJobLimit = isFinite(jobLimit) && activeJobCount >= jobLimit;
-
-  useEffect(() => {
-    dispatch(fetchVendorJobs({ token }));
-    dispatch(fetchPokesSent(token));
-    dispatch(fetchPokesReceived(token));
-  }, [dispatch, token]);
 
   // Dispatch vendor's primary location to shell (derived from most-posted job location)
   useEffect(() => {
@@ -413,39 +424,29 @@ const VendorDashboard: React.FC<Props> = ({
   useEffect(() => {
     if (viewMode === "candidates") {
       setCurrentPage(1);
-      dispatch(
-        fetchVendorCandidateMatches({
-          token,
-          jobId: selectedJobId || null,
-          page: 1,
-          limit: currentPageSize,
-        }),
-      );
+      setMatchArgs({
+        job_id: selectedJobId || undefined,
+        page: 1,
+        limit: currentPageSize,
+      });
     }
-  }, [dispatch, token, selectedJobId, viewMode]);
+  }, [selectedJobId, viewMode]);
 
   useEffect(() => {
     return () => {
-      dispatch(clearPokeState());
+      clearPokeState();
     };
-  }, [dispatch]);
+  }, []);
 
   /* ── Auto-refresh + flash animations (30 s cycle) ── */
   const refreshAll = useCallback(() => {
-    dispatch(fetchVendorJobs({ token }));
-    dispatch(fetchPokesSent(token));
-    dispatch(fetchPokesReceived(token));
+    refetchJobs();
+    refetchPokesSent();
+    refetchPokesReceived();
     if (viewMode === "candidates") {
-      dispatch(
-        fetchVendorCandidateMatches({
-          token,
-          jobId: selectedJobId || null,
-          page: currentPage,
-          limit: currentPageSize,
-        }),
-      );
+      refetchMatches();
     }
-  }, [dispatch, token, viewMode, selectedJobId, currentPage, currentPageSize]);
+  }, [refetchJobs, refetchPokesSent, refetchPokesReceived, refetchMatches, viewMode]);
 
   const jobsFlash = useAutoRefreshFlash({
     data: vendorJobs,
@@ -506,7 +507,7 @@ const VendorDashboard: React.FC<Props> = ({
   /* ── Close / Reopen a job ── */
   const handleCloseJob = async (jobId: string) => {
     setClosingJobId(jobId);
-    await dispatch(closeJob({ token, jobId }));
+    await closeJobMutation(jobId).unwrap();
     setClosingJobId(null);
     setSelectedJobPosting((prev) =>
       prev?.id === jobId ? { ...prev, is_active: false } : prev,
@@ -515,7 +516,7 @@ const VendorDashboard: React.FC<Props> = ({
 
   const handleReopenJob = async (jobId: string) => {
     setClosingJobId(jobId);
-    await dispatch(reopenJob({ token, jobId }));
+    await reopenJobMutation(jobId).unwrap();
     setClosingJobId(null);
     setSelectedJobPosting((prev) =>
       prev?.id === jobId ? { ...prev, is_active: true } : prev,
@@ -853,29 +854,22 @@ const VendorDashboard: React.FC<Props> = ({
   const handlePoke = (row: MatchRow) => {
     if (!row.pokeTargetEmail) return;
     if (isFinite(pokeLimit) && pokeCount >= pokeLimit) return;
-    dispatch(clearPokeState());
-    dispatch(
-      sendPoke({
-        token,
-        to_email: row.pokeTargetEmail,
-        to_name: row.pokeTargetName,
-        subject_context: row.pokeSubjectContext,
-        target_id: row.id,
-        is_email: false,
-        sender_name: userEmail?.split("@")[0] || "Vendor",
-        sender_email: userEmail || "",
-        job_id: selectedJobId || undefined,
-        job_title: selectedJobId ? selectedJobTitle : undefined,
-      }),
-    ).then((result) => {
-      if (sendPoke.fulfilled.match(result)) {
-        dispatch(fetchPokesSent(token));
-      }
+    clearPokeState();
+    sendPoke({
+      to_email: row.pokeTargetEmail,
+      to_name: row.pokeTargetName,
+      subject_context: row.pokeSubjectContext,
+      target_id: row.id,
+      is_email: false,
+      sender_name: userEmail?.split("@")[0] || "Vendor",
+      sender_email: userEmail || "",
+      job_id: selectedJobId || undefined,
+      job_title: selectedJobId ? selectedJobTitle : undefined,
     });
   };
 
   const handlePokeEmail = (row: MatchRow) => {
-    dispatch(clearPokeState());
+    clearPokeState();
     setPokeEmailSentSuccess(false);
     setPokeEmailRow(row);
   };
@@ -888,9 +882,8 @@ const VendorDashboard: React.FC<Props> = ({
     pdf_data?: string;
   }) => {
     if (!pokeEmailRow) return;
-    const result = await dispatch(
-      sendPoke({
-        token,
+    try {
+      await sendPoke({
         to_email: params.to_email,
         to_name: params.to_name,
         subject_context: params.subject_context,
@@ -901,16 +894,16 @@ const VendorDashboard: React.FC<Props> = ({
         sender_email: userEmail || "",
         job_id: selectedJobId || undefined,
         job_title: selectedJobId ? selectedJobTitle : undefined,
-      }),
-    );
-    if (sendPoke.fulfilled.match(result)) {
+      }).unwrap();
       setPokeEmailSentSuccess(true);
-      dispatch(fetchPokesSent(token));
+      refetchPokesSent();
       setTimeout(() => {
         setPokeEmailSentSuccess(false);
         setPokeEmailRow(null);
-        dispatch(clearPokeState());
+        clearPokeState();
       }, 2000);
+    } catch {
+      // error state handled via pokeError from useSendPokeMutation
     }
   };
 
@@ -1107,19 +1100,16 @@ const VendorDashboard: React.FC<Props> = ({
           id: "refresh",
           label: "Refresh Data",
           onClick: () => {
-            dispatch(fetchVendorJobs({ token }));
-            dispatch(fetchPokesSent(token));
-            dispatch(fetchPokesReceived(token));
+            refetchJobs();
+            refetchPokesSent();
+            refetchPokesReceived();
             if (viewMode === "candidates") {
               setCurrentPage(1);
-              dispatch(
-                fetchVendorCandidateMatches({
-                  token,
-                  jobId: selectedJobId || null,
-                  page: 1,
-                  limit: currentPageSize,
-                }),
-              );
+              setMatchArgs({
+                job_id: selectedJobId || undefined,
+                page: 1,
+                limit: currentPageSize,
+              });
             }
           },
         },
@@ -1241,26 +1231,19 @@ const VendorDashboard: React.FC<Props> = ({
         </div>
 
         {/* Error banner */}
-        {error && (
+        {pokeError && (
           <div
             className="w97-alert w97-alert-error"
             role="alert"
             aria-live="assertive"
           >
-            ⚠ Failed to load data: {error}
+            ⚠ Failed to load data: An error occurred
             <button
               aria-label="Retry loading data"
               onClick={() => {
-                dispatch(fetchVendorJobs({ token }));
+                refetchJobs();
                 if (viewMode === "candidates")
-                  dispatch(
-                    fetchVendorCandidateMatches({
-                      token,
-                      jobId: selectedJobId || null,
-                      page: currentPage,
-                      limit: currentPageSize,
-                    }),
-                  );
+                  refetchMatches();
               }}
             >
               ↺ Retry
@@ -1438,7 +1421,7 @@ const VendorDashboard: React.FC<Props> = ({
                   columns={postingsColumns}
                   data={tableData}
                   keyExtractor={(j) => j.id}
-                  loading={loading}
+                  loading={jobsLoading}
                   paginate
                   titleExtra={
                     <div className="matchdb-title-toolbar">
@@ -1457,12 +1440,12 @@ const VendorDashboard: React.FC<Props> = ({
                         Reset
                       </button>
                       <span className="matchdb-title-count">
-                        {loading ? "..." : `${tableData.length}/${totalCount}`}
+                        {jobsLoading ? "..." : `${tableData.length}/${totalCount}`}
                       </span>
                       <button
                         type="button"
                         className="matchdb-btn matchdb-title-btn"
-                        onClick={() => dispatch(fetchVendorJobs({ token }))}
+                        onClick={() => refetchJobs()}
                       >
                         ↻
                       </button>
@@ -1582,15 +1565,12 @@ const VendorDashboard: React.FC<Props> = ({
                         className="matchdb-btn matchdb-title-btn"
                         onClick={() => {
                           setCurrentPage(1);
-                          dispatch(fetchVendorJobs({ token }));
-                          dispatch(
-                            fetchVendorCandidateMatches({
-                              token,
-                              jobId: selectedJobId || null,
-                              page: 1,
-                              limit: currentPageSize,
-                            }),
-                          );
+                          refetchJobs();
+                          setMatchArgs({
+                            job_id: selectedJobId || undefined,
+                            page: 1,
+                            limit: currentPageSize,
+                          });
                         }}
                       >
                         ↻
@@ -1598,15 +1578,15 @@ const VendorDashboard: React.FC<Props> = ({
                     </div>
                   }
                   rows={rows}
-                  loading={loading}
-                  error={error}
+                  loading={matchesLoading}
+                  error={pokeError ? "An error occurred" : null}
                   serverTotal={vendorCandidateMatchesTotal}
                   serverPage={currentPage}
                   serverPageSize={currentPageSize}
                   onPageChange={handlePageChange}
                   pokeLoading={pokeLoading}
                   pokeSuccessMessage={pokeSuccessMessage}
-                  pokeError={pokeError}
+                  pokeError={pokeError ? "Failed to send poke" : null}
                   isVendor={true}
                   pokedRowIds={pokedRowIds}
                   emailedRowIds={emailedRowIds}
@@ -1656,7 +1636,7 @@ const VendorDashboard: React.FC<Props> = ({
         onClose={() => {
           setPokeEmailRow(null);
           setPokeEmailSentSuccess(false);
-          dispatch(clearPokeState());
+          clearPokeState();
         }}
         sending={pokeLoading}
         sentSuccess={pokeEmailSentSuccess}

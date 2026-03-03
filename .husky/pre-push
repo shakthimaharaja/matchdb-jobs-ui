@@ -1,0 +1,23 @@
+#!/bin/sh
+# ─── Pre-push quality gate ────────────────────────────────────────────────────
+# Runs ESLint and (optionally) Sonar before every git push.
+# To skip in emergencies: git push --no-verify
+
+set -e
+
+echo "🔍 [pre-push] Running ESLint..."
+npm run lint
+
+echo "✅ [pre-push] ESLint passed."
+
+# Uncomment the block below once sonar-scanner is installed globally or locally:
+# if command -v sonar-scanner &> /dev/null; then
+#   echo "📊 [pre-push] Running SonarQube analysis..."
+#   sonar-scanner
+#   echo "✅ [pre-push] Sonar analysis complete."
+# else
+#   echo "⚠️  [pre-push] sonar-scanner not found — skipping Sonar analysis."
+#   echo "   Install with: npm install -g sonar-scanner"
+# fi
+
+echo "🚀 [pre-push] All checks passed. Pushing..."

@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '../store';
 import {
-  fetchProfile,
-  upsertProfile,
-  clearProfileError,
-  CandidateProfile as IProfile,
-} from '../store/jobsSlice';
+  type CandidateProfile as IProfile,
+  useGetProfileQuery,
+  useUpsertProfileMutation,
+} from '../api/jobsApi';
 import './ResumeModal.css';
 
 interface Props {
@@ -30,24 +28,33 @@ const EMPTY: Partial<IProfile> = {
 };
 
 const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
-  const dispatch = useAppDispatch();
-  const { profile, profileLoading, profileError } = useAppSelector((s) => s.jobs);
+  const { data: profile, isLoading: profileFetching, error: profileQueryError, refetch } =
+    useGetProfileQuery(undefined, { skip: !open });
+  const [doUpsert, { isLoading: isSaving }] = useUpsertProfileMutation();
+
+  const profileLoading = profileFetching || isSaving;
+  const profileError =
+    profileQueryError
+      ? String((profileQueryError as any)?.data?.message || 'Failed to load profile')
+      : null;
 
   const [form, setForm] = useState<Partial<IProfile>>(EMPTY);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
-      dispatch(fetchProfile(token));
+      refetch();
       setSaveSuccess(false);
+      setSaveError(null);
     }
-  }, [open, token, dispatch]);
+  }, [open, refetch]);
 
   useEffect(() => {
     if (profile) {
       setForm({ ...profile });
     } else if (userEmail) {
-      setForm((f) => ({ ...f, email: userEmail }));
+      setForm((prev: Partial<IProfile>) => ({ ...prev, email: userEmail }));
     }
   }, [profile, userEmail]);
 
@@ -56,16 +63,18 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
   const isLocked = !!profile?.profile_locked;
 
   const set = <K extends keyof IProfile>(key: K, value: IProfile[K]) => {
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((prev: Partial<IProfile>) => ({ ...prev, [key]: value }));
     setSaveSuccess(false);
   };
 
   const handleSave = async () => {
     setSaveSuccess(false);
-    dispatch(clearProfileError());
-    const result = await dispatch(upsertProfile({ token, data: form as IProfile }));
-    if (upsertProfile.fulfilled.match(result)) {
+    setSaveError(null);
+    try {
+      await doUpsert(form as IProfile).unwrap();
       setSaveSuccess(true);
+    } catch (err: any) {
+      setSaveError(err?.data?.message || 'Failed to save profile');
     }
   };
 
@@ -90,8 +99,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
 
         {/* Scrollable body */}
         <div className="rm-body">
-          {profileError && (
-            <div className="rm-alert rm-alert-error">{profileError}</div>
+          {(profileError || saveError) && (
+            <div className="rm-alert rm-alert-error">{profileError || saveError}</div>
           )}
           {saveSuccess && (
             <div className="rm-alert rm-alert-success">

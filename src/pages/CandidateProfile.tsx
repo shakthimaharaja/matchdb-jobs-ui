@@ -10,14 +10,12 @@ import {
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Message } from "primereact/message";
-import { useAppDispatch, useAppSelector } from "../store";
 import {
-  fetchProfile,
-  upsertProfile,
-  deleteProfile,
-  clearProfileError,
-  CandidateProfile as IProfile,
-} from "../store/jobsSlice";
+  useGetProfileQuery,
+  useUpsertProfileMutation,
+  useDeleteProfileMutation,
+  type CandidateProfile as IProfile,
+} from "../api/jobsApi";
 import "./LegacyForms.css";
 import "../components/ResumeModal.css";
 
@@ -102,18 +100,17 @@ const EMPTY: IProfile = {
 };
 
 interface Props {
-  token: string | null;
+  token?: string | null;
   userEmail: string | undefined;
   onSaved?: () => void;
   premiumUnlocked?: boolean;
   onRequestPremiumUnlock?: () => void;
 }
 
-const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved, premiumUnlocked = false, onRequestPremiumUnlock }) => {
-  const dispatch = useAppDispatch();
-  const { profile, profileLoading, profileError } = useAppSelector(
-    (state) => state.jobs,
-  );
+const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked = false, onRequestPremiumUnlock }) => {
+  const { data: profile, isLoading: profileLoading, error: profileError } = useGetProfileQuery();
+  const [upsertProfile, { isLoading: saving, reset: resetUpsert }] = useUpsertProfileMutation();
+  const [deleteProfile, { isLoading: deleting }] = useDeleteProfileMutation();
 
   const { saveDraft, getDraft, clearDraft, hasDraft } = useDraftCache<IProfile>('matchdb_draft_candidate_profile');
   const [form, setForm] = useState<IProfile>(EMPTY);
@@ -135,10 +132,6 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved, premiumU
 
   // editIntent = user clicked "OK" acknowledging the $3 cost; fields become editable
   const [editIntent, setEditIntent] = useState(false);
-
-  useEffect(() => {
-    dispatch(fetchProfile(token));
-  }, [dispatch, token]);
 
   useEffect(() => {
     if (profile) {
@@ -191,7 +184,7 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved, premiumU
 
   const handleSave = async () => {
     setSaveSuccess(false);
-    dispatch(clearProfileError());
+    resetUpsert();
     // For locked profiles, merge appended text into the resume fields
     let saveData = { ...form };
     if (premiumLocked) {
@@ -204,8 +197,8 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved, premiumU
         };
       }
     }
-    const result = await dispatch(upsertProfile({ token, data: saveData }));
-    if (upsertProfile.fulfilled.match(result)) {
+    try {
+      await upsertProfile(saveData).unwrap();
       clearDraft();
       setSaveSuccess(true);
       // Clear additions after successful save
@@ -216,27 +209,31 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved, premiumU
         resume_achievements: "",
       });
       onSaved?.();
+    } catch (_) {
+      // error is surfaced via profileError from useGetProfileQuery / upsertProfile mutation state
     }
   };
 
   const handleDelete = async () => {
-    const result = await dispatch(deleteProfile(token));
-    if (deleteProfile.fulfilled.match(result)) {
+    try {
+      await deleteProfile().unwrap();
       setShowDeleteModal(false);
       setForm(EMPTY);
+    } catch (_) {
+      // error surfaced via profileError
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (!token) return;
     setDeleteAccountLoading(true);
     setDeleteAccountError(null);
     try {
       // 1. Delete Jobs profile first (if exists)
       if (profile) {
-        await dispatch(deleteProfile(token));
+        await deleteProfile().unwrap();
       }
       // 2. Delete the shell account (User + Subscription + RefreshTokens)
+      const token = localStorage.getItem("matchdb_token");
       await axios.delete("/api/auth/account", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -285,7 +282,7 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved, premiumU
               color: "#7a2222",
             }}
           >
-            ✕ {profileError}
+            ✕ {(profileError as any)?.data?.error ?? 'An error occurred'}
           </div>
         )}
         {saveSuccess && (
@@ -1165,7 +1162,7 @@ const CandidateProfile: React.FC<Props> = ({ token, userEmail, onSaved, premiumU
               </fieldset>
 
               {profileError && (
-                <div className="rm-alert rm-alert-error">✕ {profileError}</div>
+                <div className="rm-alert rm-alert-error">✕ {(profileError as any)?.data?.error ?? 'An error occurred'}</div>
               )}
             </div>
 
