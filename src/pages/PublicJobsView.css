@@ -11,6 +11,86 @@
    • Changed rows flash gold 2.5s via WebSocket diff every 30 seconds
    =================================================================== */
 
+/* ── Sign-up CTA banner (unauthenticated users) ───────────────────── */
+.pub-signup-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: linear-gradient(
+    to right,
+    var(--w97-titlebar-from, #235a81),
+    var(--w97-titlebar-to, #1a4565)
+  );
+  border-bottom: 2px solid var(--w97-btn-dark, #404040);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.pub-signup-banner-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.pub-signup-banner-text {
+  flex: 1;
+  font-size: 11px;
+  color: #fff;
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Verdana, Arial, sans-serif;
+}
+
+.pub-signup-banner-text strong {
+  color: #ffe066;
+}
+
+.pub-signup-banner-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pub-signup-hint {
+  font-size: 11px;
+  color: #ffe066;
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Verdana, Arial, sans-serif;
+  white-space: nowrap;
+}
+
+.pub-signup-hint strong {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pub-signup-btn {
+  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Verdana, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  cursor: pointer;
+  border: 2px solid;
+  /* W97 raised button look */
+  border-top-color: var(--w97-btn-highlight, #fff);
+  border-left-color: var(--w97-btn-highlight, #fff);
+  border-right-color: var(--w97-btn-dark, #404040);
+  border-bottom-color: var(--w97-btn-dark, #404040);
+  background: var(--w97-window, #c0c0c0);
+  color: #000;
+  white-space: nowrap;
+}
+
+.pub-signup-btn:active {
+  border-top-color: var(--w97-btn-dark, #404040);
+  border-left-color: var(--w97-btn-dark, #404040);
+  border-right-color: var(--w97-btn-highlight, #fff);
+  border-bottom-color: var(--w97-btn-highlight, #fff);
+}
+
+.pub-signup-btn-primary {
+  background: var(--w97-window, #c0c0c0);
+  font-weight: 700;
+}
+
 /* ── Root ─────────────────────────────────────────────────────────── */
 .pub-landing {
   display: flex;

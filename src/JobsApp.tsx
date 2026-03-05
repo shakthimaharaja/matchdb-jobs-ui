@@ -6,8 +6,10 @@ import { store } from "./store";
 import { setToken } from "./store/authSlice";
 import CandidateDashboard from "./pages/CandidateDashboard";
 import VendorDashboard from "./pages/VendorDashboard";
+import MarketerDashboard from "./pages/MarketerDashboard";
 import PostJobPage from "./pages/PostJobPage";
 import PublicJobsView from "./pages/PublicJobsView";
+import MembershipGatePage from "./pages/MembershipGatePage";
 
 export interface JobsAppProps {
   token: string | null;
@@ -58,7 +60,34 @@ const JobsApp: React.FC<JobsAppProps> = ({
     );
   }
 
-  /* ---- Authenticated view ---- */
+  /* ---- Marketer without active subscription → membership gate ---- */
+  if (userType === "marketer" && plan !== "marketer") {
+    return (
+      <Provider store={store}>
+        <MembershipGatePage userType="marketer" />
+      </Provider>
+    );
+  }
+
+  /* ---- Vendor without subscription → membership gate ---- */
+  if (userType === "vendor" && plan === "free") {
+    return (
+      <Provider store={store}>
+        <MembershipGatePage userType="vendor" />
+      </Provider>
+    );
+  }
+
+  /* ---- Candidate without visibility purchase → membership gate ---- */
+  if (userType === "candidate" && !hasPurchasedVisibility) {
+    return (
+      <Provider store={store}>
+        <MembershipGatePage userType="candidate" />
+      </Provider>
+    );
+  }
+
+  /* ---- Authenticated view (membership active) ---- */
   return (
     <Provider store={store}>
       <div
@@ -70,7 +99,18 @@ const JobsApp: React.FC<JobsAppProps> = ({
         }}
       >
         <Routes>
-          {userType === "vendor" ? (
+          {userType === "marketer" ? (
+            <Route
+              path="*"
+              element={
+                <MarketerDashboard
+                  token={token}
+                  userId={userId}
+                  userEmail={userEmail}
+                />
+              }
+            />
+          ) : userType === "vendor" ? (
             <>
               <Route
                 path="post-job"

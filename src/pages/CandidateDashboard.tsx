@@ -20,12 +20,14 @@ import {
   useGetPokesSentQuery,
   useGetPokesReceivedQuery,
   useSendPokeMutation,
+  useGetCandidateForwardedOpeningsQuery,
   type Job,
   type CandidateProfile as CandidateProfileType,
   type PokeRecord,
   type PaginatedResponse,
   type CandidateMatchesArgs,
   type SendPokeArgs,
+  type ForwardedOpeningItem,
 } from "../api/jobsApi";
 
 interface Props {
@@ -43,7 +45,8 @@ type ActiveView =
   | "pokes-sent"
   | "pokes-received"
   | "mails-sent"
-  | "mails-received";
+  | "mails-received"
+  | "forwarded";
 
 const formatRate = (value?: number | null) =>
   value ? `$${Number(value).toFixed(0)}` : "-";
@@ -218,11 +221,33 @@ const CandidateDashboard: React.FC<Props> = ({
 
   // ── RTK Query data hooks ───────────────────────────────────────────────────
   const [matchFilters, setMatchFilters] = useState<CandidateMatchesArgs>({});
-  const { data: matchesData, isLoading: matchesLoading, error: matchesError, refetch: refetchMatches } = useGetCandidateMatchesQuery(matchFilters);
+  const {
+    data: matchesData,
+    isLoading: matchesLoading,
+    error: matchesError,
+    refetch: refetchMatches,
+  } = useGetCandidateMatchesQuery(matchFilters);
   const { data: profileData, isLoading: profileLoading } = useGetProfileQuery();
-  const { data: pokesSentData = [], isLoading: pokesSentLoading, refetch: refetchPokesSent } = useGetPokesSentQuery();
-  const { data: pokesReceivedData = [], refetch: refetchPokesReceived } = useGetPokesReceivedQuery();
-  const [sendPoke, { isLoading: pokeLoading, isSuccess: pokeSent, isError: pokeError, reset: clearPokeState }] = useSendPokeMutation();
+  const {
+    data: pokesSentData = [],
+    isLoading: pokesSentLoading,
+    refetch: refetchPokesSent,
+  } = useGetPokesSentQuery();
+  const { data: pokesReceivedData = [], refetch: refetchPokesReceived } =
+    useGetPokesReceivedQuery();
+  const [
+    sendPoke,
+    {
+      isLoading: pokeLoading,
+      isSuccess: pokeSent,
+      isError: pokeError,
+      reset: clearPokeState,
+    },
+  ] = useSendPokeMutation();
+
+  // Forwarded openings from marketer companies
+  const { data: forwardedOpenings = [] } =
+    useGetCandidateForwardedOpeningsQuery();
 
   // Derive flat arrays and metadata from RTK Query responses
   const candidateMatches: Job[] = Array.isArray(matchesData)
@@ -231,14 +256,21 @@ const CandidateDashboard: React.FC<Props> = ({
   const candidateMatchesTotal: number = Array.isArray(matchesData)
     ? matchesData.length
     : (matchesData as PaginatedResponse<Job>)?.total ?? 0;
-  const candidateMatchesTypeCounts: Record<string, number> = Array.isArray(matchesData)
+  const candidateMatchesTypeCounts: Record<string, number> = Array.isArray(
+    matchesData,
+  )
     ? {}
     : (matchesData as PaginatedResponse<Job>)?.typeCounts ?? {};
-  const candidateMatchesSubTypeCounts: Record<string, Record<string, number>> = Array.isArray(matchesData)
+  const candidateMatchesSubTypeCounts: Record<
+    string,
+    Record<string, number>
+  > = Array.isArray(matchesData)
     ? {}
     : (matchesData as PaginatedResponse<Job>)?.subTypeCounts ?? {};
   const error: string | null = matchesError
-    ? (matchesError as any)?.data?.message || (matchesError as any)?.error || "Failed to load matches"
+    ? (matchesError as any)?.data?.message ||
+      (matchesError as any)?.error ||
+      "Failed to load matches"
     : null;
 
   const profile = profileData ?? null;
@@ -246,11 +278,13 @@ const CandidateDashboard: React.FC<Props> = ({
 
   // Derive poke/email tracking from server-side pokesSentData data
   const pokedRowIds = useMemo(
-    () => new Set(pokesSentData.filter((p) => !p.is_email).map((p) => p.target_id)),
+    () =>
+      new Set(pokesSentData.filter((p) => !p.is_email).map((p) => p.target_id)),
     [pokesSentData],
   );
   const emailedRowIds = useMemo(
-    () => new Set(pokesSentData.filter((p) => p.is_email).map((p) => p.target_id)),
+    () =>
+      new Set(pokesSentData.filter((p) => p.is_email).map((p) => p.target_id)),
     [pokesSentData],
   );
   const pokeCount = useMemo(
@@ -359,7 +393,10 @@ const CandidateDashboard: React.FC<Props> = ({
   }, [searchText]);
 
   // Helper: build the filter payload for RTK Query matchFilters
-  const buildFilterArgs = (page: number, pageSize: number): CandidateMatchesArgs => ({
+  const buildFilterArgs = (
+    page: number,
+    pageSize: number,
+  ): CandidateMatchesArgs => ({
     page,
     limit: pageSize,
     types: membershipTypes ? membershipTypes.join(",") : undefined,
@@ -457,6 +494,8 @@ const CandidateDashboard: React.FC<Props> = ({
         ? mailsSentOnly.length
         : activeView === "mails-received"
         ? mailsReceivedOnly.length
+        : activeView === "forwarded"
+        ? forwardedOpenings.length
         : 0;
     window.dispatchEvent(
       new CustomEvent("matchdb:footerInfo", {
@@ -508,11 +547,7 @@ const CandidateDashboard: React.FC<Props> = ({
     refetchMatches();
     refetchPokesSent();
     refetchPokesReceived();
-  }, [
-    refetchMatches,
-    refetchPokesSent,
-    refetchPokesReceived,
-  ]);
+  }, [refetchMatches, refetchPokesSent, refetchPokesReceived]);
 
   const matchesFlash = useAutoRefreshFlash({
     data: candidateMatches,
@@ -576,7 +611,15 @@ const CandidateDashboard: React.FC<Props> = ({
         refetchPokesSent();
       });
     },
-    [sendPoke, clearPokeState, refetchPokesSent, pokeLimit, pokeCount, profile?.name, userEmail],
+    [
+      sendPoke,
+      clearPokeState,
+      refetchPokesSent,
+      pokeLimit,
+      pokeCount,
+      profile?.name,
+      userEmail,
+    ],
   );
 
   const handlePokeEmail = useCallback(
@@ -922,12 +965,15 @@ const CandidateDashboard: React.FC<Props> = ({
       pdf_attachment: params.pdf_data,
       job_id: pokeEmailRow.id,
       job_title: pokeEmailRow.role,
-    }).unwrap().then(() => {
-      setPokeEmailSentSuccess(true);
-      refetchPokesSent();
-    }).catch(() => {
-      // pokeError state is handled by useSendPokeMutation
-    });
+    })
+      .unwrap()
+      .then(() => {
+        setPokeEmailSentSuccess(true);
+        refetchPokesSent();
+      })
+      .catch(() => {
+        // pokeError state is handled by useSendPokeMutation
+      });
   };
 
   const handleDownloadCSV = () => {
@@ -1222,6 +1268,13 @@ const CandidateDashboard: React.FC<Props> = ({
       icon: "",
       items: [
         {
+          id: "forwarded",
+          label: `Forwarded Openings`,
+          count: forwardedOpenings.length,
+          active: activeView === "forwarded",
+          onClick: () => setActiveView("forwarded"),
+        },
+        {
           id: "refresh",
           label: "Refresh Data",
           onClick: () => {
@@ -1283,6 +1336,8 @@ const CandidateDashboard: React.FC<Props> = ({
       ? ["Candidate Portal", "Mails", "Mails Sent"]
       : activeView === "mails-received"
       ? ["Candidate Portal", "Mails", "Mails Received"]
+      : activeView === "forwarded"
+      ? ["Candidate Portal", "Actions", "Forwarded Openings"]
       : ["Candidate Portal", "Matched Jobs", filterLabel];
 
   return (
@@ -1479,6 +1534,117 @@ const CandidateDashboard: React.FC<Props> = ({
               />
             )}
 
+            {/* Forwarded Openings view */}
+            {activeView === "forwarded" && (
+              <DataTable<ForwardedOpeningItem>
+                columns={[
+                  {
+                    key: "job_title",
+                    header: "Job Title",
+                    width: "18%",
+                    skeletonWidth: 120,
+                    render: (f) => <>{f.job_title}</>,
+                  },
+                  {
+                    key: "company_name",
+                    header: "From Company",
+                    width: "14%",
+                    skeletonWidth: 100,
+                    render: (f) => <>{f.company_name}</>,
+                  },
+                  {
+                    key: "job_type",
+                    header: "Type",
+                    width: "10%",
+                    skeletonWidth: 70,
+                    render: (f) => (
+                      <>
+                        {f.job_type}
+                        {f.job_sub_type ? ` › ${f.job_sub_type}` : ""}
+                      </>
+                    ),
+                  },
+                  {
+                    key: "job_location",
+                    header: "Location",
+                    width: "10%",
+                    skeletonWidth: 70,
+                    render: (f) => <>{f.job_location || "—"}</>,
+                  },
+                  {
+                    key: "skills_required",
+                    header: "Skills",
+                    width: "16%",
+                    skeletonWidth: 120,
+                    render: (f) => (
+                      <>
+                        {(f.skills_required || []).slice(0, 3).join(", ")}
+                        {(f.skills_required || []).length > 3
+                          ? ` +${f.skills_required.length - 3}`
+                          : ""}
+                      </>
+                    ),
+                  },
+                  {
+                    key: "comp",
+                    header: "Comp",
+                    width: "8%",
+                    skeletonWidth: 60,
+                    render: (f) => (
+                      <>
+                        {f.pay_per_hour
+                          ? `$${f.pay_per_hour}/hr`
+                          : f.salary_min || f.salary_max
+                          ? `$${(f.salary_min || 0) / 1000}k–$${
+                              (f.salary_max || 0) / 1000
+                            }k`
+                          : "—"}
+                      </>
+                    ),
+                  },
+                  {
+                    key: "note",
+                    header: "Note",
+                    width: "10%",
+                    skeletonWidth: 80,
+                    render: (f) => (
+                      <span style={{ fontSize: 10 }}>{f.note || "—"}</span>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    header: "Status",
+                    width: "7%",
+                    skeletonWidth: 50,
+                    render: (f) => (
+                      <span className="matchdb-type-pill">{f.status}</span>
+                    ),
+                  },
+                  {
+                    key: "created_at",
+                    header: "Sent",
+                    width: "7%",
+                    skeletonWidth: 60,
+                    render: (f) => (
+                      <>
+                        {new Date(f.created_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </>
+                    ),
+                  },
+                ]}
+                data={forwardedOpenings}
+                keyExtractor={(f) => f.id}
+                loading={false}
+                paginate
+                titleIcon="📤"
+                title="Forwarded Openings from Your Marketing Company"
+                emptyMessage="No openings have been forwarded to you yet."
+              />
+            )}
+
             {/* Matched Jobs view */}
             {activeView === "matches" && (
               <>
@@ -1489,8 +1655,13 @@ const CandidateDashboard: React.FC<Props> = ({
                   loading={matchesLoading}
                   paginate
                   emptyMessage="MySQL returned an empty result set (i.e. zero rows)."
-                  alertSuccess={pokeSent ? "Poke sent successfully!" : undefined}
-                  alertErrors={[pokeError ? "Failed to send poke." : null, error]}
+                  alertSuccess={
+                    pokeSent ? "Poke sent successfully!" : undefined
+                  }
+                  alertErrors={[
+                    pokeError ? "Failed to send poke." : null,
+                    error,
+                  ]}
                   title="Related Job Openings"
                   titleIcon="📌"
                   titleExtra={

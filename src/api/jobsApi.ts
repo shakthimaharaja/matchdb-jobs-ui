@@ -164,6 +164,119 @@ export interface SendPokeArgs {
   job_title?: string;
 }
 
+// ─── Marketer-specific types ──────────────────────────────────────────────────
+
+export interface MarketerJob {
+  id: string;
+  title: string;
+  description: string;
+  vendor_email: string;
+  recruiter_name: string;
+  recruiter_phone: string;
+  location: string;
+  job_country: string;
+  job_type: string;
+  job_sub_type: string;
+  work_mode: string;
+  skills_required: string[];
+  salary_min: number | null;
+  salary_max: number | null;
+  pay_per_hour: number | null;
+  experience_required: number;
+  application_count: number;
+  poke_count: number;
+  email_count: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface MarketerProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  current_role: string;
+  current_company: string;
+  preferred_job_type: string;
+  experience_years: number;
+  expected_hourly_rate: number | null;
+  skills: string[];
+  location: string;
+  resume_summary: string;
+  resume_experience: string;
+  resume_education: string;
+  resume_achievements: string;
+  bio: string;
+  poke_count: number;
+  email_count: number;
+  created_at: string;
+}
+
+export interface PaginatedMarketer<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface MarketerQueryArgs {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export interface MarketerStats {
+  total_profiles: number;
+  total_jobs: number;
+  total_open_jobs: number;
+  total_closed_jobs: number;
+  total_placed: number;
+}
+
+// ─── Company / Forwarding types ───────────────────────────────────────────────
+
+export interface CompanyInfo {
+  id: string;
+  name: string;
+  marketer_id?: string;
+  marketer_email?: string;
+  created_at?: string;
+}
+
+export interface CompanyListItem {
+  id: string;
+  name: string;
+}
+
+export interface MarketerCandidateItem {
+  id: string;
+  company_id: string;
+  candidate_name: string;
+  candidate_email: string;
+  created_at: string;
+}
+
+export interface ForwardedOpeningItem {
+  id: string;
+  candidate_email: string;
+  candidate_name: string;
+  job_id: string;
+  job_title: string;
+  job_location: string;
+  job_type: string;
+  job_sub_type: string;
+  vendor_email: string;
+  skills_required: string[];
+  pay_per_hour: number | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  note: string;
+  company_name: string;
+  status: string;
+  created_at: string;
+  marketer_email?: string;
+}
+
 // ─── RTK Query API ────────────────────────────────────────────────────────────
 
 type StateWithAuth = { auth: { token: string | null } };
@@ -180,6 +293,7 @@ export const jobsApi = createApi({
       return headers;
     },
   }),
+  keepUnusedDataFor: 300, // 5 min cache — marketer data persists across navigations
   tagTypes: [
     "VendorJobs",
     "CandidateMatches",
@@ -187,6 +301,11 @@ export const jobsApi = createApi({
     "Profile",
     "PokesSent",
     "PokesReceived",
+    "MarketerStats",
+    "MarketerCompany",
+    "MarketerCandidates",
+    "ForwardedOpenings",
+    "CandidateForwarded",
   ],
   endpoints: (builder) => ({
     // ── Jobs ──────────────────────────────────────────────────────────────────
@@ -276,6 +395,103 @@ export const jobsApi = createApi({
       query: () => "api/jobs/pokes/received",
       providesTags: ["PokesReceived"],
     }),
+
+    // ── Marketer ──────────────────────────────────────────────────────────────
+
+    getMarketerStats: builder.query<MarketerStats, void>({
+      query: () => "api/jobs/marketer/stats",
+      providesTags: ["MarketerStats"],
+      keepUnusedDataFor: 600, // 10 min extra cache for stats
+    }),
+
+    getMarketerJobs: builder.query<
+      PaginatedMarketer<MarketerJob>,
+      MarketerQueryArgs
+    >({
+      query: (params) => ({ url: "api/jobs/marketer/jobs", params }),
+      keepUnusedDataFor: 300,
+    }),
+
+    getMarketerProfiles: builder.query<
+      PaginatedMarketer<MarketerProfile>,
+      MarketerQueryArgs
+    >({
+      query: (params) => ({ url: "api/jobs/marketer/profiles", params }),
+      keepUnusedDataFor: 300,
+    }),
+
+    // ── Marketer Company ──────────────────────────────────────────────────────
+
+    registerCompany: builder.mutation<CompanyInfo, { name: string }>({
+      query: (body) => ({
+        url: "api/jobs/marketer/company",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["MarketerCompany"],
+    }),
+
+    getMyCompany: builder.query<CompanyInfo | null, void>({
+      query: () => "api/jobs/marketer/company",
+      providesTags: ["MarketerCompany"],
+    }),
+
+    listCompanies: builder.query<CompanyListItem[], void>({
+      query: () => "api/jobs/companies",
+    }),
+
+    // ── Marketer Candidates (company roster) ──────────────────────────────────
+
+    addMarketerCandidate: builder.mutation<
+      MarketerCandidateItem,
+      { candidateName: string; candidateEmail: string }
+    >({
+      query: (body) => ({
+        url: "api/jobs/marketer/candidates",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["MarketerCandidates"],
+    }),
+
+    getMarketerCandidates: builder.query<MarketerCandidateItem[], void>({
+      query: () => "api/jobs/marketer/candidates",
+      providesTags: ["MarketerCandidates"],
+    }),
+
+    removeMarketerCandidate: builder.mutation<{ ok: boolean }, string>({
+      query: (id) => ({
+        url: `api/jobs/marketer/candidates/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["MarketerCandidates"],
+    }),
+
+    // ── Forward Openings ──────────────────────────────────────────────────────
+
+    forwardOpening: builder.mutation<
+      any,
+      { candidateEmail: string; jobId: string; note?: string }
+    >({
+      query: (body) => ({
+        url: "api/jobs/marketer/forward",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["ForwardedOpenings"],
+    }),
+
+    getForwardedOpenings: builder.query<ForwardedOpeningItem[], void>({
+      query: () => "api/jobs/marketer/forwarded",
+      providesTags: ["ForwardedOpenings"],
+    }),
+
+    // ── Candidate Forwarded Openings ──────────────────────────────────────────
+
+    getCandidateForwardedOpenings: builder.query<ForwardedOpeningItem[], void>({
+      query: () => "api/jobs/candidate/forwarded",
+      providesTags: ["CandidateForwarded"],
+    }),
   }),
 });
 
@@ -297,4 +513,21 @@ export const {
   useSendPokeMutation,
   useGetPokesSentQuery,
   useGetPokesReceivedQuery,
+  // Marketer
+  useGetMarketerStatsQuery,
+  useGetMarketerJobsQuery,
+  useGetMarketerProfilesQuery,
+  // Marketer Company
+  useRegisterCompanyMutation,
+  useGetMyCompanyQuery,
+  useListCompaniesQuery,
+  // Marketer Candidates (company roster)
+  useAddMarketerCandidateMutation,
+  useGetMarketerCandidatesQuery,
+  useRemoveMarketerCandidateMutation,
+  // Forward Openings
+  useForwardOpeningMutation,
+  useGetForwardedOpeningsQuery,
+  // Candidate Forwarded Openings
+  useGetCandidateForwardedOpeningsQuery,
 } = jobsApi;

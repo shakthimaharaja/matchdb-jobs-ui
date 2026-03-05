@@ -271,10 +271,11 @@ When running standalone (not inside the shell), the app renders with its own `bo
 To run the entire MatchDB platform locally, start services in this order:
 
 ```
-1. matchdb-shell-services   →  port 8000  (auth + payments API)
-2. matchdb-jobs-services     →  port 8001  (jobs + profiles API)
-3. matchdb-jobs-ui           →  port 3001  (remote MFE) + proxy 4001
-4. matchdb-shell-ui          →  port 3000  (host shell) + proxy 4000
+0. PostgreSQL                    →  port 5432  (shared database)
+1. matchdb-shell-services        →  port 8000  (auth + payments API — owns migrations)
+2. matchdb-jobs-services         →  port 8001  (jobs + profiles API — generate-only)
+3. matchdb-jobs-ui               →  port 3001  (remote MFE) + proxy 4001
+4. matchdb-shell-ui              →  port 3000  (host shell) + proxy 4000
 ```
 
 Then open **http://localhost:3000** in your browser.

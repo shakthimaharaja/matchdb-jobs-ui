@@ -1,5 +1,16 @@
-import React from "react";
+import React, { useState } from "react";
 import "./DetailModal.css";
+
+export interface SendToCandidateOption {
+  candidate_email: string;
+  candidate_name: string;
+}
+
+export interface ForwardableJob {
+  id: string;
+  title: string;
+  vendor_email: string;
+}
 
 interface DetailModalProps {
   open: boolean;
@@ -7,15 +18,80 @@ interface DetailModalProps {
   type: "job" | "candidate";
   data: Record<string, any> | null;
   matchPercentage?: number;
+  /** Company roster candidates (for job modals — pick candidate to forward) */
+  companyCandidates?: SendToCandidateOption[];
+  /** Active job list (for candidate modals — pick job to forward candidate to) */
+  forwardableJobs?: ForwardableJob[];
+  /** Called when forwarding from job modal: (candidateEmail, jobId, note) */
+  onForwardToCandidate?: (
+    candidateEmail: string,
+    jobId: string,
+    note: string,
+  ) => void;
+  /** Called when forwarding from candidate modal: (candidateEmail, jobId, note) */
+  onForwardCandidateToJob?: (
+    candidateEmail: string,
+    jobId: string,
+    note: string,
+  ) => void;
+  forwardLoading?: boolean;
 }
 
-const fmtList = (arr?: string[]) =>
-  arr && arr.length ? arr.join(", ") : "—";
+const fmtList = (arr?: string[]) => (arr && arr.length ? arr.join(", ") : "—");
 
-const fmtVal = (v: any) => (v !== undefined && v !== null && v !== "" ? String(v) : "—");
+const fmtVal = (v: any) =>
+  v !== undefined && v !== null && v !== "" ? String(v) : "—";
 
-const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, matchPercentage }) => {
+const DetailModal: React.FC<DetailModalProps> = ({
+  open,
+  onClose,
+  type,
+  data,
+  matchPercentage,
+  companyCandidates,
+  forwardableJobs,
+  onForwardToCandidate,
+  onForwardCandidateToJob,
+  forwardLoading,
+}) => {
+  const [showSendPanel, setShowSendPanel] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState("");
+  const [selectedJob, setSelectedJob] = useState("");
+  const [forwardNote, setForwardNote] = useState("");
+
   if (!open || !data) return null;
+
+  const isJobType = type === "job";
+  const isCandidate = type === "candidate";
+  const hasCandidates = companyCandidates && companyCandidates.length > 0;
+  const hasJobs = forwardableJobs && forwardableJobs.length > 0;
+
+  // Job modal: forward a company candidate to this job's vendor
+  const canForwardCandidate = isJobType && onForwardToCandidate;
+  // Candidate modal: forward this candidate to a job/vendor (only if candidate is in company roster)
+  const isInRoster =
+    isCandidate &&
+    companyCandidates?.some((c) => c.candidate_email === data.email);
+  const canForwardToJob = isCandidate && onForwardCandidateToJob && isInRoster;
+
+  const handleForwardCandidate = () => {
+    if (!selectedCandidate || !data.id) return;
+    onForwardToCandidate!(selectedCandidate, data.id, forwardNote);
+    closeSendPanel();
+  };
+
+  const handleForwardToJob = () => {
+    if (!selectedJob || !data.email) return;
+    onForwardCandidateToJob!(data.email, selectedJob, forwardNote);
+    closeSendPanel();
+  };
+
+  const closeSendPanel = () => {
+    setShowSendPanel(false);
+    setSelectedCandidate("");
+    setSelectedJob("");
+    setForwardNote("");
+  };
 
   const handleDownloadPDF = () => {
     const win = window.open("", "_blank");
@@ -36,14 +112,21 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
           ["Current Company", fmtVal(data.current_company)],
           ["Experience", `${fmtVal(data.experience_years)} yrs`],
           ["Preferred Type", fmtVal(data.preferred_job_type)],
-          ["Expected Rate", data.expected_hourly_rate ? `$${data.expected_hourly_rate}/hr` : "—"],
+          [
+            "Expected Rate",
+            data.expected_hourly_rate
+              ? `$${data.expected_hourly_rate}/hr`
+              : "—",
+          ],
           ["Skills", fmtList(data.skills)],
           ["Summary", fmtVal(data.resume_summary)],
           ["Experience Detail", fmtVal(data.resume_experience)],
           ["Education", fmtVal(data.resume_education)],
           ["Achievements", fmtVal(data.resume_achievements)],
           ["Bio", fmtVal(data.bio)],
-          ...(matchPercentage !== undefined ? [["Match %", `${matchPercentage}%`]] : []),
+          ...(matchPercentage !== undefined
+            ? [["Match %", `${matchPercentage}%`]]
+            : []),
         ]
       : [
           ["Title", fmtVal(data.title)],
@@ -53,13 +136,20 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
           ["Sub Type", fmtVal(data.job_sub_type)],
           ["Work Mode", fmtVal(data.work_mode)],
           ["Pay/Hr", data.pay_per_hour ? `$${data.pay_per_hour}` : "—"],
-          ["Salary Range", data.salary_min || data.salary_max ? `$${data.salary_min || "?"} – $${data.salary_max || "?"}` : "—"],
+          [
+            "Salary Range",
+            data.salary_min || data.salary_max
+              ? `$${data.salary_min || "?"} – $${data.salary_max || "?"}`
+              : "—",
+          ],
           ["Experience Required", `${fmtVal(data.experience_required)} yrs`],
           ["Skills Required", fmtList(data.skills_required)],
           ["Recruiter", fmtVal(data.recruiter_name)],
           ["Recruiter Phone", fmtVal(data.recruiter_phone)],
           ["Vendor Email", fmtVal(data.vendor_email)],
-          ...(matchPercentage !== undefined ? [["Match %", `${matchPercentage}%`]] : []),
+          ...(matchPercentage !== undefined
+            ? [["Match %", `${matchPercentage}%`]]
+            : []),
         ];
 
     const tableRows = rows
@@ -68,7 +158,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
       <tr>
         <td style="font-weight:bold;padding:5px 10px;border:1px solid #ccc;background:#f5f5f5;width:180px;vertical-align:top;">${label}</td>
         <td style="padding:5px 10px;border:1px solid #ccc;white-space:pre-wrap;">${value}</td>
-      </tr>`
+      </tr>`,
       )
       .join("");
 
@@ -91,8 +181,6 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
     win.document.close();
   };
 
-  const isCandidate = type === "candidate";
-
   return (
     <div className="detail-modal-overlay" onClick={onClose}>
       <div className="detail-modal" onClick={(e) => e.stopPropagation()}>
@@ -103,12 +191,22 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
           </span>
           {matchPercentage !== undefined && (
             <span
-              className={`detail-modal-match ${matchPercentage >= 75 ? "high" : matchPercentage >= 45 ? "mid" : "low"}`}
+              className={`detail-modal-match ${
+                matchPercentage >= 75
+                  ? "high"
+                  : matchPercentage >= 45
+                  ? "mid"
+                  : "low"
+              }`}
             >
               Match: {matchPercentage}%
             </span>
           )}
-          <button type="button" className="detail-modal-close" onClick={onClose}>
+          <button
+            type="button"
+            className="detail-modal-close"
+            onClick={onClose}
+          >
             ✕
           </button>
         </div>
@@ -131,9 +229,19 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
                 <div className="detail-grid">
                   <Row label="Current Role" value={data.current_role} />
                   <Row label="Company" value={data.current_company} />
-                  <Row label="Experience" value={`${data.experience_years || 0} yrs`} />
+                  <Row
+                    label="Experience"
+                    value={`${data.experience_years || 0} yrs`}
+                  />
                   <Row label="Preferred Type" value={data.preferred_job_type} />
-                  <Row label="Expected Rate" value={data.expected_hourly_rate ? `$${data.expected_hourly_rate}/hr` : undefined} />
+                  <Row
+                    label="Expected Rate"
+                    value={
+                      data.expected_hourly_rate
+                        ? `$${data.expected_hourly_rate}/hr`
+                        : undefined
+                    }
+                  />
                 </div>
               </section>
               {data.skills && data.skills.length > 0 && (
@@ -141,18 +249,37 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
                   <h3>Extracted Skills</h3>
                   <div className="detail-tags">
                     {data.skills.map((s: string) => (
-                      <span key={s} className="detail-tag">{s}</span>
+                      <span key={s} className="detail-tag">
+                        {s}
+                      </span>
                     ))}
                   </div>
                 </section>
               )}
-              {(data.resume_summary || data.resume_experience || data.resume_education || data.resume_achievements) && (
+              {(data.resume_summary ||
+                data.resume_experience ||
+                data.resume_education ||
+                data.resume_achievements) && (
                 <section className="detail-section">
                   <h3>Resume</h3>
-                  {data.resume_summary && <Block label="Summary" value={data.resume_summary} />}
-                  {data.resume_experience && <Block label="Work Experience" value={data.resume_experience} />}
-                  {data.resume_education && <Block label="Education" value={data.resume_education} />}
-                  {data.resume_achievements && <Block label="Certifications & Achievements" value={data.resume_achievements} />}
+                  {data.resume_summary && (
+                    <Block label="Summary" value={data.resume_summary} />
+                  )}
+                  {data.resume_experience && (
+                    <Block
+                      label="Work Experience"
+                      value={data.resume_experience}
+                    />
+                  )}
+                  {data.resume_education && (
+                    <Block label="Education" value={data.resume_education} />
+                  )}
+                  {data.resume_achievements && (
+                    <Block
+                      label="Certifications & Achievements"
+                      value={data.resume_achievements}
+                    />
+                  )}
                 </section>
               )}
               {data.bio && (
@@ -171,9 +298,26 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
                   <Row label="Sub Type" value={data.job_sub_type} />
                   <Row label="Work Mode" value={data.work_mode} />
                   <Row label="Location" value={data.location} />
-                  <Row label="Pay/Hr" value={data.pay_per_hour ? `$${data.pay_per_hour}` : undefined} />
-                  <Row label="Salary" value={(data.salary_min || data.salary_max) ? `$${data.salary_min || "?"} – $${data.salary_max || "?"}` : undefined} />
-                  <Row label="Exp Required" value={`${data.experience_required || 0} yrs`} />
+                  <Row
+                    label="Pay/Hr"
+                    value={
+                      data.pay_per_hour ? `$${data.pay_per_hour}` : undefined
+                    }
+                  />
+                  <Row
+                    label="Salary"
+                    value={
+                      data.salary_min || data.salary_max
+                        ? `$${data.salary_min || "?"} – $${
+                            data.salary_max || "?"
+                          }`
+                        : undefined
+                    }
+                  />
+                  <Row
+                    label="Exp Required"
+                    value={`${data.experience_required || 0} yrs`}
+                  />
                   <Row label="Recruiter" value={data.recruiter_name} />
                   <Row label="Recruiter Ph" value={data.recruiter_phone} />
                   <Row label="Vendor Email" value={data.vendor_email} />
@@ -190,7 +334,9 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
                   <h3>Skills Required</h3>
                   <div className="detail-tags">
                     {data.skills_required.map((s: string) => (
-                      <span key={s} className="detail-tag">{s}</span>
+                      <span key={s} className="detail-tag">
+                        {s}
+                      </span>
                     ))}
                   </div>
                 </section>
@@ -202,11 +348,146 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
         {/* Footer actions */}
         <div className="detail-modal-footer">
           {isCandidate && (
-            <button type="button" className="detail-btn detail-btn-pdf" onClick={handleDownloadPDF}>
+            <button
+              type="button"
+              className="detail-btn detail-btn-pdf"
+              onClick={handleDownloadPDF}
+            >
               ⬇ Download PDF
             </button>
           )}
-          <button type="button" className="detail-btn detail-btn-close" onClick={onClose}>
+
+          {/* ── Job modal: "Forward Candidate to Vendor" ── */}
+          {canForwardCandidate && !showSendPanel && (
+            <button
+              type="button"
+              className="detail-btn detail-btn-send"
+              onClick={() => setShowSendPanel(true)}
+              title="Select one of your company candidates to forward to this job's vendor"
+            >
+              📤 Forward Candidate
+            </button>
+          )}
+
+          {canForwardCandidate && showSendPanel && (
+            <div className="detail-send-panel">
+              {hasCandidates ? (
+                <>
+                  <select
+                    className="detail-send-select"
+                    value={selectedCandidate}
+                    onChange={(e) => setSelectedCandidate(e.target.value)}
+                  >
+                    <option value="">— Pick your candidate —</option>
+                    {companyCandidates!.map((c) => (
+                      <option key={c.candidate_email} value={c.candidate_email}>
+                        {c.candidate_name
+                          ? `${c.candidate_name} (${c.candidate_email})`
+                          : c.candidate_email}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    className="detail-send-note"
+                    placeholder="Note to vendor…"
+                    value={forwardNote}
+                    onChange={(e) => setForwardNote(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="detail-btn detail-btn-pdf"
+                    disabled={!selectedCandidate || forwardLoading}
+                    onClick={handleForwardCandidate}
+                  >
+                    {forwardLoading ? "Sending…" : "→ Forward"}
+                  </button>
+                </>
+              ) : (
+                <span
+                  style={{ fontSize: 11, color: "#bb3333", fontWeight: 600 }}
+                >
+                  No candidates in your roster yet — add them in "Company
+                  Candidates" first.
+                </span>
+              )}
+              <button
+                type="button"
+                className="detail-btn detail-btn-close"
+                onClick={closeSendPanel}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* ── Candidate modal: "Forward to Job Opening" ── */}
+          {canForwardToJob && !showSendPanel && (
+            <button
+              type="button"
+              className="detail-btn detail-btn-send"
+              onClick={() => setShowSendPanel(true)}
+              title="Forward this candidate to a job opening's vendor"
+            >
+              📤 Forward to Job
+            </button>
+          )}
+
+          {canForwardToJob && showSendPanel && (
+            <div className="detail-send-panel">
+              {hasJobs ? (
+                <>
+                  <select
+                    className="detail-send-select"
+                    value={selectedJob}
+                    onChange={(e) => setSelectedJob(e.target.value)}
+                    style={{ minWidth: 260 }}
+                  >
+                    <option value="">— Pick a job opening —</option>
+                    {forwardableJobs!.map((j) => (
+                      <option key={j.id} value={j.id}>
+                        {j.title} ({j.vendor_email})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    className="detail-send-note"
+                    placeholder="Note to vendor…"
+                    value={forwardNote}
+                    onChange={(e) => setForwardNote(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="detail-btn detail-btn-pdf"
+                    disabled={!selectedJob || forwardLoading}
+                    onClick={handleForwardToJob}
+                  >
+                    {forwardLoading ? "Sending…" : "→ Forward"}
+                  </button>
+                </>
+              ) : (
+                <span
+                  style={{ fontSize: 11, color: "#bb3333", fontWeight: 600 }}
+                >
+                  No job openings loaded to forward to.
+                </span>
+              )}
+              <button
+                type="button"
+                className="detail-btn detail-btn-close"
+                onClick={closeSendPanel}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="detail-btn detail-btn-close"
+            onClick={onClose}
+          >
             Close
           </button>
         </div>
@@ -215,16 +496,24 @@ const DetailModal: React.FC<DetailModalProps> = ({ open, onClose, type, data, ma
   );
 };
 
-const Row: React.FC<{ label: string; value?: string | number | null }> = ({ label, value }) => (
+const Row: React.FC<{ label: string; value?: string | number | null }> = ({
+  label,
+  value,
+}) => (
   <div className="detail-row">
     <span className="detail-label">{label}</span>
     <span className="detail-value">{value ?? "—"}</span>
   </div>
 );
 
-const Block: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+const Block: React.FC<{ label: string; value: string }> = ({
+  label,
+  value,
+}) => (
   <div style={{ marginBottom: 8 }}>
-    <div className="detail-label" style={{ marginBottom: 3 }}>{label}</div>
+    <div className="detail-label" style={{ marginBottom: 3 }}>
+      {label}
+    </div>
     <pre className="detail-pre">{value}</pre>
   </div>
 );

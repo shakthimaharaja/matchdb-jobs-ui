@@ -210,6 +210,40 @@
   background: #1a4565;
 }
 
+.detail-btn-send {
+  background: #2e7d32;
+  color: #fff;
+  border-color: #5aaa5e #1a5e1e #1a5e1e #5aaa5e;
+}
+.detail-btn-send:hover {
+  background: #1b5e20;
+}
+
+/* ── Send-to-candidate inline panel ───────────────────────────────── */
+.detail-send-panel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+.detail-send-select {
+  height: 24px;
+  font-size: 12px;
+  font-family: inherit;
+  min-width: 180px;
+  border: 1px inset var(--w97-btn-shadow, #aaa);
+}
+.detail-send-note {
+  height: 22px;
+  font-size: 12px;
+  font-family: inherit;
+  min-width: 120px;
+  flex: 1;
+  border: 1px inset var(--w97-btn-shadow, #aaa);
+  padding: 0 4px;
+}
+
 /* Dark mode */
 [data-theme="dark"] .detail-tag {
   background: #2a3a4a;

@@ -218,6 +218,23 @@ const LoginWarningBar: React.FC<{
   </div>
 );
 
+/** Banner shown at the top of every public view — prompts unauthenticated users to sign up via Shell. */
+const SignUpBanner: React.FC = () => (
+  <div className="pub-signup-banner">
+    <span className="pub-signup-banner-icon">💼</span>
+    <span className="pub-signup-banner-text">
+      Browsing live data • <strong>Sign up</strong> to apply for jobs, get
+      matched, and get discovered by employers
+    </span>
+    <span className="pub-signup-banner-actions">
+      <span className="pub-signup-hint">
+        Use <strong>Sign&nbsp;In</strong> / <strong>Sign&nbsp;Up</strong> in the
+        top header to get started
+      </span>
+    </span>
+  </div>
+);
+
 /**
  * Renders a number with a typewriter-style animation,
  * re-triggering each time the value changes.
@@ -554,6 +571,7 @@ const TwinView: React.FC<TwinProps> = ({
 
   return (
     <div className="pub-landing">
+      <SignUpBanner />
       <div className="pub-section">
         <div className="pub-section-titlebar">
           <span className="pub-section-icon">🗄️</span>
@@ -782,6 +800,7 @@ const CandView: React.FC<CandViewProps> = ({
 
   return (
     <div className="pub-landing">
+      <SignUpBanner />
       <div className="pub-section">
         <div className="pub-section-titlebar">
           <span className="pub-section-icon">💼</span>
@@ -969,6 +988,7 @@ const VendorView: React.FC<VendorViewProps> = ({
 
   return (
     <div className="pub-landing">
+      <SignUpBanner />
       <div className="pub-section">
         <div className="pub-section-titlebar">
           <span className="pub-section-icon">👥</span>
@@ -1177,11 +1197,15 @@ const PublicJobsView: React.FC = () => {
 
   const openLogin = useCallback(
     (context: "candidate" | "vendor", mode: "login" | "register" = "login") => {
+      /* locked = true when user is on /jobs/candidate or /jobs/vendor — type is pre-determined */
+      const isSpecificView = isCandView || isVendorView;
       window.dispatchEvent(
-        new CustomEvent("matchdb:openLogin", { detail: { context, mode } }),
+        new CustomEvent("matchdb:openLogin", {
+          detail: { context, mode, locked: isSpecificView },
+        }),
       );
     },
-    [],
+    [isCandView, isVendorView],
   );
 
   // ── Route-based view selection ────────────────────────────────────────────
