@@ -12,8 +12,7 @@
   min-height: 0;
   padding: 8px;
   background: var(--w97-desktop, #008080);
-  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Verdana, Arial,
-    sans-serif;
+  font-family: inherit;
   font-size: 12px;
 }
 
@@ -108,11 +107,7 @@
 }
 
 .mg-feature-table th {
-  background: linear-gradient(
-    to bottom,
-    var(--w97-window, #c0c0c0),
-    #b0b0b0
-  );
+  background: linear-gradient(to bottom, var(--w97-window, #c0c0c0), #b0b0b0);
   font-weight: 700;
   font-size: 11px;
 }
@@ -126,13 +121,28 @@
   width: 15%;
 }
 
-.mg-free-col  { color: #888; }
-.mg-basic-col { color: #235a81; }
-.mg-pro-col   { color: #1a7a4a; }
-.mg-plus-col  { color: #7a3a1a; font-weight: 700; }
+.mg-free-col {
+  color: #888;
+}
+.mg-basic-col {
+  color: #235a81;
+}
+.mg-pro-col {
+  color: #1a7a4a;
+}
+.mg-plus-col {
+  color: #7a3a1a;
+  font-weight: 700;
+}
 
-.mg-yes { color: #1a7a4a; font-weight: 700; }
-.mg-no  { color: #c00;    font-weight: 700; }
+.mg-yes {
+  color: #1a7a4a;
+  font-weight: 700;
+}
+.mg-no {
+  color: #c00;
+  font-weight: 700;
+}
 
 /* ── Package cards (candidate) ────────────────────────────────────── */
 .mg-pkg-grid {
@@ -226,8 +236,7 @@
 }
 
 .mg-cta-btn {
-  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Verdana, Arial,
-    sans-serif;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 700;
   padding: 5px 18px;

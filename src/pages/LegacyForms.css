@@ -4,7 +4,7 @@
   min-height: 100%;
   padding: 6px;
   background: var(--w97-window, #c0c0c0);
-  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif;
+  font-family: inherit;
   font-size: 11px;
   color: var(--w97-text, #000);
 }

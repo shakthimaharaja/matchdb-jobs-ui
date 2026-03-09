@@ -4,6 +4,7 @@ import { DataTable } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import DetailModal from "../components/DetailModal";
 import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import {
   useGetMarketerJobsQuery,
   useGetMarketerProfilesQuery,
@@ -228,6 +229,9 @@ const MarketerDashboard: React.FC<Props> = () => {
     refetchJobs();
     refetchProfiles();
   }, [refetchJobs, refetchProfiles]);
+
+  // Live push: fires refreshAll immediately when data-collection uploads new data
+  useLiveRefresh({ onRefresh: refreshAll });
 
   const jobsFlash = useAutoRefreshFlash({
     data: jobs,

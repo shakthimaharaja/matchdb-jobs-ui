@@ -75,6 +75,6 @@
   max-height: 260px;
   overflow-y: auto;
   line-height: 1.55;
-  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif;
+  font-family: inherit;
   font-size: 11px;
 }

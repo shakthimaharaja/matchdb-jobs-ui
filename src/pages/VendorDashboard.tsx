@@ -9,6 +9,7 @@ import { PokesTable } from "../shared";
 import { DataTable } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import {
   useGetVendorJobsQuery,
   useGetVendorCandidateMatchesQuery,
@@ -157,11 +158,32 @@ const VendorDashboard: React.FC<Props> = ({
   // ── RTK Query data hooks ───────────────────────────────────────────────────
   const [jobsArgs, setJobsArgs] = useState<VendorJobsArgs>({});
   const [matchArgs, setMatchArgs] = useState<VendorCandidateMatchesArgs>({});
-  const { data: jobsData, isLoading: jobsLoading, refetch: refetchJobs } = useGetVendorJobsQuery(jobsArgs);
-  const { data: matchesData, isLoading: matchesLoading, refetch: refetchMatches } = useGetVendorCandidateMatchesQuery(matchArgs);
-  const { data: pokesSentData = [], isLoading: pokesSentLoading, refetch: refetchPokesSent } = useGetPokesSentQuery();
-  const { data: pokesReceivedData = [], refetch: refetchPokesReceived } = useGetPokesReceivedQuery();
-  const [sendPoke, { isLoading: pokeLoading, isSuccess: pokeSent, isError: pokeError, reset: clearPokeState }] = useSendPokeMutation();
+  const {
+    data: jobsData,
+    isLoading: jobsLoading,
+    refetch: refetchJobs,
+  } = useGetVendorJobsQuery(jobsArgs);
+  const {
+    data: matchesData,
+    isLoading: matchesLoading,
+    refetch: refetchMatches,
+  } = useGetVendorCandidateMatchesQuery(matchArgs);
+  const {
+    data: pokesSentData = [],
+    isLoading: pokesSentLoading,
+    refetch: refetchPokesSent,
+  } = useGetPokesSentQuery();
+  const { data: pokesReceivedData = [], refetch: refetchPokesReceived } =
+    useGetPokesReceivedQuery();
+  const [
+    sendPoke,
+    {
+      isLoading: pokeLoading,
+      isSuccess: pokeSent,
+      isError: pokeError,
+      reset: clearPokeState,
+    },
+  ] = useSendPokeMutation();
   const [closeJobMutation] = useCloseJobMutation();
   const [reopenJobMutation] = useReopenJobMutation();
 
@@ -172,7 +194,9 @@ const VendorDashboard: React.FC<Props> = ({
   const vendorJobsTotal: number = Array.isArray(jobsData)
     ? jobsData.length
     : (jobsData as PaginatedResponse<Job>)?.total ?? 0;
-  const vendorCandidateMatches: CandidateProfileMatch[] = Array.isArray(matchesData)
+  const vendorCandidateMatches: CandidateProfileMatch[] = Array.isArray(
+    matchesData,
+  )
     ? matchesData
     : (matchesData as PaginatedResponse<CandidateProfileMatch>)?.data ?? [];
   const vendorCandidateMatchesTotal: number = Array.isArray(matchesData)
@@ -446,7 +470,16 @@ const VendorDashboard: React.FC<Props> = ({
     if (viewMode === "candidates") {
       refetchMatches();
     }
-  }, [refetchJobs, refetchPokesSent, refetchPokesReceived, refetchMatches, viewMode]);
+  }, [
+    refetchJobs,
+    refetchPokesSent,
+    refetchPokesReceived,
+    refetchMatches,
+    viewMode,
+  ]);
+
+  // Live push: fires refreshAll immediately when data-collection uploads new data
+  useLiveRefresh({ onRefresh: refreshAll });
 
   const jobsFlash = useAutoRefreshFlash({
     data: vendorJobs,
@@ -1242,8 +1275,7 @@ const VendorDashboard: React.FC<Props> = ({
               aria-label="Retry loading data"
               onClick={() => {
                 refetchJobs();
-                if (viewMode === "candidates")
-                  refetchMatches();
+                if (viewMode === "candidates") refetchMatches();
               }}
             >
               ↺ Retry
@@ -1440,7 +1472,9 @@ const VendorDashboard: React.FC<Props> = ({
                         Reset
                       </button>
                       <span className="matchdb-title-count">
-                        {jobsLoading ? "..." : `${tableData.length}/${totalCount}`}
+                        {jobsLoading
+                          ? "..."
+                          : `${tableData.length}/${totalCount}`}
                       </span>
                       <button
                         type="button"

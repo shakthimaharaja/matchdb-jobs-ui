@@ -46,14 +46,7 @@ const JobsApp: React.FC<JobsAppProps> = ({
   if (!token) {
     return (
       <Provider store={store}>
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-          }}
-        >
+        <div className="matchdb-page-transition matchdb-flex-col">
           <PublicJobsView />
         </div>
       </Provider>
@@ -90,14 +83,7 @@ const JobsApp: React.FC<JobsAppProps> = ({
   /* ---- Authenticated view (membership active) ---- */
   return (
     <Provider store={store}>
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-        }}
-      >
+      <div className="matchdb-page-transition matchdb-flex-col">
         <Routes>
           {userType === "marketer" ? (
             <Route
@@ -158,8 +144,7 @@ const JobsApp: React.FC<JobsAppProps> = ({
         {showPostJob && userType === "vendor" && (
           <div className="rm-overlay" onClick={() => setShowPostJob(false)}>
             <div
-              className="rm-window"
-              style={{ width: 780 }}
+              className="rm-window matchdb-postjob-window"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Title bar */}

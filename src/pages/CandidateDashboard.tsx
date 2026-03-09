@@ -14,6 +14,7 @@ import PokeEmailModal from "../components/PokeEmailModal";
 import CandidateProfile from "./CandidateProfile";
 import { PokesTable } from "../shared";
 import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import {
   useGetCandidateMatchesQuery,
   useGetProfileQuery,
@@ -548,6 +549,9 @@ const CandidateDashboard: React.FC<Props> = ({
     refetchPokesSent();
     refetchPokesReceived();
   }, [refetchMatches, refetchPokesSent, refetchPokesReceived]);
+
+  // Live push: fires refreshAll immediately when data-collection uploads new data
+  useLiveRefresh({ onRefresh: refreshAll });
 
   const matchesFlash = useAutoRefreshFlash({
     data: candidateMatches,

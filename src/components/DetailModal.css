@@ -22,7 +22,7 @@
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  font-family: "MS Sans Serif", Tahoma, Verdana, Arial, sans-serif;
+  font-family: inherit;
   font-size: 13px;
 }
 

@@ -2,7 +2,7 @@
 
 /* Body inherits rm-body layout but with tighter padding top */
 .pjp-body {
-  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif;
+  font-family: inherit;
   font-size: 11px;
   color: var(--w97-text, #000);
 }
@@ -26,7 +26,7 @@
 }
 
 .pjp-paste-area {
-  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif !important;
+  font-family: inherit !important;
   font-size: 11px;
   line-height: 1.6;
   min-height: 110px;
@@ -101,7 +101,7 @@
 
 /* ── Description textarea ── */
 .pjp-desc-area {
-  font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif !important;
+  font-family: inherit !important;
   font-size: 11px !important;
   line-height: 1.5;
   min-height: 110px;

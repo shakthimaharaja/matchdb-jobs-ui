@@ -407,8 +407,8 @@ const DetailModal: React.FC<DetailModalProps> = ({
                 <span
                   style={{ fontSize: 11, color: "#bb3333", fontWeight: 600 }}
                 >
-                  No candidates in your roster yet — add them in "Company
-                  Candidates" first.
+                  No candidates in your roster yet — add them in &quot;Company
+                  Candidates&quot; first.
                 </span>
               )}
               <button
