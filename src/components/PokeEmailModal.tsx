@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { MatchRow } from "./MatchDataTable";
 import { CandidateProfile } from "../api/jobsApi";
 import { generateResumePDF } from "../utils/generateResumePDF";
+import { Button, Input } from "matchdb-component-library";
 import "./ResumeModal.css";
 
 interface PokeEmailModalProps {
@@ -193,7 +194,7 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           <span className="rm-titlebar-title">
             Mail Template — {row.pokeTargetName}
           </span>
-          <button className="rm-close" onClick={onClose} title="Close">✕</button>
+          <Button variant="close" size="xs" onClick={onClose} title="Close">✕</Button>
         </div>
 
         {/* Status bar */}
@@ -238,8 +239,7 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           {/* Subject */}
           <fieldset className="rm-fieldset">
             <legend>Subject</legend>
-            <input
-              type="text"
+            <Input
               className="rm-input"
               style={{ width: "100%", boxSizing: "border-box" }}
               value={subject}

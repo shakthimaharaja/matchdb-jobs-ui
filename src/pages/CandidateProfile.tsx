@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import useDraftCache from "../hooks/useDraftCache";
 import axios from "axios";
+import { Button as MDBButton } from "matchdb-component-library";
 import { Button } from "primereact/button";
 import { Dropdown } from "primereact/dropdown";
 import {
@@ -375,16 +376,14 @@ const CandidateProfile: React.FC<Props> = ({
             }}
           >
             <span>📋 You have an unsaved draft from a previous session.</span>
-            <button
-              type="button"
-              className="matchdb-btn"
+            <MDBButton
               onClick={restoreFromDraft}
+              size="xs"
             >
               ↩ Restore Draft
-            </button>
-            <button
-              type="button"
-              className="matchdb-btn"
+            </MDBButton>
+            <MDBButton
+              size="xs"
               style={{ color: "#888" }}
               onClick={() => {
                 clearDraft();
@@ -392,7 +391,7 @@ const CandidateProfile: React.FC<Props> = ({
               }}
             >
               ✕ Discard
-            </button>
+            </MDBButton>
           </div>
         )}
 
@@ -428,18 +427,15 @@ const CandidateProfile: React.FC<Props> = ({
                 enable editing for this session.
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button
-                  type="button"
-                  className="matchdb-btn matchdb-btn-primary"
+                <MDBButton
+                  variant="primary"
                   style={{ whiteSpace: "nowrap" }}
                   onClick={() => setEditIntent(true)}
                 >
                   OK, Let Me Edit
-                </button>
-                <button
-                  type="button"
-                  className="matchdb-btn"
-                  style={{ color: "#235a81", whiteSpace: "nowrap" }}
+                </MDBButton>
+                <MDBButton
+                  style={{ color: "var(--w97-blue, #235a81)", whiteSpace: "nowrap" }}
                   onClick={() =>
                     window.dispatchEvent(
                       new CustomEvent("matchdb:openPricing", {
@@ -449,7 +445,7 @@ const CandidateProfile: React.FC<Props> = ({
                   }
                 >
                   ↑ Add Visibility
-                </button>
+                </MDBButton>
               </div>
             </div>
           )}
@@ -1070,15 +1066,13 @@ const CandidateProfile: React.FC<Props> = ({
           )}
           <span style={{ flex: 1 }} />
           {profile && (
-            <button
-              type="button"
-              className="matchdb-btn"
+            <MDBButton
               style={{ color: "#880000" }}
               onClick={() => setShowDeleteModal(true)}
               disabled={profileLoading}
             >
               🗑 Delete Profile
-            </button>
+            </MDBButton>
           )}
         </div>
       </div>
@@ -1105,13 +1099,14 @@ const CandidateProfile: React.FC<Props> = ({
               <span className="rm-titlebar-title">
                 Delete Account — Permanent
               </span>
-              <button
-                className="rm-close"
+              <MDBButton
+                variant="close"
+                size="xs"
                 onClick={() => setShowDeleteAccountModal(false)}
                 title="Cancel"
               >
                 ✕
-              </button>
+              </MDBButton>
             </div>
 
             {/* Status bar */}
@@ -1206,9 +1201,7 @@ const CandidateProfile: React.FC<Props> = ({
 
             {/* Footer */}
             <div className="rm-footer">
-              <button
-                type="button"
-                className="rm-btn"
+              <MDBButton
                 style={{
                   color: "#fff",
                   background: confirmText === "DELETE" ? "#880000" : "#999",
@@ -1222,15 +1215,13 @@ const CandidateProfile: React.FC<Props> = ({
                 {deleteAccountLoading
                   ? "⏳ Deleting Account..."
                   : "🛑 Permanently Delete My Account"}
-              </button>
-              <button
-                type="button"
-                className="rm-btn"
+              </MDBButton>
+              <MDBButton
                 onClick={() => setShowDeleteAccountModal(false)}
                 style={{ marginLeft: "auto" }}
               >
                 Cancel
-              </button>
+              </MDBButton>
             </div>
           </div>
         </div>
@@ -1255,13 +1246,14 @@ const CandidateProfile: React.FC<Props> = ({
               <span className="rm-titlebar-title">
                 Delete Candidate Profile
               </span>
-              <button
-                className="rm-close"
+              <MDBButton
+                variant="close"
+                size="xs"
                 onClick={() => setShowDeleteModal(false)}
                 title="Cancel"
               >
                 ✕
-              </button>
+              </MDBButton>
             </div>
 
             {/* Status bar */}
@@ -1318,9 +1310,7 @@ const CandidateProfile: React.FC<Props> = ({
 
             {/* Footer */}
             <div className="rm-footer">
-              <button
-                type="button"
-                className="rm-btn"
+              <MDBButton
                 style={{
                   color: "#880000",
                   borderTopColor: "#ffaaaa",
@@ -1332,15 +1322,13 @@ const CandidateProfile: React.FC<Props> = ({
                 disabled={profileLoading}
               >
                 {profileLoading ? "Deleting..." : "🗑 Yes, Delete My Profile"}
-              </button>
-              <button
-                type="button"
-                className="rm-btn"
+              </MDBButton>
+              <MDBButton
                 onClick={() => setShowDeleteModal(false)}
                 style={{ marginLeft: "auto" }}
               >
                 Cancel
-              </button>
+              </MDBButton>
             </div>
           </div>
         </div>

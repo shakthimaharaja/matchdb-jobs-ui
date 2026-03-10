@@ -6,7 +6,7 @@ import DetailModal from "../components/DetailModal";
 import JobPostingModal from "../components/JobPostingModal";
 import PokeEmailModal from "../components/PokeEmailModal";
 import { PokesTable } from "../shared";
-import { DataTable } from "matchdb-component-library";
+import { DataTable, Button, Input, Select } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
@@ -567,14 +567,13 @@ const VendorDashboard: React.FC<Props> = ({
         skeletonWidth: 22,
         thProps: { title: "Click to view full posting" },
         render: (job: Job) => (
-          <button
-            type="button"
-            className="matchdb-btn matchdb-btn-expand"
+          <Button
+            variant="expand"
             title="View full job posting"
             onClick={() => setSelectedJobPosting(job)}
           >
             ⊕
-          </button>
+          </Button>
         ),
       },
       {
@@ -701,9 +700,7 @@ const VendorDashboard: React.FC<Props> = ({
         render: (job: Job) => {
           const n_poke = pokesPerJob[job.id] || 0;
           return (
-            <button
-              type="button"
-              className="matchdb-btn"
+            <Button
               style={{
                 fontSize: 11,
                 padding: "0 6px",
@@ -731,7 +728,7 @@ const VendorDashboard: React.FC<Props> = ({
               }
             >
               {n_poke}
-            </button>
+            </Button>
           );
         },
       },
@@ -744,9 +741,7 @@ const VendorDashboard: React.FC<Props> = ({
         render: (job: Job) => {
           const n_mail = mailsPerJob[job.id] || 0;
           return (
-            <button
-              type="button"
-              className="matchdb-btn"
+            <Button
               style={{
                 fontSize: 11,
                 padding: "0 6px",
@@ -774,7 +769,7 @@ const VendorDashboard: React.FC<Props> = ({
               }
             >
               {n_mail}
-            </button>
+            </Button>
           );
         },
       },
@@ -793,9 +788,8 @@ const VendorDashboard: React.FC<Props> = ({
         skeletonWidth: 60,
         thProps: { title: "View matching candidates for this job" },
         render: (job: Job) => (
-          <button
-            type="button"
-            className="matchdb-btn vdp-btn-matches"
+          <Button
+            variant="matches"
             disabled={!job.is_active}
             title={
               job.is_active
@@ -812,7 +806,7 @@ const VendorDashboard: React.FC<Props> = ({
             }
           >
             👥 View
-          </button>
+          </Button>
         ),
       },
       {
@@ -823,25 +817,23 @@ const VendorDashboard: React.FC<Props> = ({
         thProps: { title: "Close or reopen this position" },
         render: (job: Job) =>
           job.is_active ? (
-            <button
-              type="button"
-              className="matchdb-btn vdp-btn-close"
+            <Button
+              variant="close"
               disabled={closingJobId === job.id}
               onClick={() => handleCloseJob(job.id)}
               title="Close this position — stop accepting applications"
             >
               {closingJobId === job.id ? "..." : "🔒 Close"}
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
-              className="matchdb-btn vdp-btn-reopen"
+            <Button
+              variant="reopen"
               disabled={closingJobId === job.id}
               onClick={() => handleReopenJob(job.id)}
               title="Reopen this position — resume accepting applications"
             >
               {closingJobId === job.id ? "..." : "✔ Reopen"}
-            </button>
+            </Button>
           ),
       },
     ],
@@ -1271,15 +1263,16 @@ const VendorDashboard: React.FC<Props> = ({
             aria-live="assertive"
           >
             ⚠ Failed to load data: An error occurred
-            <button
+            <Button
               aria-label="Retry loading data"
+              size="xs"
               onClick={() => {
                 refetchJobs();
                 if (viewMode === "candidates") refetchMatches();
               }}
             >
               ↺ Retry
-            </button>
+            </Button>
           </div>
         )}
 
@@ -1457,36 +1450,34 @@ const VendorDashboard: React.FC<Props> = ({
                   paginate
                   titleExtra={
                     <div className="matchdb-title-toolbar">
-                      <input
+                      <Input
                         id="posting-search"
-                        className="matchdb-input matchdb-title-search"
+                        className="matchdb-title-search"
                         value={postingSearch}
                         onChange={(e) => setPostingSearch(e.target.value)}
                         placeholder="Search..."
                       />
-                      <button
-                        type="button"
-                        className="matchdb-btn matchdb-title-btn"
+                      <Button
+                        size="xs"
                         onClick={() => setPostingSearch("")}
                       >
                         Reset
-                      </button>
+                      </Button>
                       <span className="matchdb-title-count">
                         {jobsLoading
                           ? "..."
                           : `${tableData.length}/${totalCount}`}
                       </span>
-                      <button
-                        type="button"
-                        className="matchdb-btn matchdb-title-btn"
+                      <Button
+                        size="xs"
                         onClick={() => refetchJobs()}
                       >
                         ↻
-                      </button>
+                      </Button>
                       {onPostJob && (
-                        <button
-                          type="button"
-                          className="matchdb-btn matchdb-btn-primary matchdb-title-btn"
+                        <Button
+                          variant="primary"
+                          size="xs"
                           onClick={atJobLimit ? openPricingModal : onPostJob}
                         >
                           {atJobLimit
@@ -1494,7 +1485,7 @@ const VendorDashboard: React.FC<Props> = ({
                               ? "🔒 Subscribe"
                               : "🔒 Upgrade"
                             : "+ Post"}
-                        </button>
+                        </Button>
                       )}
                     </div>
                   }
@@ -1547,13 +1538,12 @@ const VendorDashboard: React.FC<Props> = ({
                   Subscribe to the <strong>Basic</strong> plan ($22/mo) or
                   higher to browse candidates and send pokes.
                 </p>
-                <button
-                  type="button"
-                  className="matchdb-btn matchdb-btn-primary"
+                <Button
+                  variant="primary"
                   onClick={openPricingModal}
                 >
                   View Subscription Plans →
-                </button>
+                </Button>
               </div>
             )}
 
@@ -1564,9 +1554,9 @@ const VendorDashboard: React.FC<Props> = ({
                   titleIcon="👥"
                   titleExtra={
                     <div className="matchdb-title-toolbar">
-                      <select
+                      <Select
                         id="vendor-job-filter"
-                        className="matchdb-select matchdb-title-select"
+                        className="matchdb-title-select"
                         value={selectedJobId}
                         onChange={(e) => setSelectedJobId(e.target.value)}
                       >
@@ -1576,27 +1566,25 @@ const VendorDashboard: React.FC<Props> = ({
                             {job.title}
                           </option>
                         ))}
-                      </select>
-                      <input
+                      </Select>
+                      <Input
                         id="vendor-search"
-                        className="matchdb-input matchdb-title-search"
+                        className="matchdb-title-search"
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         placeholder="Search..."
                       />
-                      <button
-                        type="button"
-                        className="matchdb-btn matchdb-title-btn"
+                      <Button
+                        size="xs"
                         onClick={() => {
                           setSelectedJobId("");
                           setSearchText("");
                         }}
                       >
                         Reset
-                      </button>
-                      <button
-                        type="button"
-                        className="matchdb-btn matchdb-title-btn"
+                      </Button>
+                      <Button
+                        size="xs"
                         onClick={() => {
                           setCurrentPage(1);
                           refetchJobs();
@@ -1608,7 +1596,7 @@ const VendorDashboard: React.FC<Props> = ({
                         }}
                       >
                         ↻
-                      </button>
+                      </Button>
                     </div>
                   }
                   rows={rows}

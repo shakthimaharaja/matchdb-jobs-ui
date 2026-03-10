@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 import { MatchRow } from "../components/MatchDataTable";
-import { DataTable } from "matchdb-component-library";
+import { DataTable, Button, Input, Select } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import DBLayout, { NavGroup } from "../components/DBLayout";
 import DetailModal from "../components/DetailModal";
@@ -685,14 +685,13 @@ const CandidateDashboard: React.FC<Props> = ({
         align: "center" as const,
         skeletonWidth: 22,
         render: (row: MatchRow) => (
-          <button
-            type="button"
-            className="matchdb-btn matchdb-btn-expand"
+          <Button
+            variant="expand"
             title="View details (or double-click row)"
             onClick={() => onRowClick(row)}
           >
             ⊕
-          </button>
+          </Button>
         ),
       },
       {
@@ -888,9 +887,8 @@ const CandidateDashboard: React.FC<Props> = ({
 
           return (
             <div style={{ display: "flex", gap: 2 }}>
-              <button
-                className="matchdb-btn matchdb-btn-poke"
-                type="button"
+              <Button
+                variant="poke"
                 disabled={pokeDisabled}
                 onClick={() => !pokeDisabled && handlePoke(row)}
                 title={pokeTitle}
@@ -909,10 +907,9 @@ const CandidateDashboard: React.FC<Props> = ({
                 }}
               >
                 {alreadyPoked ? "✓" : pokeLoading ? "…" : "Poke"}
-              </button>
-              <button
-                className="matchdb-btn matchdb-btn-email"
-                type="button"
+              </Button>
+              <Button
+                variant="email"
                 disabled={mailDisabled}
                 onClick={() => !mailDisabled && handlePokeEmail(row)}
                 title={mailTitle}
@@ -931,7 +928,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 }}
               >
                 {alreadyEmailed ? "✓" : "✉"}
-              </button>
+              </Button>
             </div>
           );
         },
@@ -1391,14 +1388,13 @@ const CandidateDashboard: React.FC<Props> = ({
               Packages start at <strong>$13</strong> — one-time payment, no
               subscription required.
             </p>
-            <button
-              type="button"
-              className="matchdb-btn matchdb-btn-primary"
+            <Button
+              variant="primary"
               style={{ fontSize: 14, padding: "10px 28px" }}
               onClick={openPricingModal}
             >
               View Visibility Packages →
-            </button>
+            </Button>
           </div>
         ) : (
           /* ── UNLOCKED STATE ── */
@@ -1411,12 +1407,13 @@ const CandidateDashboard: React.FC<Props> = ({
                 aria-live="assertive"
               >
                 ⚠ Failed to load matches: {error}
-                <button
+                <Button
                   aria-label="Retry loading matches"
                   onClick={() => refetchMatches()}
+                  size="xs"
                 >
                   ↺ Retry
-                </button>
+                </Button>
               </div>
             )}
 
@@ -1670,16 +1667,16 @@ const CandidateDashboard: React.FC<Props> = ({
                   titleIcon="📌"
                   titleExtra={
                     <div className="matchdb-title-toolbar">
-                      <input
+                      <Input
                         id="candidate-search"
-                        className="matchdb-input matchdb-title-search"
+                        className="matchdb-title-search"
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         placeholder="Search..."
                       />
-                      <select
+                      <Select
                         id="candidate-type"
-                        className="matchdb-select matchdb-title-select"
+                        className="matchdb-title-select"
                         value={filterType}
                         onChange={(e) => {
                           setFilterType(e.target.value);
@@ -1692,12 +1689,12 @@ const CandidateDashboard: React.FC<Props> = ({
                             {t.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                       {(filterType === "contract" ||
                         filterType === "full_time") && (
-                        <select
+                        <Select
                           id="candidate-subtype"
-                          className="matchdb-select matchdb-title-select"
+                          className="matchdb-title-select"
                           value={filterSubType}
                           onChange={(e) => setFilterSubType(e.target.value)}
                         >
@@ -1712,11 +1709,11 @@ const CandidateDashboard: React.FC<Props> = ({
                                 {st.label}
                               </option>
                             ))}
-                        </select>
+                        </Select>
                       )}
-                      <select
+                      <Select
                         id="candidate-workmode"
-                        className="matchdb-select matchdb-title-select"
+                        className="matchdb-title-select"
                         value={filterWorkMode}
                         onChange={(e) => setFilterWorkMode(e.target.value)}
                       >
@@ -1726,10 +1723,9 @@ const CandidateDashboard: React.FC<Props> = ({
                             {wm.label}
                           </option>
                         ))}
-                      </select>
-                      <button
-                        type="button"
-                        className="matchdb-btn matchdb-title-btn"
+                      </Select>
+                      <Button
+                        size="xs"
                         onClick={() => {
                           setSearchText("");
                           setFilterType("");
@@ -1738,10 +1734,9 @@ const CandidateDashboard: React.FC<Props> = ({
                         }}
                       >
                         Reset
-                      </button>
-                      <button
-                        type="button"
-                        className="matchdb-btn matchdb-title-btn"
+                      </Button>
+                      <Button
+                        size="xs"
                         onClick={() => {
                           setPaginationMap((prev) => ({
                             ...prev,
@@ -1754,7 +1749,7 @@ const CandidateDashboard: React.FC<Props> = ({
                         }}
                       >
                         ↻
-                      </button>
+                      </Button>
                     </div>
                   }
                   serverTotal={candidateMatchesTotal}
@@ -1809,13 +1804,14 @@ const CandidateDashboard: React.FC<Props> = ({
                   Complete &amp; save to continue
                 </span>
               ) : (
-                <button
-                  className="rm-close"
+                <Button
+                  variant="close"
                   onClick={() => setProfileOpen(false)}
                   title="Close"
+                  size="xs"
                 >
                   ✕
-                </button>
+                </Button>
               )}
             </div>
             <div className="rm-statusbar">

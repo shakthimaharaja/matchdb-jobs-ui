@@ -8,6 +8,7 @@
  * No prices are hard-coded here — the PricingPage fetches real prices from Stripe.
  */
 import React from "react";
+import { Button } from "matchdb-component-library";
 import "./MembershipGatePage.css";
 
 interface MembershipGatePageProps {
@@ -117,9 +118,9 @@ const VendorGate: React.FC = () => (
 
         {/* CTA */}
         <div className="mg-cta-row">
-          <button className="mg-cta-btn" onClick={() => openPricing("vendor")}>
+          <Button variant="primary" onClick={() => openPricing("vendor")}>
             View Subscription Plans &amp; Pricing →
-          </button>
+          </Button>
           <span className="mg-cta-note">
             Monthly billing via Stripe · Cancel anytime
           </span>
@@ -252,12 +253,12 @@ const CandidateGate: React.FC = () => (
 
         {/* CTA */}
         <div className="mg-cta-row">
-          <button
-            className="mg-cta-btn"
+          <Button
+            variant="primary"
             onClick={() => openPricing("candidate")}
           >
             Get Visibility Package →
-          </button>
+          </Button>
           <span className="mg-cta-note">
             Secure checkout via Stripe · One-time payment · No subscription
           </span>
@@ -415,12 +416,12 @@ const MarketerGate: React.FC = () => (
         </div>
 
         <div className="mg-cta-row">
-          <button
-            className="mg-cta-btn"
+          <Button
+            variant="primary"
             onClick={() => openPricing("marketer")}
           >
             View Marketer Plans &amp; Pricing →
-          </button>
+          </Button>
           <span className="mg-cta-note">
             Monthly billing via Stripe · Cancel anytime
           </span>

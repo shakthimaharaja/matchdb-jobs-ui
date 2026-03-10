@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Button, Input, Select } from "matchdb-component-library";
 import "./DetailModal.css";
 
 export interface SendToCandidateOption {
@@ -202,13 +203,14 @@ const DetailModal: React.FC<DetailModalProps> = ({
               Match: {matchPercentage}%
             </span>
           )}
-          <button
-            type="button"
+          <Button
+            variant="close"
+            size="xs"
             className="detail-modal-close"
             onClick={onClose}
           >
             ✕
-          </button>
+          </Button>
         </div>
 
         {/* Content */}
@@ -348,32 +350,32 @@ const DetailModal: React.FC<DetailModalProps> = ({
         {/* Footer actions */}
         <div className="detail-modal-footer">
           {isCandidate && (
-            <button
-              type="button"
+            <Button
+              variant="download"
               className="detail-btn detail-btn-pdf"
               onClick={handleDownloadPDF}
             >
               ⬇ Download PDF
-            </button>
+            </Button>
           )}
 
           {/* ── Job modal: "Forward Candidate to Vendor" ── */}
           {canForwardCandidate && !showSendPanel && (
-            <button
-              type="button"
+            <Button
+              variant="primary"
               className="detail-btn detail-btn-send"
               onClick={() => setShowSendPanel(true)}
               title="Select one of your company candidates to forward to this job's vendor"
             >
               📤 Forward Candidate
-            </button>
+            </Button>
           )}
 
           {canForwardCandidate && showSendPanel && (
             <div className="detail-send-panel">
               {hasCandidates ? (
                 <>
-                  <select
+                  <Select
                     className="detail-send-select"
                     value={selectedCandidate}
                     onChange={(e) => setSelectedCandidate(e.target.value)}
@@ -386,22 +388,21 @@ const DetailModal: React.FC<DetailModalProps> = ({
                           : c.candidate_email}
                       </option>
                     ))}
-                  </select>
-                  <input
-                    type="text"
+                  </Select>
+                  <Input
                     className="detail-send-note"
                     placeholder="Note to vendor…"
                     value={forwardNote}
                     onChange={(e) => setForwardNote(e.target.value)}
                   />
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
                     className="detail-btn detail-btn-pdf"
                     disabled={!selectedCandidate || forwardLoading}
                     onClick={handleForwardCandidate}
                   >
                     {forwardLoading ? "Sending…" : "→ Forward"}
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <span
@@ -411,33 +412,33 @@ const DetailModal: React.FC<DetailModalProps> = ({
                   Candidates&quot; first.
                 </span>
               )}
-              <button
-                type="button"
+              <Button
+                variant="close"
                 className="detail-btn detail-btn-close"
                 onClick={closeSendPanel}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           )}
 
           {/* ── Candidate modal: "Forward to Job Opening" ── */}
           {canForwardToJob && !showSendPanel && (
-            <button
-              type="button"
+            <Button
+              variant="primary"
               className="detail-btn detail-btn-send"
               onClick={() => setShowSendPanel(true)}
               title="Forward this candidate to a job opening's vendor"
             >
               📤 Forward to Job
-            </button>
+            </Button>
           )}
 
           {canForwardToJob && showSendPanel && (
             <div className="detail-send-panel">
               {hasJobs ? (
                 <>
-                  <select
+                  <Select
                     className="detail-send-select"
                     value={selectedJob}
                     onChange={(e) => setSelectedJob(e.target.value)}
@@ -449,22 +450,21 @@ const DetailModal: React.FC<DetailModalProps> = ({
                         {j.title} ({j.vendor_email})
                       </option>
                     ))}
-                  </select>
-                  <input
-                    type="text"
+                  </Select>
+                  <Input
                     className="detail-send-note"
                     placeholder="Note to vendor…"
                     value={forwardNote}
                     onChange={(e) => setForwardNote(e.target.value)}
                   />
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
                     className="detail-btn detail-btn-pdf"
                     disabled={!selectedJob || forwardLoading}
                     onClick={handleForwardToJob}
                   >
                     {forwardLoading ? "Sending…" : "→ Forward"}
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <span
@@ -473,23 +473,22 @@ const DetailModal: React.FC<DetailModalProps> = ({
                   No job openings loaded to forward to.
                 </span>
               )}
-              <button
-                type="button"
+              <Button
+                variant="close"
                 className="detail-btn detail-btn-close"
                 onClick={closeSendPanel}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           )}
 
-          <button
-            type="button"
+          <Button
             className="detail-btn detail-btn-close"
             onClick={onClose}
           >
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

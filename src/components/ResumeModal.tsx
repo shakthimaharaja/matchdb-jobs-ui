@@ -4,6 +4,7 @@ import {
   useGetProfileQuery,
   useUpsertProfileMutation,
 } from '../api/jobsApi';
+import { Button, Input } from 'matchdb-component-library';
 import './ResumeModal.css';
 
 interface Props {
@@ -87,7 +88,7 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
           <span className="rm-titlebar-title">
             {isLocked ? 'My Resume (Read-Only)' : 'Fill In Your Resume'}
           </span>
-          <button className="rm-close" onClick={onClose} title="Close">✕</button>
+          <Button variant="close" size="xs" onClick={onClose} title="Close">✕</Button>
         </div>
 
         {/* Status bar below titlebar */}
@@ -116,9 +117,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             <div className="rm-grid-2">
               <div className="rm-field">
                 <label>Full Name *</label>
-                <input
+                <Input
                   type="text"
-                  className="rm-input"
                   value={form.name || ''}
                   onChange={(e) => set('name', e.target.value)}
                   placeholder="John Smith"
@@ -126,9 +126,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
               </div>
               <div className="rm-field">
                 <label>Email *</label>
-                <input
+                <Input
                   type="email"
-                  className="rm-input"
                   value={form.email || ''}
                   onChange={(e) => set('email', e.target.value)}
                   disabled={isLocked}
@@ -136,9 +135,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
               </div>
               <div className="rm-field">
                 <label>Phone</label>
-                <input
+                <Input
                   type="text"
-                  className="rm-input"
                   value={form.phone || ''}
                   onChange={(e) => set('phone', e.target.value)}
                   placeholder="+1-555-0100"
@@ -146,9 +144,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
               </div>
               <div className="rm-field">
                 <label>Location</label>
-                <input
+                <Input
                   type="text"
-                  className="rm-input"
                   value={form.location || ''}
                   onChange={(e) => set('location', e.target.value)}
                   placeholder="City, State"
@@ -163,9 +160,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             <div className="rm-grid-2">
               <div className="rm-field">
                 <label>Current Company</label>
-                <input
+                <Input
                   type="text"
-                  className="rm-input"
                   value={form.current_company || ''}
                   onChange={(e) => set('current_company', e.target.value)}
                   disabled={isLocked}
@@ -174,9 +170,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
               </div>
               <div className="rm-field">
                 <label>Current Role / Title</label>
-                <input
+                <Input
                   type="text"
-                  className="rm-input"
                   value={form.current_role || ''}
                   onChange={(e) => set('current_role', e.target.value)}
                   disabled={isLocked}
@@ -285,28 +280,28 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
         {/* Footer buttons */}
         <div className="rm-footer">
           {!isLocked && (
-            <button
-              className="rm-btn rm-btn-primary"
+            <Button
+              variant="primary"
               onClick={handleSave}
               disabled={profileLoading || !form.name || !form.email}
               title="Save your resume — skills will be extracted automatically"
             >
               {profileLoading ? 'Saving...' : 'Save & Extract Skills'}
-            </button>
+            </Button>
           )}
           {isLocked && (
-            <button
-              className="rm-btn rm-btn-primary"
+            <Button
+              variant="primary"
               onClick={handleSave}
               disabled={profileLoading}
               title="Update your contact information and preferences"
             >
               {profileLoading ? 'Saving...' : 'Update Preferences'}
-            </button>
+            </Button>
           )}
-          <button className="rm-btn" onClick={onClose}>
+          <Button onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

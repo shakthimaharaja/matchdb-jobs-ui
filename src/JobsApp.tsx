@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { Button } from "matchdb-component-library";
 import "./components/ResumeModal.css";
 import { Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
@@ -159,13 +160,9 @@ const JobsApp: React.FC<JobsAppProps> = ({
               <div className="rm-titlebar">
                 <span className="rm-titlebar-icon">📋</span>
                 <span className="rm-titlebar-title">Post a New Job</span>
-                <button
-                  className="rm-close"
-                  onClick={() => setShowPostJob(false)}
-                  title="Close"
-                >
+                <Button variant="close" size="xs" onClick={() => setShowPostJob(false)} title="Close">
                   ✕
-                </button>
+                </Button>
               </div>
               {/* Status bar */}
               <div className="rm-statusbar">

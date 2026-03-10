@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "matchdb-component-library";
 import {
   useGetStateTaxRatesQuery,
   useUpsertProjectFinancialMutation,
@@ -321,20 +322,20 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
           {editingSettings || editingRows ? (
             <>
               {fin && (
-                <button type="button" className="pf-btn pf-btn-cancel"
+                <Button size="xs"
                   onClick={() => { setEditingSettings(false); setEditingRows(false); setPeriods(generatePeriods(fin)); setBillRate(fin.billRate); setPayRate(fin.payRate); setStateCode(fin.stateCode); setCashPct(fin.cashPct); }}>
                   Cancel
-                </button>
+                </Button>
               )}
-              <button type="button" className="pf-btn pf-btn-save" onClick={handleSave} disabled={saving}>
+              <Button variant="primary" size="xs" onClick={handleSave} disabled={saving}>
                 {saving ? "Saving…" : "Save All"}
-              </button>
+              </Button>
             </>
           ) : (
-            <button type="button" className="pf-btn pf-btn-edit"
+            <Button size="xs"
               onClick={() => { setEditingSettings(true); setEditingRows(true); }}>
               Edit
-            </button>
+            </Button>
           )}
         </div>
       </div>

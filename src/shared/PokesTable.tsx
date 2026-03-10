@@ -1,5 +1,5 @@
 import React from "react";
-import { DataTable } from "matchdb-component-library";
+import { DataTable, Button } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import { PokeRecord } from "../api/jobsApi";
 
@@ -89,7 +89,7 @@ const buildColumns = (
       return (
         <a
           href={`mailto:${personEmail}`}
-          style={{ color: "#2a5fa0", textDecoration: "none" }}
+          style={{ color: "var(--w97-blue, #2a5fa0)", textDecoration: "none" }}
         >
           {personEmail}
         </a>
@@ -184,23 +184,13 @@ const PokesTable: React.FC<PokesTableProps> = ({
 
   const titleExtra =
     jobId && onClearJob ? (
-      <button
-        type="button"
+      <Button
+        size="xs"
         onClick={onClearJob}
-        style={{
-          background: "transparent",
-          border: "1px solid rgba(255,255,255,.4)",
-          color: "#fff",
-          fontSize: 11,
-          cursor: "pointer",
-          padding: "1px 8px",
-          borderRadius: 2,
-          marginLeft: 4,
-        }}
         title="Show all — clear job filter"
       >
         ✕ Clear filter
-      </button>
+      </Button>
     ) : undefined;
 
   return (

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Button } from "matchdb-component-library";
 import "./ProjectFinancialForm.css";
 import {
   useGetStateTaxRatesQuery,
@@ -233,13 +234,13 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
           </div>
           <div className="pf-card-header-right">
             {fin && (
-              <button type="button" className="pf-btn pf-btn-cancel" onClick={() => setEditing(false)}>
+              <Button size="xs" onClick={() => setEditing(false)}>
                 Cancel
-              </button>
+              </Button>
             )}
-            <button type="button" className="pf-btn pf-btn-save" onClick={handleSave} disabled={saving}>
+            <Button variant="primary" size="xs" onClick={handleSave} disabled={saving}>
               {saving ? "Saving…" : "Save"}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -454,9 +455,9 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
           </div>
         </div>
         <div className="pf-card-header-right">
-          <button type="button" className="pf-btn pf-btn-edit" onClick={() => setEditing(true)}>
+          <Button size="xs" onClick={() => setEditing(true)}>
             Edit
-          </button>
+          </Button>
         </div>
       </div>
 

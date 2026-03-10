@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePostJobMutation } from '../api/jobsApi';
 import useDraftCache from '../hooks/useDraftCache';
+import { Button } from 'matchdb-component-library';
 import '../components/ResumeModal.css';
 import './PostJobPage.css';
 
@@ -347,9 +348,8 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
             fontSize: 11, marginBottom: 6,
           }}>
             <span>📋 You have an unsaved job draft from a previous session.</span>
-            <button
-              type="button"
-              className="rm-btn"
+            <Button
+              size="xs"
               onClick={() => {
                 const draft = getDraft();
                 if (draft) { setForm(draft); }
@@ -357,15 +357,14 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
               }}
             >
               ↩ Restore Draft
-            </button>
-            <button
-              type="button"
-              className="rm-btn"
+            </Button>
+            <Button
+              size="xs"
               style={{ color: '#888' }}
               onClick={() => { clearDraft(); setShowDraftBanner(false); }}
             >
               ✕ Discard
-            </button>
+            </Button>
           </div>
         )}
 
@@ -396,23 +395,21 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
             }
           />
           <div className="pjp-paste-actions">
-            <button
-              type="button"
-              className="rm-btn pjp-parse-btn"
+            <Button
+              variant="primary"
               onClick={handleParse}
               disabled={!pasteText.trim()}
               title="Detect title, location, pay, job type, skills, and experience from the pasted text"
             >
               ⚡ Parse &amp; Fill Form
-            </button>
+            </Button>
             {pasteText && (
-              <button
-                type="button"
-                className="rm-btn"
+              <Button
+                size="xs"
                 onClick={() => { setPasteText(''); setParseResult(null); }}
               >
                 Clear
-              </button>
+              </Button>
             )}
           </div>
 
@@ -658,14 +655,14 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
 
       {/* ── Footer — pinned below scrollable body ── */}
       <div className="rm-footer">
-        <button
+        <Button
+          variant="primary"
           type="submit"
-          className="rm-btn rm-btn-primary"
           disabled={loading || !form.title || !form.description || !form.job_country}
           title="Post this job — skills will be auto-extracted from the description"
         >
           {loading ? 'Posting...' : '📤 Post Job'}
-        </button>
+        </Button>
         <span className="pjp-hint" style={{ alignSelf: 'center', marginLeft: 4 }}>
           * Title, Description & Country are required
         </span>

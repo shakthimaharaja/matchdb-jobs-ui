@@ -14,6 +14,7 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useVerifyInviteQuery, useAcceptInviteMutation } from "../api/jobsApi";
+import { Button } from "matchdb-component-library";
 
 const STATUS_LABELS: Record<
   string,
@@ -51,7 +52,7 @@ const InviteAcceptPage: React.FC = () => {
           style={{
             fontSize: 16,
             fontWeight: 700,
-            color: "#bb3333",
+            color: "var(--w97-red, #bb3333)",
             marginBottom: 8,
           }}
         >
@@ -82,7 +83,7 @@ const InviteAcceptPage: React.FC = () => {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
         <div style={{ fontSize: 48, marginBottom: 12 }}>🎉</div>
-        <h2 style={{ margin: "0 0 8px", fontSize: 18, color: "#2e7d32" }}>
+        <h2 style={{ margin: "0 0 8px", fontSize: 18, color: "var(--w97-green, #2e7d32)" }}>
           Welcome to {invite?.company_name || "the team"}!
         </h2>
         <p style={{ fontSize: 12, color: "#555" }}>
@@ -114,7 +115,7 @@ const InviteAcceptPage: React.FC = () => {
                 style={{
                   fontSize: 16,
                   fontWeight: 700,
-                  color: "#235a81",
+                  color: "var(--w97-blue, #235a81)",
                 }}
               >
                 🏢 {invite.company_name}
@@ -164,24 +165,19 @@ const InviteAcceptPage: React.FC = () => {
                   justifyContent: "center",
                 }}
               >
-                <button
-                  type="button"
-                  className="matchdb-btn"
+                <Button
+                  variant="primary"
                   onClick={handleAccept}
                   disabled={accepting}
                   style={{
                     fontSize: 13,
                     padding: "8px 24px",
-                    background: "#235a81",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 4,
                     cursor: accepting ? "wait" : "pointer",
                     fontWeight: 600,
                   }}
                 >
                   {accepting ? "Accepting…" : "✓ Accept Invite"}
-                </button>
+                </Button>
               </div>
             )}
           </>
