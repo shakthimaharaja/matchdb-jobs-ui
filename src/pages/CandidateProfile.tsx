@@ -14,7 +14,9 @@ import {
   useGetProfileQuery,
   useUpsertProfileMutation,
   useDeleteProfileMutation,
+  useLazySearchCompaniesQuery,
   type CandidateProfile as IProfile,
+  type CompanySearchResult,
 } from "../api/jobsApi";
 import "./LegacyForms.css";
 import "../components/ResumeModal.css";
@@ -55,27 +57,27 @@ const VISIBILITY_TYPES = [
 ];
 
 const COUNTRIES = [
-  { value: '', label: '— Select Country —' },
-  { value: 'US', label: '🇺🇸 United States' },
-  { value: 'IN', label: '🇮🇳 India' },
-  { value: 'GB', label: '🇬🇧 United Kingdom' },
-  { value: 'CA', label: '🇨🇦 Canada' },
-  { value: 'AU', label: '🇦🇺 Australia' },
-  { value: 'DE', label: '🇩🇪 Germany' },
-  { value: 'SG', label: '🇸🇬 Singapore' },
-  { value: 'AE', label: '🇦🇪 UAE' },
-  { value: 'JP', label: '🇯🇵 Japan' },
-  { value: 'NL', label: '🇳🇱 Netherlands' },
-  { value: 'FR', label: '🇫🇷 France' },
-  { value: 'BR', label: '🇧🇷 Brazil' },
-  { value: 'MX', label: '🇲🇽 Mexico' },
-  { value: 'PH', label: '🇵🇭 Philippines' },
-  { value: 'IL', label: '🇮🇱 Israel' },
-  { value: 'IE', label: '🇮🇪 Ireland' },
-  { value: 'PL', label: '🇵🇱 Poland' },
-  { value: 'SE', label: '🇸🇪 Sweden' },
-  { value: 'CH', label: '🇨🇭 Switzerland' },
-  { value: 'KR', label: '🇰🇷 South Korea' },
+  { value: "", label: "— Select Country —" },
+  { value: "US", label: "🇺🇸 United States" },
+  { value: "IN", label: "🇮🇳 India" },
+  { value: "GB", label: "🇬🇧 United Kingdom" },
+  { value: "CA", label: "🇨🇦 Canada" },
+  { value: "AU", label: "🇦🇺 Australia" },
+  { value: "DE", label: "🇩🇪 Germany" },
+  { value: "SG", label: "🇸🇬 Singapore" },
+  { value: "AE", label: "🇦🇪 UAE" },
+  { value: "JP", label: "🇯🇵 Japan" },
+  { value: "NL", label: "🇳🇱 Netherlands" },
+  { value: "FR", label: "🇫🇷 France" },
+  { value: "BR", label: "🇧🇷 Brazil" },
+  { value: "MX", label: "🇲🇽 Mexico" },
+  { value: "PH", label: "🇵🇭 Philippines" },
+  { value: "IL", label: "🇮🇱 Israel" },
+  { value: "IE", label: "🇮🇪 Ireland" },
+  { value: "PL", label: "🇵🇱 Poland" },
+  { value: "SE", label: "🇸🇪 Sweden" },
+  { value: "CH", label: "🇨🇭 Switzerland" },
+  { value: "KR", label: "🇰🇷 South Korea" },
 ];
 
 const EMPTY: IProfile = {
@@ -107,12 +109,24 @@ interface Props {
   onRequestPremiumUnlock?: () => void;
 }
 
-const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked = false, onRequestPremiumUnlock }) => {
-  const { data: profile, isLoading: profileLoading, error: profileError } = useGetProfileQuery();
-  const [upsertProfile, { isLoading: saving, reset: resetUpsert }] = useUpsertProfileMutation();
+const CandidateProfile: React.FC<Props> = ({
+  userEmail,
+  onSaved,
+  premiumUnlocked = false,
+  onRequestPremiumUnlock,
+}) => {
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    error: profileError,
+  } = useGetProfileQuery();
+  const [upsertProfile, { isLoading: saving, reset: resetUpsert }] =
+    useUpsertProfileMutation();
   const [deleteProfile, { isLoading: deleting }] = useDeleteProfileMutation();
 
-  const { saveDraft, getDraft, clearDraft, hasDraft } = useDraftCache<IProfile>('matchdb_draft_candidate_profile');
+  const { saveDraft, getDraft, clearDraft, hasDraft } = useDraftCache<IProfile>(
+    "matchdb_draft_candidate_profile",
+  );
   const [form, setForm] = useState<IProfile>(EMPTY);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
@@ -133,6 +147,16 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
   // editIntent = user clicked "OK" acknowledging the $3 cost; fields become editable
   const [editIntent, setEditIntent] = useState(false);
 
+  // Company autocomplete search
+  const [companySuggestions, setCompanySuggestions] = useState<
+    CompanySearchResult[]
+  >([]);
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+  const [searchCompanies] = useLazySearchCompaniesQuery();
+  const companySearchTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
   useEffect(() => {
     if (profile) {
       setForm({ ...profile });
@@ -150,7 +174,10 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
 
   // Auto-save form to localStorage while filling in (only when no confirmed server profile)
   useEffect(() => {
-    if (!profile && (form.name || form.resume_summary || form.resume_experience || form.bio)) {
+    if (
+      !profile &&
+      (form.name || form.resume_summary || form.resume_experience || form.bio)
+    ) {
       saveDraft(form);
     }
   }, [form, profile]);
@@ -170,6 +197,33 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
   const setField = <K extends keyof IProfile>(key: K, value: IProfile[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
     setSaveSuccess(false);
+  };
+
+  const handleCompanyInputChange = (value: string) => {
+    setField("current_company", value);
+    if (companySearchTimerRef.current)
+      clearTimeout(companySearchTimerRef.current);
+    if (value.trim().length >= 2) {
+      companySearchTimerRef.current = setTimeout(async () => {
+        try {
+          const result = await searchCompanies(value.trim()).unwrap();
+          setCompanySuggestions(result || []);
+          setShowCompanyDropdown((result || []).length > 0);
+        } catch {
+          setCompanySuggestions([]);
+          setShowCompanyDropdown(false);
+        }
+      }, 300);
+    } else {
+      setCompanySuggestions([]);
+      setShowCompanyDropdown(false);
+    }
+  };
+
+  const handleCompanySelect = (company: CompanySearchResult) => {
+    setField("current_company", company.name);
+    setShowCompanyDropdown(false);
+    setCompanySuggestions([]);
   };
 
   const onNumberChange =
@@ -193,7 +247,11 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
       if (extra) {
         saveData = {
           ...saveData,
-          resume_summary: ((saveData.resume_summary || "") + "\n\n" + extra).trim(),
+          resume_summary: (
+            (saveData.resume_summary || "") +
+            "\n\n" +
+            extra
+          ).trim(),
         };
       }
     }
@@ -264,10 +322,10 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
             {isLocked && premiumUnlocked
               ? "🔓 Premium unlocked — all fields fully editable"
               : isLocked && editIntent
-                ? "✏ Editing unlocked — proceed to billing to save changes"
-                : isLocked
-                  ? "🔒 Some fields locked — see notice below"
-                  : "New profile — fill in details, skills auto-extracted on save"}
+              ? "✏ Editing unlocked — proceed to billing to save changes"
+              : isLocked
+              ? "🔒 Some fields locked — see notice below"
+              : "New profile — fill in details, skills auto-extracted on save"}
           </span>
         </div>
 
@@ -282,7 +340,7 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
               color: "#7a2222",
             }}
           >
-            ✕ {(profileError as any)?.data?.error ?? 'An error occurred'}
+            ✕ {(profileError as any)?.data?.error ?? "An error occurred"}
           </div>
         )}
         {saveSuccess && (
@@ -328,7 +386,10 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
               type="button"
               className="matchdb-btn"
               style={{ color: "#888" }}
-              onClick={() => { clearDraft(); setShowDraftBanner(false); }}
+              onClick={() => {
+                clearDraft();
+                setShowDraftBanner(false);
+              }}
             >
               ✕ Discard
             </button>
@@ -360,8 +421,11 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
               }}
             >
               <div style={{ fontSize: 12, color: "#7a5800", lineHeight: 1.5 }}>
-                <strong>🔒 Updating company, experience, education &amp; bio</strong> — requires payment at billing.
-                Click <strong>OK</strong> to enable editing for this session.
+                <strong>
+                  🔒 Updating company, experience, education &amp; bio
+                </strong>{" "}
+                — requires payment at billing. Click <strong>OK</strong> to
+                enable editing for this session.
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                 <button
@@ -378,7 +442,9 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
                   style={{ color: "#235a81", whiteSpace: "nowrap" }}
                   onClick={() =>
                     window.dispatchEvent(
-                      new CustomEvent("matchdb:openPricing", { detail: { tab: "candidate" } }),
+                      new CustomEvent("matchdb:openPricing", {
+                        detail: { tab: "candidate" },
+                      }),
                     )
                   }
                 >
@@ -444,16 +510,22 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
                 />
               </div>
               <div className="legacy-row">
-                <label htmlFor="profile-country">🌍 Subscription Country *</label>
+                <label htmlFor="profile-country">
+                  🌍 Subscription Country *
+                </label>
                 <select
                   id="profile-country"
                   className="p-inputtext"
-                  style={{ width: '100%', padding: '6px 8px', fontSize: 13 }}
-                  value={form.profile_country || ''}
-                  onChange={(e) => setField("profile_country" as any, e.target.value)}
+                  style={{ width: "100%", padding: "6px 8px", fontSize: 13 }}
+                  value={form.profile_country || ""}
+                  onChange={(e) =>
+                    setField("profile_country" as any, e.target.value)
+                  }
                 >
                   {COUNTRIES.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -465,20 +537,68 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
             <legend>
               Professional Details
               {effectivelyLocked && (
-                <span style={{ marginLeft: 8, fontSize: 11, color: "#888", fontWeight: 400 }}>
+                <span
+                  style={{
+                    marginLeft: 8,
+                    fontSize: 11,
+                    color: "#888",
+                    fontWeight: 400,
+                  }}
+                >
                   🔒 Company &amp; role locked
                 </span>
               )}
             </legend>
             <div className="legacy-grid two-col">
-              <div className="legacy-row">
+              <div className="legacy-row" style={{ position: "relative" }}>
                 <label htmlFor="profile-company">Current Company</label>
                 <InputText
                   id="profile-company"
                   value={form.current_company}
-                  onChange={(e) => setField("current_company", e.target.value)}
+                  onChange={(e) => handleCompanyInputChange(e.target.value)}
+                  onFocus={() => {
+                    if (companySuggestions.length > 0)
+                      setShowCompanyDropdown(true);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setShowCompanyDropdown(false), 200);
+                  }}
                   disabled={effectivelyLocked}
+                  placeholder="Start typing to search companies…"
+                  autoComplete="off"
                 />
+                {showCompanyDropdown && companySuggestions.length > 0 && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      zIndex: 999,
+                      background: "#fff",
+                      border: "1px solid #ccc",
+                      borderRadius: 4,
+                      maxHeight: 180,
+                      overflowY: "auto",
+                      boxShadow: "0 3px 8px rgba(0,0,0,.15)",
+                    }}
+                  >
+                    {companySuggestions.map((c) => (
+                      <div
+                        key={c.id}
+                        style={{
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          cursor: "pointer",
+                          borderBottom: "1px solid #f0f0f0",
+                        }}
+                        onMouseDown={() => handleCompanySelect(c)}
+                      >
+                        🏢 {c.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="legacy-row">
                 <label htmlFor="profile-role">Current Role</label>
@@ -659,11 +779,25 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
             <legend>
               Resume
               {effectivelyLocked ? (
-                <span style={{ marginLeft: 8, fontSize: 11, color: "#888", fontWeight: 400 }}>
+                <span
+                  style={{
+                    marginLeft: 8,
+                    fontSize: 11,
+                    color: "#888",
+                    fontWeight: 400,
+                  }}
+                >
                   🔒 Experience/education/bio locked · summary append below
                 </span>
               ) : isLocked ? (
-                <span style={{ marginLeft: 8, fontSize: 11, color: "#888", fontWeight: 400 }}>
+                <span
+                  style={{
+                    marginLeft: 8,
+                    fontSize: 11,
+                    color: "#888",
+                    fontWeight: 400,
+                  }}
+                >
                   🔓 Editing unlocked — all fields fully editable
                 </span>
               ) : null}
@@ -887,36 +1021,50 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
           <button
             type="button"
             className="matchdb-btn matchdb-btn-primary"
-            onClick={premiumLocked && editIntent ? onRequestPremiumUnlock : handleSave}
-            disabled={profileLoading || !form.name || !form.email || !form.profile_country}
+            onClick={
+              premiumLocked && editIntent ? onRequestPremiumUnlock : handleSave
+            }
+            disabled={
+              profileLoading ||
+              !form.name ||
+              !form.email ||
+              !form.profile_country
+            }
           >
             {profileLoading
               ? "⏳ Saving..."
               : premiumLocked && editIntent
-                ? "✏ Update Profile → Billing"
-                : isLocked && premiumUnlocked
-                  ? "💾 Save All Changes"
-                  : isLocked
-                    ? "✓ Update Profile"
-                    : "💾 Save & Extract Skills"}
+              ? "✏ Update Profile → Billing"
+              : isLocked && premiumUnlocked
+              ? "💾 Save All Changes"
+              : isLocked
+              ? "✓ Update Profile"
+              : "💾 Save & Extract Skills"}
           </button>
           {!isLocked && (
-            <span style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}>
+            <span
+              style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}
+            >
               Skills will be auto-extracted from your resume on save.
             </span>
           )}
           {effectivelyLocked && !editIntent && (
-            <span style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}>
+            <span
+              style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}
+            >
               Summary append &amp; visibility changes will be saved.
             </span>
           )}
           {premiumLocked && editIntent && (
             <span style={{ fontSize: 10, color: "#1b5e20" }}>
-              Proceeds to plans &amp; pricing — add visibility, then pay for profile update.
+              Proceeds to plans &amp; pricing — add visibility, then pay for
+              profile update.
             </span>
           )}
           {isLocked && premiumUnlocked && (
-            <span style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}>
+            <span
+              style={{ fontSize: 10, color: "var(--w97-text-secondary, #555)" }}
+            >
               All fields will be updated and skills re-extracted.
             </span>
           )}
@@ -1162,7 +1310,9 @@ const CandidateProfile: React.FC<Props> = ({ userEmail, onSaved, premiumUnlocked
               </fieldset>
 
               {profileError && (
-                <div className="rm-alert rm-alert-error">✕ {(profileError as any)?.data?.error ?? 'An error occurred'}</div>
+                <div className="rm-alert rm-alert-error">
+                  ✕ {(profileError as any)?.data?.error ?? "An error occurred"}
+                </div>
               )}
             </div>
 

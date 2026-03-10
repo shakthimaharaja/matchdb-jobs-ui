@@ -1,0 +1,1802 @@
+/* ============================================================================
+   ProjectFinancialForm — QuickBooks + ADP Hybrid Professional Design
+   ============================================================================ */
+
+/* ── Design tokens ───────────────────────────────────────────────────────── */
+:root,
+.pf-root {
+  --pf-blue: #0066cc;
+  --pf-blue-lt: #e8f0fb;
+  --pf-teal: #00767a;
+  --pf-teal-lt: #e0f5f5;
+  --pf-green: #1a7f37;
+  --pf-green-lt: #e6f4ea;
+  --pf-red: #c62828;
+  --pf-red-lt: #fdecea;
+  --pf-orange: #e65100;
+  --pf-orange-lt: #fff3e0;
+  --pf-purple: #5c35a6;
+  --pf-purple-lt: #f1eeff;
+  --pf-gold: #b45309;
+  --pf-gold-lt: #fef3c7;
+  --pf-bg: #f0f2f5;
+  --pf-card: #ffffff;
+  --pf-border: #d0d7e2;
+  --pf-border-lt: #e8ecf1;
+  --pf-text: #1a2436;
+  --pf-text-2: #374151;
+  --pf-muted: #6b7689;
+  --pf-row-bg: #ffffff;
+  --pf-row-alt: #fafbfc;
+  --pf-row-hover: #f0f7ff;
+  --pf-row-alt-hover: #eaf3ff;
+  --pf-hdr-bg: #1a2d45;
+  --pf-section-bg: #fafbfc;
+  --pf-shadow: 0 2px 10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+  --pf-shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --pf-radius: 8px;
+  --pf-radius-sm: 4px;
+}
+
+/* ── Legacy shell bridge — map --pf-* tokens to --w97-* when inside the shell ── */
+.legacy-shell-root .pf-root,
+.legacy-shell-root {
+  --pf-blue: var(--w97-blue);
+  --pf-teal: var(--w97-teal);
+  --pf-green: var(--w97-green);
+  --pf-red: var(--w97-red);
+  --pf-orange: var(--w97-orange);
+  --pf-gold: var(--w97-yellow);
+  --pf-text: var(--w97-text);
+  --pf-text-2: var(--w97-text-secondary);
+  --pf-muted: var(--w97-text-secondary);
+  --pf-card: var(--w97-window);
+  --pf-bg: var(--w97-desktop);
+  --pf-border: var(--w97-border-dark);
+  --pf-border-lt: var(--w97-border-light);
+  --pf-row-bg: var(--w97-window);
+  --pf-row-alt: var(--w97-window-alt);
+  --pf-row-hover: var(--w97-nav-hover);
+  --pf-row-alt-hover: var(--w97-nav-hover);
+  --pf-hdr-bg: var(--w97-titlebar-from);
+  --pf-section-bg: var(--w97-window-alt);
+}
+
+/* ── Tab summary aggregate bar ───────────────────────────────────────────── */
+.pf-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 900px) {
+  .pf-summary-bar {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.pf-summary-tile {
+  background: var(--pf-card);
+  border: 1px solid var(--pf-border-lt);
+  border-radius: var(--pf-radius);
+  box-shadow: var(--pf-shadow);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pf-summary-tile-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pf-muted);
+}
+
+.pf-summary-tile-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--pf-text);
+  line-height: 1.2;
+}
+
+.pf-summary-tile-value.green {
+  color: var(--pf-green);
+}
+.pf-summary-tile-value.blue {
+  color: var(--pf-blue);
+}
+.pf-summary-tile-value.orange {
+  color: var(--pf-orange);
+}
+.pf-summary-tile-value.purple {
+  color: var(--pf-purple);
+}
+
+.pf-summary-tile-sub {
+  font-size: 10px;
+  color: var(--pf-muted);
+}
+
+/* ── Project list container ──────────────────────────────────────────────── */
+.pf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.pf-card {
+  background: var(--pf-card);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius);
+  box-shadow: var(--pf-shadow);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.pf-card:hover {
+  box-shadow: var(--pf-shadow-lg);
+}
+
+.pf-card.pf-card-editing {
+  border-color: var(--pf-blue);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.12), var(--pf-shadow);
+}
+
+/* Accent stripe on left edge */
+.pf-card::before {
+  content: "";
+  display: block;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pf-teal), var(--pf-blue));
+}
+
+.pf-card.pf-card-closed::before {
+  background: linear-gradient(90deg, #9ca3af, #6b7280);
+}
+
+/* ── Card header ─────────────────────────────────────────────────────────── */
+.pf-card-header {
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fafbfc;
+  border-bottom: 1px solid var(--pf-border-lt);
+}
+
+.pf-card-header-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pf-card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pf-job-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pf-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pf-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pf-meta-item {
+  font-size: 11px;
+  color: var(--pf-muted);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pf-meta-sep {
+  color: var(--pf-border);
+  font-size: 10px;
+}
+
+/* Status badges */
+.pf-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.pf-status-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.pf-status-active {
+  background: var(--pf-green-lt);
+  color: var(--pf-green);
+}
+.pf-status-active::before {
+  background: var(--pf-green);
+}
+
+.pf-status-closed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.pf-status-closed::before {
+  background: #9ca3af;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.pf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--pf-radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.pf-btn-edit {
+  background: var(--pf-blue-lt);
+  color: var(--pf-blue);
+  border-color: #c0d6f5;
+}
+.pf-btn-edit:hover {
+  background: #d4e7ff;
+  border-color: var(--pf-blue);
+}
+
+.pf-btn-save {
+  background: var(--pf-teal);
+  color: #fff;
+  border-color: var(--pf-teal);
+}
+.pf-btn-save:hover {
+  background: #005f63;
+}
+.pf-btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pf-btn-cancel {
+  background: #f3f4f6;
+  color: var(--pf-text-2);
+  border-color: var(--pf-border);
+}
+.pf-btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+/* ── Financial body (read mode) ──────────────────────────────────────────── */
+.pf-financial-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.pf-billing-panel,
+.pf-compensation-panel {
+  padding: 14px 18px 16px;
+}
+
+.pf-billing-panel {
+  border-right: 1px solid var(--pf-border-lt);
+}
+
+.pf-panel-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pf-muted);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--pf-border-lt);
+}
+
+/* Rate rows (Bill Rate, Pay Rate, Hours) */
+.pf-rate-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 12px;
+  color: var(--pf-text-2);
+}
+
+.pf-rate-label {
+  color: var(--pf-muted);
+  font-size: 11.5px;
+}
+
+.pf-rate-value {
+  font-weight: 600;
+  color: var(--pf-text);
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 12px;
+}
+
+.pf-divider {
+  border: none;
+  border-top: 1px dashed var(--pf-border-lt);
+  margin: 8px 0;
+}
+
+/* Total rows */
+.pf-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12.5px;
+}
+
+.pf-total-row-label {
+  color: var(--pf-text-2);
+}
+
+.pf-value-billed {
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--pf-green);
+  font-size: 13px;
+}
+
+.pf-value-pay {
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--pf-blue);
+  font-size: 13px;
+}
+
+/* Marketer margin highlight */
+.pf-margin-box {
+  margin-top: 8px;
+  background: var(--pf-teal-lt);
+  border: 1px solid #b2e0e2;
+  border-radius: var(--pf-radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pf-margin-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pf-teal);
+}
+
+.pf-margin-values {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.pf-margin-amount {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--pf-teal);
+  font-family: monospace;
+}
+
+.pf-margin-pct {
+  font-size: 10px;
+  color: var(--pf-teal);
+  font-weight: 600;
+}
+
+/* ── Compensation panel ───────────────────────────────────────────────────── */
+.pf-comp-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.pf-comp-label {
+  color: var(--pf-text-2);
+}
+
+.pf-value-gross {
+  font-weight: 600;
+  font-family: monospace;
+  color: var(--pf-text);
+  font-size: 12.5px;
+}
+
+.pf-value-deduction {
+  font-weight: 600;
+  font-family: monospace;
+  color: var(--pf-red);
+  font-size: 12.5px;
+}
+
+/* Net payable highlight */
+.pf-net-box {
+  background: var(--pf-blue-lt);
+  border: 1px solid #c0d6f5;
+  border-radius: var(--pf-radius-sm);
+  padding: 8px 10px;
+  margin: 8px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pf-net-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pf-blue);
+}
+
+.pf-net-amount {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--pf-blue);
+  font-family: monospace;
+}
+
+/* Payment tracker */
+.pf-payment-tracker {
+  margin-top: 8px;
+}
+
+.pf-payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.pf-payment-label {
+  color: var(--pf-muted);
+}
+
+.pf-value-paid {
+  font-weight: 600;
+  font-family: monospace;
+  color: var(--pf-green);
+  font-size: 12.5px;
+}
+
+.pf-value-pending-pos {
+  font-weight: 600;
+  font-family: monospace;
+  color: var(--pf-orange);
+  font-size: 12.5px;
+}
+
+.pf-value-pending-neg {
+  font-weight: 600;
+  font-family: monospace;
+  color: var(--pf-red);
+  font-size: 12.5px;
+}
+
+/* Progress bar */
+.pf-progress-wrap {
+  margin-top: 8px;
+  background: var(--pf-border-lt);
+  border-radius: 20px;
+  height: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.pf-progress-fill {
+  height: 100%;
+  border-radius: 20px;
+  background: linear-gradient(90deg, var(--pf-green), #2dd55b);
+  transition: width 0.4s ease;
+}
+
+.pf-progress-fill.overpaid {
+  background: linear-gradient(90deg, var(--pf-red), #ef9a9a);
+  width: 100% !important;
+}
+
+.pf-progress-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--pf-muted);
+}
+
+/* ── Card footer (dates + notes) ──────────────────────────────────────────── */
+.pf-card-footer {
+  padding: 8px 18px 10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: #fafbfc;
+  border-top: 1px solid var(--pf-border-lt);
+}
+
+.pf-footer-item {
+  font-size: 11px;
+  color: var(--pf-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pf-footer-notes {
+  font-size: 11px;
+  color: var(--pf-text-2);
+  font-style: italic;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── EDIT FORM ───────────────────────────────────────────────────────────── */
+/* Live preview bar (shown while editing) */
+.pf-preview-strip {
+  background: linear-gradient(135deg, #1a3a52 0%, #0f2a3e 100%);
+  padding: 10px 18px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pf-preview-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 90px;
+}
+
+.pf-preview-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.pf-preview-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  font-family: monospace;
+}
+
+.pf-preview-value.green {
+  color: #4ade80;
+}
+.pf-preview-value.blue {
+  color: #60a5fa;
+}
+.pf-preview-value.teal {
+  color: #2dd4bf;
+}
+.pf-preview-value.orange {
+  color: #fbbf24;
+}
+.pf-preview-value.red {
+  color: #f87171;
+}
+
+.pf-preview-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+/* Form grid */
+.pf-edit-form {
+  padding: 16px 18px 14px;
+}
+
+.pf-edit-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pf-muted);
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--pf-border-lt);
+}
+
+.pf-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.pf-edit-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.pf-edit-grid-full {
+  grid-column: 1 / -1;
+}
+
+.pf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pf-field-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--pf-text-2);
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pf-field-hint {
+  font-size: 9.5px;
+  color: var(--pf-teal);
+  font-weight: 400;
+  background: var(--pf-teal-lt);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.pf-field-input {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-sm);
+  font-size: 12px;
+  color: var(--pf-text);
+  background: #fff;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pf-field-input:focus {
+  outline: none;
+  border-color: var(--pf-blue);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+}
+
+.pf-field-input.pf-input-rate {
+  font-family: "Consolas", "Courier New", monospace;
+  font-weight: 600;
+  color: var(--pf-blue);
+}
+
+.pf-field-select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-sm);
+  font-size: 12px;
+  color: var(--pf-text);
+  background: #fff;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pf-field-select:focus {
+  outline: none;
+  border-color: var(--pf-blue);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+}
+
+.pf-field-textarea {
+  padding: 7px 8px;
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-sm);
+  font-size: 12px;
+  color: var(--pf-text);
+  background: #fff;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 52px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pf-field-textarea:focus {
+  outline: none;
+  border-color: var(--pf-blue);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+}
+
+/* Margin inline calculator hint */
+.pf-margin-hint {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--pf-teal);
+  padding: 4px 8px;
+  background: var(--pf-teal-lt);
+  border-radius: 3px;
+  border: 1px solid #b2e0e2;
+  margin-top: 2px;
+  display: inline-block;
+}
+
+/* Edit form context bar */
+.pf-edit-context {
+  padding: 7px 18px;
+  background: #f8f9fa;
+  border-top: 1px solid var(--pf-border-lt);
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.pf-edit-context-item {
+  font-size: 10.5px;
+  color: var(--pf-muted);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Empty state */
+.pf-empty {
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--pf-card);
+  border: 1px dashed var(--pf-border);
+  border-radius: var(--pf-radius);
+}
+
+.pf-empty-icon {
+  font-size: 36px;
+  margin-bottom: 10px;
+  opacity: 0.4;
+}
+
+.pf-empty-text {
+  font-size: 13px;
+  color: var(--pf-muted);
+}
+
+/* Tab header section */
+.pf-tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.pf-tab-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pf-text);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pf-tab-count {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  background: var(--pf-blue-lt);
+  color: var(--pf-blue);
+  border-radius: 10px;
+}
+
+/* ============================================================================
+   ProjectPayTable — ppt-* classes
+   ============================================================================ */
+
+/* ── Root container ─────────────────────────────────────────────────────── */
+.ppt-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--pf-bg);
+  border-radius: var(--pf-radius);
+}
+
+/* ── Settings bar ───────────────────────────────────────────────────────── */
+.ppt-settings-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #fff;
+  border-bottom: 1px solid var(--pf-border-lt);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.ppt-settings-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ppt-settings-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Read-mode value groups */
+.ppt-sval-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ppt-sval-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pf-muted);
+}
+
+.ppt-sval {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pf-text);
+  font-family: "Consolas", "Courier New", monospace;
+}
+
+.ppt-sval-billed {
+  color: var(--pf-green);
+}
+.ppt-sval-pay {
+  color: var(--pf-blue);
+}
+.ppt-sval-margin {
+  color: var(--pf-teal);
+}
+.ppt-sval-tax {
+  color: var(--pf-text-2);
+}
+
+.ppt-sdivider {
+  width: 1px;
+  height: 28px;
+  background: var(--pf-border-lt);
+  flex-shrink: 0;
+}
+
+/* Edit-mode fields */
+.ppt-sfield {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 90px;
+}
+
+.ppt-sfield-wide {
+  min-width: 160px;
+}
+
+.ppt-slabel {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--pf-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ppt-sinput {
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-sm);
+  font-size: 12px;
+  color: var(--pf-text);
+  background: #fff;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.ppt-sinput:focus {
+  outline: none;
+  border-color: var(--pf-blue);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.12);
+}
+
+.ppt-sinput-rate {
+  font-family: "Consolas", "Courier New", monospace;
+  font-weight: 600;
+  color: var(--pf-blue);
+}
+
+/* Notes bar */
+.ppt-notes-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #fafbfc;
+  border-bottom: 1px solid var(--pf-border-lt);
+  flex-shrink: 0;
+}
+
+.ppt-notes-input {
+  flex: 1;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-sm);
+  font-size: 11.5px;
+  color: var(--pf-text);
+  background: #fff;
+  font-family: inherit;
+}
+
+.ppt-notes-input:focus {
+  outline: none;
+  border-color: var(--pf-blue);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.12);
+}
+
+/* Notes footer */
+.ppt-notes-footer {
+  padding: 6px 14px;
+  background: var(--pf-gold-lt);
+  border-top: 1px solid #fde68a;
+  font-size: 11px;
+  color: var(--pf-gold);
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+/* ── Totals strip ───────────────────────────────────────────────────────── */
+.ppt-totals-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 8px 14px;
+  background: #fff;
+  border-bottom: 2px solid var(--pf-border-lt);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.ppt-ts-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 12px;
+  min-width: 80px;
+}
+
+.ppt-ts-tile:first-child {
+  padding-left: 0;
+}
+
+.ppt-ts-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--pf-muted);
+  white-space: nowrap;
+}
+
+.ppt-ts-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--pf-text);
+  font-family: "Consolas", "Courier New", monospace;
+  white-space: nowrap;
+}
+
+.ppt-ts-green {
+  color: var(--pf-green);
+}
+.ppt-ts-teal {
+  color: var(--pf-teal);
+}
+.ppt-ts-blue {
+  color: var(--pf-blue);
+}
+.ppt-ts-orange {
+  color: var(--pf-orange);
+}
+.ppt-ts-red {
+  color: var(--pf-red);
+}
+
+.ppt-ts-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--pf-border-lt);
+  flex-shrink: 0;
+}
+
+/* Progress tile inside strip */
+.ppt-ts-progress-tile {
+  min-width: 100px;
+  flex: 1;
+}
+
+.ppt-ts-progress-wrap {
+  height: 6px;
+  background: var(--pf-border-lt);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.ppt-ts-progress-fill {
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--pf-green), #2dd55b);
+  transition: width 0.4s ease;
+}
+
+/* ── Table wrapper ──────────────────────────────────────────────────────── */
+.ppt-table-wrap {
+  flex: 1;
+  overflow: auto;
+  background: var(--pf-bg);
+}
+
+/* ── Table ──────────────────────────────────────────────────────────────── */
+.ppt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.ppt-thead-row {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--pf-hdr-bg);
+}
+
+.ppt-th {
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.75);
+  text-align: right;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.ppt-th-period {
+  text-align: left;
+  width: 90px;
+}
+.ppt-th-num {
+  width: 68px;
+}
+.ppt-th-money {
+  width: 88px;
+}
+.ppt-th-net {
+  color: #93c5fd;
+}
+.ppt-th-balance {
+  width: 80px;
+  color: #fde68a;
+}
+
+.ppt-th-sub {
+  display: block;
+  font-size: 9px;
+  font-weight: 500;
+  opacity: 0.6;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-top: 1px;
+}
+
+/* ── Body rows ──────────────────────────────────────────────────────────── */
+.ppt-row {
+  background: var(--pf-row-bg);
+  border-bottom: 1px solid var(--pf-border-lt);
+  transition: background 0.1s;
+}
+
+.ppt-row:hover {
+  background: var(--pf-row-hover);
+}
+
+.ppt-row-alt {
+  background: var(--pf-row-alt);
+}
+.ppt-row-alt:hover {
+  background: var(--pf-row-alt-hover);
+}
+
+.ppt-td {
+  padding: 6px 10px;
+  vertical-align: middle;
+  color: var(--pf-text-2);
+}
+
+.ppt-td-period {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pf-text);
+  white-space: nowrap;
+}
+
+.ppt-td-num,
+.ppt-td-money,
+.ppt-td-balance {
+  text-align: right;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+/* Value colours */
+.ppt-val-billed {
+  color: var(--pf-green);
+  font-weight: 600;
+}
+.ppt-val-gross {
+  color: var(--pf-text);
+}
+.ppt-val-deduct {
+  color: var(--pf-red);
+  font-size: 11px;
+}
+.ppt-val-net {
+  color: var(--pf-blue);
+  font-weight: 700;
+}
+.ppt-val-paid {
+  color: var(--pf-green);
+  font-weight: 600;
+}
+.ppt-val-zero {
+  color: #bbb;
+}
+
+/* Balance cell colours */
+.ppt-td-balance {
+  font-weight: 700;
+}
+.ppt-bal-pos {
+  color: var(--pf-orange);
+}
+.ppt-bal-neg {
+  color: var(--pf-red);
+}
+.ppt-bal-zero {
+  color: var(--pf-green);
+}
+
+/* Inline edit inputs */
+.ppt-cell-input {
+  border: 1px solid var(--pf-border);
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-size: 11.5px;
+  font-family: "Consolas", "Courier New", monospace;
+  color: var(--pf-text);
+  background: var(--pf-row-bg);
+  text-align: right;
+  transition: border-color 0.12s;
+  box-sizing: border-box;
+}
+
+.ppt-cell-input:focus {
+  outline: none;
+  border-color: var(--pf-blue);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+}
+
+.ppt-cell-input-sm {
+  width: 60px;
+}
+.ppt-cell-paid {
+  width: 80px;
+  color: var(--pf-green);
+}
+
+/* ── Footer row ─────────────────────────────────────────────────────────── */
+.ppt-tfoot-row {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--pf-hdr-bg);
+  border-top: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.ppt-tf {
+  padding: 8px 10px;
+  font-size: 11.5px;
+  font-family: "Consolas", "Courier New", monospace;
+  font-weight: 700;
+  color: #fff;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ppt-tf-label {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ppt-tf-num {
+  text-align: right;
+}
+.ppt-tf-money {
+  text-align: right;
+}
+.ppt-tf-balance {
+  font-size: 11px;
+}
+
+/* ── Project pill sub-tabs ──────────────────────────────────────────────── */
+.ppt-pill-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 14px 0;
+  background: #fff;
+  border-bottom: 1px solid var(--pf-border-lt);
+  flex-shrink: 0;
+}
+
+.ppt-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  background: #f3f4f6;
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
+.ppt-pill:hover {
+  background: var(--pf-blue-lt);
+  color: var(--pf-blue);
+  border-color: #c0d6f5;
+}
+
+.ppt-pill-active {
+  background: var(--pf-blue);
+  color: #fff;
+  border-color: var(--pf-blue);
+}
+
+.ppt-pill-active:hover {
+  background: #0055bb;
+  border-color: #0055bb;
+  color: #fff;
+}
+
+.ppt-pill-closed {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.ppt-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Full-viewport projects layout */
+.ppt-projects-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ppt-projects-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================================
+   Overview Tab — ov-* classes
+   ============================================================================ */
+
+.ov-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── KPI strip ──────────────────────────────────────────────────────────── */
+.ov-kpi-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 10px 16px;
+  background: var(--pf-card);
+  border: 1px solid var(--pf-border-lt);
+  border-radius: var(--pf-radius);
+  box-shadow: var(--pf-shadow);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.ov-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 14px;
+  min-width: 80px;
+}
+
+.ov-kpi:first-child {
+  padding-left: 0;
+}
+
+.ov-kpi-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--pf-muted);
+  white-space: nowrap;
+}
+
+.ov-kpi-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pf-text);
+  white-space: nowrap;
+}
+
+.ov-kpi-pct {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.ov-kv-green {
+  color: var(--pf-green);
+}
+.ov-kv-teal {
+  color: var(--pf-teal);
+}
+.ov-kv-blue {
+  color: var(--pf-blue);
+}
+.ov-kv-orange {
+  color: var(--pf-orange);
+}
+.ov-kv-amber {
+  color: var(--pf-gold);
+}
+
+.ov-kpi-div {
+  width: 1px;
+  height: 36px;
+  background: var(--pf-border-lt);
+  flex-shrink: 0;
+}
+
+/* ── Middle two-column ──────────────────────────────────────────────────── */
+.ov-mid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--pf-border-lt);
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .ov-mid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Section header */
+.ov-section-hdr {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pf-muted);
+  padding: 8px 14px;
+  background: var(--pf-section-bg);
+  border-bottom: 1px solid var(--pf-border-lt);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ov-hdr-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  background: var(--pf-blue-lt);
+  color: var(--pf-blue);
+  border-radius: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Profile card ───────────────────────────────────────────────────────── */
+.ov-profile-card {
+  border-right: 1px solid var(--pf-border-lt);
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.ov-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.ov-info-table tr:not(:last-child) td {
+  border-bottom: 1px solid var(--pf-border-lt);
+}
+
+.ov-inf-lbl {
+  padding: 7px 10px 7px 14px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--pf-muted);
+  white-space: nowrap;
+  width: 110px;
+  background: var(--pf-section-bg);
+  vertical-align: middle;
+}
+
+.ov-inf-val {
+  padding: 7px 14px 7px 6px;
+  color: var(--pf-text);
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.ov-mono {
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 11.5px;
+}
+
+.ov-skill-chip {
+  display: inline-block;
+  background: var(--pf-blue-lt);
+  color: var(--pf-blue);
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.ov-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.ov-badge-green {
+  background: var(--pf-green-lt);
+  color: var(--pf-green);
+}
+.ov-badge-amber {
+  background: var(--pf-gold-lt);
+  color: var(--pf-gold);
+}
+
+/* ── Projects summary card ──────────────────────────────────────────────── */
+.ov-projects-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--pf-card);
+  border: 1px solid var(--pf-border-lt);
+  border-radius: var(--pf-radius);
+  box-shadow: var(--pf-shadow);
+}
+
+.ov-proj-wrap {
+  overflow: auto;
+  flex: 1;
+}
+
+.ov-proj-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: auto;
+}
+
+.ov-pt-head {
+  background: var(--pf-hdr-bg);
+}
+
+.ov-pt-th {
+  padding: 8px 10px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.ov-pt-r {
+  text-align: right;
+}
+
+.ov-pt-row {
+  background: var(--pf-row-bg);
+  border-bottom: 1px solid var(--pf-border-lt);
+  transition: background 0.1s;
+}
+.ov-pt-row:hover {
+  background: var(--pf-row-hover);
+}
+.ov-pt-alt {
+  background: var(--pf-row-alt);
+}
+.ov-pt-alt:hover {
+  background: var(--pf-row-alt-hover);
+}
+
+.ov-pt-td {
+  padding: 7px 10px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.ov-proj-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--pf-text);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ov-proj-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ov-proj-active {
+  background: var(--pf-green-lt);
+  color: var(--pf-green);
+}
+.ov-proj-closed {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.ov-proj-state {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--pf-blue-lt);
+  color: var(--pf-blue);
+}
+
+.ov-pt-foot {
+  background: var(--pf-hdr-bg);
+}
+
+.ov-pt-tf {
+  padding: 7px 10px;
+  font-size: 11.5px;
+  font-family: "Consolas", "Courier New", monospace;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* Shared value colours used in both proj table and monthly table */
+.ov-val-green {
+  color: var(--pf-green);
+  font-weight: 600;
+}
+.ov-val-teal {
+  color: var(--pf-teal);
+  font-weight: 600;
+}
+.ov-val-blue {
+  color: var(--pf-blue);
+  font-weight: 600;
+}
+.ov-val-orange {
+  color: var(--pf-orange);
+  font-weight: 600;
+}
+.ov-val-red {
+  color: var(--pf-red);
+  font-weight: 600;
+}
+
+/* ── Monthly pay table ──────────────────────────────────────────────────── */
+.ov-monthly-card {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  background: var(--pf-card);
+  border: 1px solid var(--pf-border-lt);
+  border-radius: var(--pf-radius);
+  box-shadow: var(--pf-shadow);
+  overflow: hidden;
+}
+
+.ov-monthly-wrap {
+  overflow-x: auto;
+}
+
+.ov-monthly-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: auto;
+  min-width: 700px;
+}
+
+.ov-mt-head {
+  background: var(--pf-hdr-bg);
+}
+
+.ov-mt-th {
+  padding: 8px 10px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.ov-mt-r {
+  text-align: right;
+}
+
+.ov-mt-row {
+  background: var(--pf-row-bg);
+  border-bottom: 1px solid var(--pf-border-lt);
+  transition: background 0.1s;
+}
+.ov-mt-row:hover {
+  background: var(--pf-row-hover);
+}
+.ov-mt-alt {
+  background: var(--pf-row-alt);
+}
+.ov-mt-alt:hover {
+  background: var(--pf-row-alt-hover);
+}
+
+.ov-mt-td {
+  padding: 5px 10px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.ov-mt-period {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pf-text);
+}
+
+.ov-mt-bar-wrap {
+  display: inline-block;
+  width: 60px;
+  height: 6px;
+  background: var(--pf-border-lt);
+  border-radius: 6px;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.ov-mt-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--pf-green), #2dd55b);
+  transition: width 0.3s ease;
+}
+
+.ov-mt-bar-pct {
+  font-size: 10px;
+  color: var(--pf-muted);
+  font-weight: 600;
+  display: inline-block;
+  min-width: 30px;
+}
+
+.ov-mt-foot {
+  background: var(--pf-hdr-bg);
+}
+
+.ov-mt-tf {
+  padding: 7px 10px;
+  font-size: 11.5px;
+  font-family: "Consolas", "Courier New", monospace;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}

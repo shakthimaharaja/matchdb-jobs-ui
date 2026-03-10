@@ -253,7 +253,149 @@ export interface MarketerCandidateItem {
   company_id: string;
   candidate_name: string;
   candidate_email: string;
+  invite_status: string; // "none" | "invited" | "accepted"
+  invite_sent_at: string | null;
+  poke_count: number;
+  email_count: number;
+  current_role: string;
+  skills: string[];
+  experience_years: number;
+  location: string;
   created_at: string;
+}
+
+export interface ProjectFinancialData {
+  id: string;
+  billRate: number;
+  payRate: number;
+  hoursWorked: number;
+  projectStart: string | null;
+  projectEnd: string | null;
+  stateCode: string;
+  stateTaxPct: number;
+  cashPct: number;
+  totalBilled: number;
+  totalPay: number;
+  taxAmount: number;
+  cashAmount: number;
+  netPayable: number;
+  amountPaid: number;
+  amountPending: number;
+  notes: string;
+}
+
+export interface CandidateDetailProject {
+  id: string;
+  job_id: string;
+  job_title: string;
+  vendor_email: string;
+  location: string;
+  job_type: string;
+  job_sub_type: string;
+  pay_per_hour: number | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  status: string;
+  is_active: boolean;
+  applied_at: string;
+  financials: ProjectFinancialData | null;
+}
+
+export interface USStateTax {
+  code: string;
+  name: string;
+  taxPct: number;
+}
+
+export interface FinancialSummary {
+  count: number;
+  totalBilled: number;
+  totalPay: number;
+  taxAmount: number;
+  cashAmount: number;
+  netPayable: number;
+  amountPaid: number;
+  amountPending: number;
+  hoursWorked: number;
+}
+
+export interface CandidateDetailVendorActivity {
+  id: string;
+  sender_email: string;
+  sender_name: string;
+  sender_type: string;
+  is_email: boolean;
+  subject: string;
+  job_title: string;
+  created_at: string;
+}
+
+export interface CandidateDetailResponse {
+  roster: {
+    id: string;
+    candidate_name: string;
+    candidate_email: string;
+    invite_status: string;
+    invite_sent_at: string | null;
+    created_at: string;
+  };
+  profile: {
+    id: string;
+    candidate_id: string;
+    name: string;
+    email: string;
+    phone: string;
+    current_company: string;
+    current_role: string;
+    preferred_job_type: string;
+    expected_hourly_rate: number | null;
+    experience_years: number;
+    skills: string[];
+    location: string;
+    bio: string;
+    resume_summary: string;
+    resume_experience: string;
+    resume_education: string;
+    resume_achievements: string;
+  } | null;
+  projects: CandidateDetailProject[];
+  forwarded_openings: {
+    id: string;
+    job_id: string;
+    job_title: string;
+    job_location: string;
+    job_type: string;
+    job_sub_type: string;
+    vendor_email: string;
+    status: string;
+    note: string;
+    created_at: string;
+  }[];
+  vendor_activity: CandidateDetailVendorActivity[];
+}
+
+export interface CompanyInviteInfo {
+  id: string;
+  company_id: string;
+  company_name: string;
+  marketer_email: string;
+  candidate_email: string;
+  candidate_name: string;
+  offer_note: string;
+  status: string; // "pending" | "accepted" | "declined" | "expired"
+  token: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface CompanySearchResult {
+  id: string;
+  name: string;
+}
+
+export interface InviteVerifyResponse {
+  status: "valid" | "already_accepted" | "expired";
+  invite?: CompanyInviteInfo;
 }
 
 export interface ForwardedOpeningItem {
@@ -306,6 +448,8 @@ export const jobsApi = createApi({
     "MarketerCandidates",
     "ForwardedOpenings",
     "CandidateForwarded",
+    "CompanyInvites",
+    "ProjectFinancials",
   ],
   endpoints: (builder) => ({
     // ── Jobs ──────────────────────────────────────────────────────────────────
@@ -459,6 +603,11 @@ export const jobsApi = createApi({
       providesTags: ["MarketerCandidates"],
     }),
 
+    getMarketerCandidateDetail: builder.query<CandidateDetailResponse, string>({
+      query: (id) => `api/jobs/marketer/candidates/${id}/detail`,
+      providesTags: ["MarketerCandidates"],
+    }),
+
     removeMarketerCandidate: builder.mutation<{ ok: boolean }, string>({
       query: (id) => ({
         url: `api/jobs/marketer/candidates/${id}`,
@@ -492,6 +641,120 @@ export const jobsApi = createApi({
       query: () => "api/jobs/candidate/forwarded",
       providesTags: ["CandidateForwarded"],
     }),
+
+    // ── Invite Candidate (marketer sends invite email) ────────────────────────
+
+    inviteCandidate: builder.mutation<
+      { ok: boolean; token: string },
+      { candidateId: string; offerNote?: string }
+    >({
+      query: ({ candidateId, offerNote }) => ({
+        url: `api/jobs/marketer/candidates/${candidateId}/invite`,
+        method: "POST",
+        body: { offerNote },
+      }),
+      invalidatesTags: ["MarketerCandidates", "CompanyInvites"],
+    }),
+
+    // ── Forward Opening with Email ────────────────────────────────────────────
+
+    forwardOpeningWithEmail: builder.mutation<
+      any,
+      { candidateEmail: string; jobId: string; note?: string }
+    >({
+      query: (body) => ({
+        url: "api/jobs/marketer/forward-with-email",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["ForwardedOpenings"],
+    }),
+
+    // ── Update Forwarded Opening Status ───────────────────────────────────────
+
+    updateForwardedStatus: builder.mutation<
+      any,
+      { id: string; status: string }
+    >({
+      query: ({ id, status }) => ({
+        url: `api/jobs/marketer/forwarded/${id}/status`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: ["ForwardedOpenings"],
+    }),
+
+    // ── Verify Invite (public — candidate landing page) ──────────────────────
+
+    verifyInvite: builder.query<InviteVerifyResponse, string>({
+      query: (token) => `api/jobs/invite/${token}`,
+    }),
+
+    // ── Accept Invite ─────────────────────────────────────────────────────────
+
+    acceptInvite: builder.mutation<
+      { ok: boolean },
+      { token: string; candidateId?: string }
+    >({
+      query: ({ token }) => ({
+        url: `api/jobs/invite/${token}/accept`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Profile"],
+    }),
+
+    // ── Company Search (fuzzy dropdown) ───────────────────────────────────────
+
+    searchCompanies: builder.query<CompanySearchResult[], string>({
+      query: (q) => ({
+        url: "api/jobs/companies/search",
+        params: { q },
+      }),
+    }),
+
+    // ── Project Financials ────────────────────────────────────────────────────
+
+    getStateTaxRates: builder.query<USStateTax[], void>({
+      query: () => "api/jobs/marketer/financials/states",
+    }),
+
+    getFinancialSummary: builder.query<FinancialSummary, void>({
+      query: () => "api/jobs/marketer/financials/summary",
+      providesTags: ["ProjectFinancials"],
+    }),
+
+    upsertProjectFinancial: builder.mutation<
+      ProjectFinancialData,
+      {
+        applicationId: string;
+        candidateId?: string;
+        candidateEmail?: string;
+        billRate: number;
+        payRate: number;
+        hoursWorked: number;
+        projectStart?: string;
+        projectEnd?: string;
+        stateCode: string;
+        cashPct: number;
+        amountPaid: number;
+        notes?: string;
+      }
+    >({
+      query: (body) => ({
+        url: "api/jobs/marketer/financials",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["ProjectFinancials", "MarketerCandidates"],
+    }),
+
+    deleteProjectFinancial: builder.mutation<{ ok: boolean }, string>({
+      query: (applicationId) => ({
+        url: `api/jobs/marketer/financials/${applicationId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["ProjectFinancials", "MarketerCandidates"],
+    }),
   }),
 });
 
@@ -524,10 +787,24 @@ export const {
   // Marketer Candidates (company roster)
   useAddMarketerCandidateMutation,
   useGetMarketerCandidatesQuery,
+  useGetMarketerCandidateDetailQuery,
   useRemoveMarketerCandidateMutation,
   // Forward Openings
   useForwardOpeningMutation,
   useGetForwardedOpeningsQuery,
   // Candidate Forwarded Openings
   useGetCandidateForwardedOpeningsQuery,
+  // Invite / Accept / Search
+  useInviteCandidateMutation,
+  useForwardOpeningWithEmailMutation,
+  useUpdateForwardedStatusMutation,
+  useVerifyInviteQuery,
+  useAcceptInviteMutation,
+  useSearchCompaniesQuery,
+  useLazySearchCompaniesQuery,
+  // Project Financials
+  useGetStateTaxRatesQuery,
+  useGetFinancialSummaryQuery,
+  useUpsertProjectFinancialMutation,
+  useDeleteProjectFinancialMutation,
 } = jobsApi;

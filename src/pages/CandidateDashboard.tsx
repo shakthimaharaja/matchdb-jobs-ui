@@ -1384,7 +1384,7 @@ const CandidateDashboard: React.FC<Props> = ({
             >
               Job openings matched to your profile are hidden until you purchase
               a Visibility Package. Once purchased, your profile becomes
-              discoverable by recruiters and you'll see your personalized
+              discoverable by recruiters and you&apos;ll see your personalized
               matches here.
             </p>
             <p style={{ margin: "0 0 24px", fontSize: 12, color: "#888" }}>

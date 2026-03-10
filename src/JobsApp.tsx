@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 import "./components/ResumeModal.css";
 import { Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
@@ -10,6 +10,7 @@ import MarketerDashboard from "./pages/MarketerDashboard";
 import PostJobPage from "./pages/PostJobPage";
 import PublicJobsView from "./pages/PublicJobsView";
 import MembershipGatePage from "./pages/MembershipGatePage";
+import InviteAcceptPage from "./pages/InviteAcceptPage";
 
 export interface JobsAppProps {
   token: string | null;
@@ -36,11 +37,15 @@ const JobsApp: React.FC<JobsAppProps> = ({
 }) => {
   const [showPostJob, setShowPostJob] = useState(false);
 
-  // Keep jobs-ui Redux store in sync with the token prop from shell.
-  // jobsApi's prepareHeaders reads from this store so it auto-injects the JWT.
-  useEffect(() => {
+  // Synchronously update the jobs-ui Redux store with the token prop BEFORE
+  // children render.  RTK Query's prepareHeaders reads from this store, so
+  // if we used useEffect (which fires child-first), MarketerDashboard's
+  // query hooks would fire before the token is available → 401 errors.
+  const prevToken = useRef<string | null>(null);
+  if (token !== prevToken.current) {
+    prevToken.current = token;
     store.dispatch(setToken(token ?? null));
-  }, [token]);
+  }
 
   /* ---- Pre-login: show public live data tables ---- */
   if (!token) {
@@ -85,6 +90,9 @@ const JobsApp: React.FC<JobsAppProps> = ({
     <Provider store={store}>
       <div className="matchdb-page-transition matchdb-flex-col">
         <Routes>
+          {/* Invite acceptance — available to all logged-in users */}
+          <Route path="invite/:token" element={<InviteAcceptPage />} />
+
           {userType === "marketer" ? (
             <Route
               path="*"
