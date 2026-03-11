@@ -252,6 +252,16 @@ const VendorDashboard: React.FC<Props> = ({
     });
   };
 
+  // On mount: stamp ?view=postings if no view param exists yet (e.g. fresh login)
+  useEffect(() => {
+    if (!searchParams.get("view")) {
+      setSearchParams(
+        (prev) => { const next = new URLSearchParams(prev); next.set("view", "postings"); return next; },
+        { replace: true },
+      );
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [searchText, setSearchText] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState<Record<
     string,
@@ -1457,10 +1467,7 @@ const VendorDashboard: React.FC<Props> = ({
                         onChange={(e) => setPostingSearch(e.target.value)}
                         placeholder="Search..."
                       />
-                      <Button
-                        size="xs"
-                        onClick={() => setPostingSearch("")}
-                      >
+                      <Button size="xs" onClick={() => setPostingSearch("")}>
                         Reset
                       </Button>
                       <span className="matchdb-title-count">
@@ -1468,10 +1475,7 @@ const VendorDashboard: React.FC<Props> = ({
                           ? "..."
                           : `${tableData.length}/${totalCount}`}
                       </span>
-                      <Button
-                        size="xs"
-                        onClick={() => refetchJobs()}
-                      >
+                      <Button size="xs" onClick={() => refetchJobs()}>
                         ↻
                       </Button>
                       {onPostJob && (
@@ -1538,10 +1542,7 @@ const VendorDashboard: React.FC<Props> = ({
                   Subscribe to the <strong>Basic</strong> plan ($22/mo) or
                   higher to browse candidates and send pokes.
                 </p>
-                <Button
-                  variant="primary"
-                  onClick={openPricingModal}
-                >
+                <Button variant="primary" onClick={openPricingModal}>
                   View Subscription Plans →
                 </Button>
               </div>

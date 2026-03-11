@@ -483,10 +483,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
             </div>
           )}
 
-          <Button
-            className="detail-btn detail-btn-close"
-            onClick={onClose}
-          >
+          <Button className="detail-btn detail-btn-close" onClick={onClose}>
             Close
           </Button>
         </div>

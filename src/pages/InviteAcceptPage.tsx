@@ -83,7 +83,13 @@ const InviteAcceptPage: React.FC = () => {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
         <div style={{ fontSize: 48, marginBottom: 12 }}>🎉</div>
-        <h2 style={{ margin: "0 0 8px", fontSize: 18, color: "var(--w97-green, #2e7d32)" }}>
+        <h2
+          style={{
+            margin: "0 0 8px",
+            fontSize: 18,
+            color: "var(--w97-green, #2e7d32)",
+          }}
+        >
           Welcome to {invite?.company_name || "the team"}!
         </h2>
         <p style={{ fontSize: 12, color: "#555" }}>

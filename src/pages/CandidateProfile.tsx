@@ -376,10 +376,7 @@ const CandidateProfile: React.FC<Props> = ({
             }}
           >
             <span>📋 You have an unsaved draft from a previous session.</span>
-            <MDBButton
-              onClick={restoreFromDraft}
-              size="xs"
-            >
+            <MDBButton onClick={restoreFromDraft} size="xs">
               ↩ Restore Draft
             </MDBButton>
             <MDBButton
@@ -435,7 +432,10 @@ const CandidateProfile: React.FC<Props> = ({
                   OK, Let Me Edit
                 </MDBButton>
                 <MDBButton
-                  style={{ color: "var(--w97-blue, #235a81)", whiteSpace: "nowrap" }}
+                  style={{
+                    color: "var(--w97-blue, #235a81)",
+                    whiteSpace: "nowrap",
+                  }}
                   onClick={() =>
                     window.dispatchEvent(
                       new CustomEvent("matchdb:openPricing", {

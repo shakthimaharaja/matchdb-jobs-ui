@@ -160,7 +160,12 @@ const JobsApp: React.FC<JobsAppProps> = ({
               <div className="rm-titlebar">
                 <span className="rm-titlebar-icon">📋</span>
                 <span className="rm-titlebar-title">Post a New Job</span>
-                <Button variant="close" size="xs" onClick={() => setShowPostJob(false)} title="Close">
+                <Button
+                  variant="close"
+                  size="xs"
+                  onClick={() => setShowPostJob(false)}
+                  title="Close"
+                >
                   ✕
                 </Button>
               </div>

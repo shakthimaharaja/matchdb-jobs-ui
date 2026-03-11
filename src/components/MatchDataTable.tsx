@@ -162,7 +162,11 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
               ⊕
             </button>
           ) : (
-            <span style={{ color: "var(--w97-btn-shadow, #c0c0c0)", fontSize: 13 }}>⊕</span>
+            <span
+              style={{ color: "var(--w97-btn-shadow, #c0c0c0)", fontSize: 13 }}
+            >
+              ⊕
+            </span>
           ),
       },
       {
@@ -201,7 +205,10 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         render: (row: MatchRow) => (
           <a
             href={`mailto:${row.email}`}
-            style={{ color: "var(--w97-blue, #2a5fa0)", textDecoration: "none" }}
+            style={{
+              color: "var(--w97-blue, #2a5fa0)",
+              textDecoration: "none",
+            }}
           >
             {row.email}
           </a>

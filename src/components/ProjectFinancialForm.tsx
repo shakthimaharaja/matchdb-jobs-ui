@@ -19,24 +19,41 @@ interface Props {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt = (v: number) =>
-  `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  `$${v.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 const fmtPct = (v: number) =>
-  `${v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+  `${v.toLocaleString("en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
 
 const fmtDate = (iso: string | null) => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  } catch { return "—"; }
+    return new Date(iso).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return "—";
+  }
 };
 
 const toDateInput = (iso: string | null) => {
   if (!iso) return "";
-  try { return new Date(iso).toISOString().split("T")[0]; } catch { return ""; }
+  try {
+    return new Date(iso).toISOString().split("T")[0];
+  } catch {
+    return "";
+  }
 };
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.min(hi, Math.max(lo, v));
 
 // ─── Preview strip (used in edit mode) ───────────────────────────────────────
 
@@ -68,7 +85,9 @@ const PreviewStrip: React.FC<PreviewProps> = (p) => (
     <div className="pf-preview-divider" />
     <div className="pf-preview-metric">
       <span className="pf-preview-label">Your Margin</span>
-      <span className="pf-preview-value teal">{fmt(p.marginAmount)} ({fmtPct(p.marginPct)})</span>
+      <span className="pf-preview-value teal">
+        {fmt(p.marginAmount)} ({fmtPct(p.marginPct)})
+      </span>
     </div>
     <div className="pf-preview-divider" />
     <div className="pf-preview-metric">
@@ -77,7 +96,9 @@ const PreviewStrip: React.FC<PreviewProps> = (p) => (
     </div>
     <div className="pf-preview-divider" />
     <div className="pf-preview-metric">
-      <span className="pf-preview-label">Withholding ({fmtPct(p.cashPct)})</span>
+      <span className="pf-preview-label">
+        Withholding ({fmtPct(p.cashPct)})
+      </span>
       <span className="pf-preview-value red">-{fmt(p.cashAmount)}</span>
     </div>
     <div className="pf-preview-divider" />
@@ -88,7 +109,11 @@ const PreviewStrip: React.FC<PreviewProps> = (p) => (
     <div className="pf-preview-divider" />
     <div className="pf-preview-metric">
       <span className="pf-preview-label">Outstanding</span>
-      <span className={`pf-preview-value ${p.amountPending > 0 ? "orange" : p.amountPending < 0 ? "red" : "green"}`}>
+      <span
+        className={`pf-preview-value ${
+          p.amountPending > 0 ? "orange" : p.amountPending < 0 ? "red" : "green"
+        }`}
+      >
         {fmt(Math.abs(p.amountPending))}
       </span>
     </div>
@@ -97,23 +122,32 @@ const PreviewStrip: React.FC<PreviewProps> = (p) => (
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidateEmail, onSaved }) => {
+const ProjectFinancialForm: React.FC<Props> = ({
+  project,
+  candidateId,
+  candidateEmail,
+  onSaved,
+}) => {
   const { data: states = [] } = useGetStateTaxRatesQuery();
   const [upsert, { isLoading: saving }] = useUpsertProjectFinancialMutation();
 
   const fin = project.financials;
 
   // ── Form state ──────────────────────────────────────────────────────────────
-  const [editing, setEditing]         = useState(false);
-  const [billRate, setBillRate]       = useState(fin?.billRate ?? 0);
-  const [payRate, setPayRate]         = useState(fin?.payRate ?? 0);
+  const [editing, setEditing] = useState(false);
+  const [billRate, setBillRate] = useState(fin?.billRate ?? 0);
+  const [payRate, setPayRate] = useState(fin?.payRate ?? 0);
   const [hoursWorked, setHoursWorked] = useState(fin?.hoursWorked ?? 0);
-  const [projectStart, setProjectStart] = useState(toDateInput(fin?.projectStart ?? null));
-  const [projectEnd, setProjectEnd]     = useState(toDateInput(fin?.projectEnd ?? null));
-  const [stateCode, setStateCode]     = useState(fin?.stateCode ?? "");
-  const [cashPct, setCashPct]         = useState(fin?.cashPct ?? 0);
-  const [amountPaid, setAmountPaid]   = useState(fin?.amountPaid ?? 0);
-  const [notes, setNotes]             = useState(fin?.notes ?? "");
+  const [projectStart, setProjectStart] = useState(
+    toDateInput(fin?.projectStart ?? null),
+  );
+  const [projectEnd, setProjectEnd] = useState(
+    toDateInput(fin?.projectEnd ?? null),
+  );
+  const [stateCode, setStateCode] = useState(fin?.stateCode ?? "");
+  const [cashPct, setCashPct] = useState(fin?.cashPct ?? 0);
+  const [amountPaid, setAmountPaid] = useState(fin?.amountPaid ?? 0);
+  const [notes, setNotes] = useState(fin?.notes ?? "");
 
   useEffect(() => {
     if (fin) {
@@ -136,16 +170,27 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
   }, [states, stateCode]);
 
   const computed = useMemo(() => {
-    const totalBilled  = billRate * hoursWorked;
-    const totalPay     = payRate * hoursWorked;
+    const totalBilled = billRate * hoursWorked;
+    const totalPay = payRate * hoursWorked;
     const marginAmount = totalBilled - totalPay;
-    const marginPct    = totalBilled > 0 ? (marginAmount / totalBilled) * 100 : 0;
-    const taxAmount    = (totalPay * stateTaxPct) / 100;
-    const cashAmount   = (totalPay * cashPct) / 100;
-    const netPayable   = totalPay - taxAmount - cashAmount;
+    const marginPct = totalBilled > 0 ? (marginAmount / totalBilled) * 100 : 0;
+    const taxAmount = (totalPay * stateTaxPct) / 100;
+    const cashAmount = (totalPay * cashPct) / 100;
+    const netPayable = totalPay - taxAmount - cashAmount;
     const amountPending = netPayable - amountPaid;
-    const paidPct      = netPayable > 0 ? clamp((amountPaid / netPayable) * 100, 0, 100) : 0;
-    return { totalBilled, totalPay, marginAmount, marginPct, taxAmount, cashAmount, netPayable, amountPending, paidPct };
+    const paidPct =
+      netPayable > 0 ? clamp((amountPaid / netPayable) * 100, 0, 100) : 0;
+    return {
+      totalBilled,
+      totalPay,
+      marginAmount,
+      marginPct,
+      taxAmount,
+      cashAmount,
+      netPayable,
+      amountPending,
+      paidPct,
+    };
   }, [billRate, payRate, hoursWorked, stateTaxPct, cashPct, amountPaid]);
 
   // ── Save ────────────────────────────────────────────────────────────────────
@@ -159,7 +204,7 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
         payRate,
         hoursWorked,
         projectStart: projectStart || undefined,
-        projectEnd:   projectEnd   || undefined,
+        projectEnd: projectEnd || undefined,
         stateCode,
         cashPct,
         amountPaid,
@@ -170,28 +215,50 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
     } catch (e: any) {
       alert(e?.data?.error || "Failed to save financial data");
     }
-  }, [upsert, project.id, candidateId, candidateEmail, billRate, payRate, hoursWorked, projectStart, projectEnd, stateCode, cashPct, amountPaid, notes, onSaved]);
+  }, [
+    upsert,
+    project.id,
+    candidateId,
+    candidateEmail,
+    billRate,
+    payRate,
+    hoursWorked,
+    projectStart,
+    projectEnd,
+    stateCode,
+    cashPct,
+    amountPaid,
+    notes,
+    onSaved,
+  ]);
 
   // ── Read-only values (from saved fin or computed) ────────────────────────────
   const display = fin
     ? {
-        totalBilled:    fin.totalBilled,
-        totalPay:       fin.totalPay,
-        marginAmount:   fin.totalBilled - fin.totalPay,
-        marginPct:      fin.totalBilled > 0 ? ((fin.totalBilled - fin.totalPay) / fin.totalBilled) * 100 : 0,
-        taxAmount:      fin.taxAmount,
-        taxPct:         fin.stateTaxPct,
-        cashAmount:     fin.cashAmount,
-        cashPct:        fin.cashPct,
-        netPayable:     fin.netPayable,
-        amountPaid:     fin.amountPaid,
-        amountPending:  fin.amountPending,
-        paidPct:        fin.netPayable > 0 ? clamp((fin.amountPaid / fin.netPayable) * 100, 0, 100) : 0,
-        billRate:       fin.billRate,
-        payRate:        fin.payRate,
-        hoursWorked:    fin.hoursWorked,
-        stateCode:      fin.stateCode,
-        stateName:      states.find((s) => s.code === fin.stateCode)?.name ?? fin.stateCode,
+        totalBilled: fin.totalBilled,
+        totalPay: fin.totalPay,
+        marginAmount: fin.totalBilled - fin.totalPay,
+        marginPct:
+          fin.totalBilled > 0
+            ? ((fin.totalBilled - fin.totalPay) / fin.totalBilled) * 100
+            : 0,
+        taxAmount: fin.taxAmount,
+        taxPct: fin.stateTaxPct,
+        cashAmount: fin.cashAmount,
+        cashPct: fin.cashPct,
+        netPayable: fin.netPayable,
+        amountPaid: fin.amountPaid,
+        amountPending: fin.amountPending,
+        paidPct:
+          fin.netPayable > 0
+            ? clamp((fin.amountPaid / fin.netPayable) * 100, 0, 100)
+            : 0,
+        billRate: fin.billRate,
+        payRate: fin.payRate,
+        hoursWorked: fin.hoursWorked,
+        stateCode: fin.stateCode,
+        stateName:
+          states.find((s) => s.code === fin.stateCode)?.name ?? fin.stateCode,
       }
     : null;
 
@@ -201,16 +268,27 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
   if (editing || !fin) {
     const editStateTaxPct = stateTaxPct;
     const editMarginAmount = computed.totalBilled - computed.totalPay;
-    const editMarginPct = computed.totalBilled > 0 ? (editMarginAmount / computed.totalBilled) * 100 : 0;
+    const editMarginPct =
+      computed.totalBilled > 0
+        ? (editMarginAmount / computed.totalBilled) * 100
+        : 0;
 
     return (
-      <div className={`pf-root pf-card pf-card-editing${!isActive ? " pf-card-closed" : ""}`}>
+      <div
+        className={`pf-root pf-card pf-card-editing${
+          !isActive ? " pf-card-closed" : ""
+        }`}
+      >
         {/* Card header */}
         <div className="pf-card-header">
           <div className="pf-card-header-left">
             <span className="pf-job-title">{project.job_title}</span>
             <div className="pf-card-meta">
-              <span className={`pf-status-badge ${isActive ? "pf-status-active" : "pf-status-closed"}`}>
+              <span
+                className={`pf-status-badge ${
+                  isActive ? "pf-status-active" : "pf-status-closed"
+                }`}
+              >
                 {isActive ? "Active" : "Closed"}
               </span>
               {project.vendor_email && (
@@ -226,7 +304,8 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
                 <>
                   <span className="pf-meta-sep">·</span>
                   <span className="pf-meta-item">
-                    {project.job_type}{project.job_sub_type ? ` › ${project.job_sub_type}` : ""}
+                    {project.job_type}
+                    {project.job_sub_type ? ` › ${project.job_sub_type}` : ""}
                   </span>
                 </>
               )}
@@ -238,7 +317,12 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
                 Cancel
               </Button>
             )}
-            <Button variant="primary" size="xs" onClick={handleSave} disabled={saving}>
+            <Button
+              variant="primary"
+              size="xs"
+              onClick={handleSave}
+              disabled={saving}
+            >
               {saving ? "Saving…" : "Save"}
             </Button>
           </div>
@@ -265,7 +349,10 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
           <div className="pf-edit-section-title">Billing &amp; Hours</div>
           <div className="pf-edit-grid" style={{ marginBottom: 6 }}>
             <div className="pf-field">
-              <label className="pf-field-label" htmlFor={`pf-bill-${project.id}`}>
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-bill-${project.id}`}
+              >
                 Bill Rate ($/hr)
               </label>
               <input
@@ -274,12 +361,16 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
                 className="pf-field-input pf-input-rate"
                 value={billRate || ""}
                 onChange={(e) => setBillRate(Number(e.target.value) || 0)}
-                min={0} step={0.01}
+                min={0}
+                step={0.01}
                 placeholder="0.00"
               />
             </div>
             <div className="pf-field">
-              <label className="pf-field-label" htmlFor={`pf-pay-${project.id}`}>
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-pay-${project.id}`}
+              >
                 Pay Rate ($/hr)
               </label>
               <input
@@ -288,12 +379,16 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
                 className="pf-field-input pf-input-rate"
                 value={payRate || ""}
                 onChange={(e) => setPayRate(Number(e.target.value) || 0)}
-                min={0} step={0.01}
+                min={0}
+                step={0.01}
                 placeholder="0.00"
               />
             </div>
             <div className="pf-field">
-              <label className="pf-field-label" htmlFor={`pf-hours-${project.id}`}>
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-hours-${project.id}`}
+              >
                 Hours Worked
               </label>
               <input
@@ -302,7 +397,8 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
                 className="pf-field-input"
                 value={hoursWorked || ""}
                 onChange={(e) => setHoursWorked(Number(e.target.value) || 0)}
-                min={0} step={0.5}
+                min={0}
+                step={0.5}
                 placeholder="0"
               />
             </div>
@@ -315,10 +411,18 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
           </div>
 
           {/* Section 2: Deductions */}
-          <div className="pf-edit-section-title" style={{ marginTop: 14 }}>Deductions &amp; Tax</div>
-          <div className="pf-edit-grid pf-edit-grid-3" style={{ marginBottom: 6 }}>
+          <div className="pf-edit-section-title" style={{ marginTop: 14 }}>
+            Deductions &amp; Tax
+          </div>
+          <div
+            className="pf-edit-grid pf-edit-grid-3"
+            style={{ marginBottom: 6 }}
+          >
             <div className="pf-field">
-              <label className="pf-field-label" htmlFor={`pf-state-${project.id}`}>
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-state-${project.id}`}
+              >
                 Work State (USA)
                 {stateCode && (
                   <span className="pf-field-hint">Tax: {editStateTaxPct}%</span>
@@ -339,7 +443,10 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
               </select>
             </div>
             <div className="pf-field">
-              <label className="pf-field-label" htmlFor={`pf-cash-${project.id}`}>
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-cash-${project.id}`}
+              >
                 Additional Withholding %
               </label>
               <input
@@ -348,12 +455,17 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
                 className="pf-field-input"
                 value={cashPct || ""}
                 onChange={(e) => setCashPct(Number(e.target.value) || 0)}
-                min={0} max={100} step={0.1}
+                min={0}
+                max={100}
+                step={0.1}
                 placeholder="0.0"
               />
             </div>
             <div className="pf-field">
-              <label className="pf-field-label" htmlFor={`pf-paid-${project.id}`}>
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-paid-${project.id}`}
+              >
                 Amount Paid to Date ($)
               </label>
               <input
@@ -362,17 +474,28 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
                 className="pf-field-input pf-input-rate"
                 value={amountPaid || ""}
                 onChange={(e) => setAmountPaid(Number(e.target.value) || 0)}
-                min={0} step={0.01}
+                min={0}
+                step={0.01}
                 placeholder="0.00"
               />
             </div>
           </div>
 
           {/* Section 3: Dates */}
-          <div className="pf-edit-section-title" style={{ marginTop: 14 }}>Project Timeline</div>
-          <div className="pf-edit-grid pf-edit-grid-3" style={{ marginBottom: 6 }}>
+          <div className="pf-edit-section-title" style={{ marginTop: 14 }}>
+            Project Timeline
+          </div>
+          <div
+            className="pf-edit-grid pf-edit-grid-3"
+            style={{ marginBottom: 6 }}
+          >
             <div className="pf-field">
-              <label className="pf-field-label" htmlFor={`pf-start-${project.id}`}>Start Date</label>
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-start-${project.id}`}
+              >
+                Start Date
+              </label>
               <input
                 id={`pf-start-${project.id}`}
                 type="date"
@@ -382,7 +505,12 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
               />
             </div>
             <div className="pf-field">
-              <label className="pf-field-label" htmlFor={`pf-end-${project.id}`}>End Date</label>
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-end-${project.id}`}
+              >
+                End Date
+              </label>
               <input
                 id={`pf-end-${project.id}`}
                 type="date"
@@ -391,8 +519,16 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
                 onChange={(e) => setProjectEnd(e.target.value)}
               />
             </div>
-            <div className="pf-field pf-edit-grid-full" style={{ gridColumn: "auto" }}>
-              <label className="pf-field-label" htmlFor={`pf-notes-${project.id}`}>Notes</label>
+            <div
+              className="pf-field pf-edit-grid-full"
+              style={{ gridColumn: "auto" }}
+            >
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-notes-${project.id}`}
+              >
+                Notes
+              </label>
               <textarea
                 id={`pf-notes-${project.id}`}
                 className="pf-field-textarea"
@@ -408,10 +544,14 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
         {/* Context footer */}
         <div className="pf-edit-context">
           {project.vendor_email && (
-            <span className="pf-edit-context-item">Vendor: {project.vendor_email}</span>
+            <span className="pf-edit-context-item">
+              Vendor: {project.vendor_email}
+            </span>
           )}
           {project.location && (
-            <span className="pf-edit-context-item">Location: {project.location}</span>
+            <span className="pf-edit-context-item">
+              Location: {project.location}
+            </span>
           )}
           <span className="pf-edit-context-item">
             Applied: {fmtDate(project.applied_at)}
@@ -432,7 +572,11 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
         <div className="pf-card-header-left">
           <span className="pf-job-title">{project.job_title}</span>
           <div className="pf-card-meta">
-            <span className={`pf-status-badge ${isActive ? "pf-status-active" : "pf-status-closed"}`}>
+            <span
+              className={`pf-status-badge ${
+                isActive ? "pf-status-active" : "pf-status-closed"
+              }`}
+            >
               {isActive ? "Active" : "Closed"}
             </span>
             {project.vendor_email && (
@@ -448,7 +592,8 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
               <>
                 <span className="pf-meta-sep">·</span>
                 <span className="pf-meta-item">
-                  {project.job_type}{project.job_sub_type ? ` › ${project.job_sub_type}` : ""}
+                  {project.job_type}
+                  {project.job_sub_type ? ` › ${project.job_sub_type}` : ""}
                 </span>
               </>
             )}
@@ -477,7 +622,9 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
           </div>
           <div className="pf-rate-row">
             <span className="pf-rate-label">Hours Worked</span>
-            <span className="pf-rate-value">{d.hoursWorked.toLocaleString()}</span>
+            <span className="pf-rate-value">
+              {d.hoursWorked.toLocaleString()}
+            </span>
           </div>
 
           <hr className="pf-divider" />
@@ -496,7 +643,9 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
             <span className="pf-margin-label">Your Margin</span>
             <div className="pf-margin-values">
               <span className="pf-margin-amount">{fmt(d.marginAmount)}</span>
-              <span className="pf-margin-pct">{fmtPct(d.marginPct)} of billed</span>
+              <span className="pf-margin-pct">
+                {fmtPct(d.marginPct)} of billed
+              </span>
             </div>
           </div>
         </div>
@@ -519,7 +668,9 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
           )}
           {d.cashAmount > 0 && (
             <div className="pf-comp-row">
-              <span className="pf-comp-label">Withholding ({fmtPct(d.cashPct)})</span>
+              <span className="pf-comp-label">
+                Withholding ({fmtPct(d.cashPct)})
+              </span>
               <span className="pf-value-deduction">−{fmt(d.cashAmount)}</span>
             </div>
           )}
@@ -540,8 +691,14 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
               <span className="pf-payment-label">
                 {isOverpaid ? "Overpaid" : "Outstanding"}
               </span>
-              <span className={isOverpaid ? "pf-value-pending-neg" : "pf-value-pending-pos"}>
-                {isOverpaid ? `+${fmt(Math.abs(d.amountPending))}` : fmt(d.amountPending)}
+              <span
+                className={
+                  isOverpaid ? "pf-value-pending-neg" : "pf-value-pending-pos"
+                }
+              >
+                {isOverpaid
+                  ? `+${fmt(Math.abs(d.amountPending))}`
+                  : fmt(d.amountPending)}
               </span>
             </div>
             <div className="pf-progress-wrap">
@@ -577,9 +734,7 @@ const ProjectFinancialForm: React.FC<Props> = ({ project, candidateId, candidate
             </span>
           </>
         )}
-        {fin.notes && (
-          <span className="pf-footer-notes">{fin.notes}</span>
-        )}
+        {fin.notes && <span className="pf-footer-notes">{fin.notes}</span>}
       </div>
     </div>
   );

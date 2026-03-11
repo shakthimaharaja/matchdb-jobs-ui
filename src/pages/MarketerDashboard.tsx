@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import DBLayout, { NavGroup } from "../components/DBLayout";
 import {
   DataTable,
@@ -188,17 +189,48 @@ function downloadResumePDF(p: MarketerProfile) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const MarketerDashboard: React.FC<Props> = () => {
-  const [activeView, setActiveView] =
-    useState<ActiveView>("company-candidates");
+  // ── URL-driven state — view, sub-filter, selected candidate, and detail tab
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeView =
+    (searchParams.get("view") as ActiveView) || "company-candidates";
+  const subFilter = searchParams.get("filter") || null;
+  const selectedCandidateId = searchParams.get("cid") || null;
+  const detailTab =
+    (searchParams.get("tab") as
+      | "overview"
+      | "projects"
+      | "vendor-activity"
+      | "forwarded") || "overview";
+
   const [jobSearch, setJobSearch] = useState("");
   const [profileSearch, setProfileSearch] = useState("");
-  const [subFilter, setSubFilter] = useState<string | null>(null);
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
-    null,
-  );
-  const [detailTab, setDetailTab] = useState<
-    "overview" | "projects" | "vendor-activity" | "forwarded"
-  >("overview");
+  const [overviewSubTab, setOverviewSubTab] = useState<"financial" | "monthly">("financial");
+  const [vendorActivitySubTab, setVendorActivitySubTab] = useState<string>("summary");
+
+  /** Update multiple URL params atomically in one navigate() call */
+  const navParams = (updates: Record<string, string | null>) =>
+    setSearchParams(
+      (prev) => {
+        const n = new URLSearchParams(prev);
+        for (const [k, v] of Object.entries(updates)) {
+          if (v === null) n.delete(k);
+          else n.set(k, v);
+        }
+        return n;
+      },
+      { replace: true },
+    );
+  // On mount: stamp ?view=company-candidates if no view param exists yet
+  // This ensures the URL always reflects the active view after login.
+  useEffect(() => {
+    if (!searchParams.get("view")) {
+      setSearchParams(
+        (prev) => { const n = new URLSearchParams(prev); n.set("view", "company-candidates"); return n; },
+        { replace: true },
+      );
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
   );
@@ -336,8 +368,7 @@ const MarketerDashboard: React.FC<Props> = () => {
   // ── Nav helpers ─────────────────────────────────────────────────────────────
 
   const navigateTo = (view: ActiveView) => {
-    setActiveView(view);
-    setSubFilter(null);
+    navParams({ view, filter: null, cid: null, tab: null });
     if (view === "vendor-posted") setNewJobsBadge(0);
     if (view === "candidate-created") setNewProfilesBadge(0);
   };
@@ -589,40 +620,29 @@ const MarketerDashboard: React.FC<Props> = () => {
             label: "C2C Openings",
             depth: 1,
             active: activeView === "vendor-posted" && subFilter === "c2c",
-            onClick: () => {
-              setActiveView("vendor-posted");
-              setSubFilter("c2c");
-            },
+            onClick: () => navParams({ view: "vendor-posted", filter: "c2c" }),
           },
           {
             id: "sub-jobs-w2",
             label: "W2 Openings",
             depth: 1,
             active: activeView === "vendor-posted" && subFilter === "w2",
-            onClick: () => {
-              setActiveView("vendor-posted");
-              setSubFilter("w2");
-            },
+            onClick: () => navParams({ view: "vendor-posted", filter: "w2" }),
           },
           {
             id: "sub-jobs-c2h",
             label: "C2H Openings",
             depth: 1,
             active: activeView === "vendor-posted" && subFilter === "c2h",
-            onClick: () => {
-              setActiveView("vendor-posted");
-              setSubFilter("c2h");
-            },
+            onClick: () => navParams({ view: "vendor-posted", filter: "c2h" }),
           },
           {
             id: "sub-jobs-ft",
             label: "Full Time Openings",
             depth: 1,
             active: activeView === "vendor-posted" && subFilter === "full_time",
-            onClick: () => {
-              setActiveView("vendor-posted");
-              setSubFilter("full_time");
-            },
+            onClick: () =>
+              navParams({ view: "vendor-posted", filter: "full_time" }),
           },
         ],
       },
@@ -645,30 +665,24 @@ const MarketerDashboard: React.FC<Props> = () => {
             label: "C2C Profiles",
             depth: 1,
             active: activeView === "candidate-created" && subFilter === "c2c",
-            onClick: () => {
-              setActiveView("candidate-created");
-              setSubFilter("c2c");
-            },
+            onClick: () =>
+              navParams({ view: "candidate-created", filter: "c2c" }),
           },
           {
             id: "sub-profiles-w2",
             label: "W2 Profiles",
             depth: 1,
             active: activeView === "candidate-created" && subFilter === "w2",
-            onClick: () => {
-              setActiveView("candidate-created");
-              setSubFilter("w2");
-            },
+            onClick: () =>
+              navParams({ view: "candidate-created", filter: "w2" }),
           },
           {
             id: "sub-profiles-c2h",
             label: "C2H Profiles",
             depth: 1,
             active: activeView === "candidate-created" && subFilter === "c2h",
-            onClick: () => {
-              setActiveView("candidate-created");
-              setSubFilter("c2h");
-            },
+            onClick: () =>
+              navParams({ view: "candidate-created", filter: "c2h" }),
           },
           {
             id: "sub-profiles-ft",
@@ -676,10 +690,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             depth: 1,
             active:
               activeView === "candidate-created" && subFilter === "full_time",
-            onClick: () => {
-              setActiveView("candidate-created");
-              setSubFilter("full_time");
-            },
+            onClick: () =>
+              navParams({ view: "candidate-created", filter: "full_time" }),
           },
         ],
       },
@@ -1131,11 +1143,9 @@ const MarketerDashboard: React.FC<Props> = () => {
               padding: 0,
               textDecoration: "underline",
             }}
-            onClick={() => {
-              setSelectedCandidateId(c.id);
-              setDetailTab("overview");
-              setActiveView("candidate-detail");
-            }}
+            onClick={() =>
+              navParams({ view: "candidate-detail", cid: c.id, tab: "overview" })
+            }
           >
             {c.candidate_name || "—"}
           </button>
@@ -1611,10 +1621,9 @@ const MarketerDashboard: React.FC<Props> = () => {
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <Button
                     size="sm"
-                    onClick={() => {
-                      setActiveView("company-candidates");
-                      setSelectedCandidateId(null);
-                    }}
+                    onClick={() =>
+                      navParams({ view: "company-candidates", cid: null, tab: null })
+                    }
                   >
                     ← Back
                   </Button>
@@ -1734,7 +1743,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 <Tabs
                   activeKey={detailTab}
                   onSelect={(key) => {
-                    setDetailTab(key as typeof detailTab);
+                    navParams({ tab: key });
                     if (key !== "projects") setSelectedProjectId(null);
                   }}
                   tabs={[
@@ -1929,404 +1938,54 @@ const MarketerDashboard: React.FC<Props> = () => {
 
                     return (
                       <div className="ov-root">
-                        {/* ══ ROW 1 — Legacy profile card + legacy quick-stats sidebar ══ */}
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 16,
-                            flexWrap: "wrap",
-                            padding: "16px 16px 0",
-                          }}
-                        >
-                          {/* ── LEFT: Profile Information card (unchanged from legacy) ── */}
-                          <div
-                            className="matchdb-card"
-                            style={{
-                              flex: "1 1 380px",
-                              padding: 20,
-                              borderLeft: "4px solid var(--w97-blue)",
-                            }}
-                          >
-                            <h3
-                              style={{
-                                margin: "0 0 14px",
-                                fontSize: 14,
-                                fontWeight: 700,
-                                color: "var(--w97-titlebar-from)",
-                              }}
-                            >
-                              Profile Information
-                            </h3>
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "1fr 1fr",
-                                gap: "10px 20px",
-                                fontSize: 12,
-                              }}
-                            >
-                              <div>
-                                <span
-                                  style={{
-                                    color: "var(--w97-text-secondary)",
-                                    fontSize: 10,
-                                    textTransform: "uppercase",
-                                    letterSpacing: 0.5,
-                                  }}
-                                >
-                                  Email
-                                </span>
-                                <div style={{ fontWeight: 500, marginTop: 2 }}>
-                                  {candidateDetail.roster.candidate_email}
-                                </div>
-                              </div>
-                              <div>
-                                <span
-                                  style={{
-                                    color: "var(--w97-text-secondary)",
-                                    fontSize: 10,
-                                    textTransform: "uppercase",
-                                    letterSpacing: 0.5,
-                                  }}
-                                >
-                                  Candidate ID
-                                </span>
-                                <div
-                                  style={{
-                                    fontWeight: 500,
-                                    marginTop: 2,
-                                    fontFamily: "monospace",
-                                  }}
-                                >
-                                  {candidateDetail.profile?.candidate_id || "—"}
-                                </div>
-                              </div>
-                              <div>
-                                <span
-                                  style={{
-                                    color: "var(--w97-text-secondary)",
-                                    fontSize: 10,
-                                    textTransform: "uppercase",
-                                    letterSpacing: 0.5,
-                                  }}
-                                >
-                                  Role
-                                </span>
-                                <div style={{ fontWeight: 500, marginTop: 2 }}>
-                                  {candidateDetail.profile?.current_role || "—"}
-                                </div>
-                              </div>
-                              <div>
-                                <span
-                                  style={{
-                                    color: "var(--w97-text-secondary)",
-                                    fontSize: 10,
-                                    textTransform: "uppercase",
-                                    letterSpacing: 0.5,
-                                  }}
-                                >
-                                  Experience
-                                </span>
-                                <div style={{ fontWeight: 500, marginTop: 2 }}>
-                                  {candidateDetail.profile?.experience_years !=
-                                  null
-                                    ? `${candidateDetail.profile.experience_years} years`
-                                    : "—"}
-                                </div>
-                              </div>
-                              <div>
-                                <span
-                                  style={{
-                                    color: "var(--w97-text-secondary)",
-                                    fontSize: 10,
-                                    textTransform: "uppercase",
-                                    letterSpacing: 0.5,
-                                  }}
-                                >
-                                  Rate
-                                </span>
-                                <div style={{ fontWeight: 500, marginTop: 2 }}>
-                                  {candidateDetail.profile?.expected_hourly_rate
-                                    ? `$${candidateDetail.profile.expected_hourly_rate}/hr`
-                                    : "—"}
-                                </div>
-                              </div>
-                              <div>
-                                <span
-                                  style={{
-                                    color: "var(--w97-text-secondary)",
-                                    fontSize: 10,
-                                    textTransform: "uppercase",
-                                    letterSpacing: 0.5,
-                                  }}
-                                >
-                                  Location
-                                </span>
-                                <div style={{ fontWeight: 500, marginTop: 2 }}>
-                                  {candidateDetail.profile?.location || "—"}
-                                </div>
-                              </div>
-                              <div>
-                                <span
-                                  style={{
-                                    color: "var(--w97-text-secondary)",
-                                    fontSize: 10,
-                                    textTransform: "uppercase",
-                                    letterSpacing: 0.5,
-                                  }}
-                                >
-                                  Phone
-                                </span>
-                                <div style={{ fontWeight: 500, marginTop: 2 }}>
-                                  {candidateDetail.profile?.phone || "—"}
-                                </div>
-                              </div>
-                              <div>
-                                <span
-                                  style={{
-                                    color: "var(--w97-text-secondary)",
-                                    fontSize: 10,
-                                    textTransform: "uppercase",
-                                    letterSpacing: 0.5,
-                                  }}
-                                >
-                                  Company
-                                </span>
-                                <div style={{ fontWeight: 500, marginTop: 2 }}>
-                                  {candidateDetail.profile?.current_company ||
-                                    "—"}
-                                </div>
-                              </div>
-                              <div style={{ gridColumn: "1 / -1" }}>
-                                <span
-                                  style={{
-                                    color: "var(--w97-text-secondary)",
-                                    fontSize: 10,
-                                    textTransform: "uppercase",
-                                    letterSpacing: 0.5,
-                                  }}
-                                >
-                                  Skills
-                                </span>
-                                <div
-                                  style={{
-                                    marginTop: 4,
-                                    display: "flex",
-                                    flexWrap: "wrap",
-                                    gap: 4,
-                                  }}
-                                >
-                                  {Array.isArray(
-                                    candidateDetail.profile?.skills,
-                                  ) &&
-                                  candidateDetail.profile!.skills.length > 0 ? (
-                                    candidateDetail.profile!.skills.map((s) => (
-                                      <span
-                                        key={s}
-                                        style={{
-                                          background: "#e8f0fe",
-                                          color: "var(--w97-blue)",
-                                          padding: "2px 8px",
-                                          borderRadius: 12,
-                                          fontSize: 10,
-                                          fontWeight: 500,
-                                        }}
-                                      >
-                                        {s}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span
-                                      style={{
-                                        color: "var(--w97-text-secondary)",
-                                        fontSize: 11,
-                                      }}
-                                    >
-                                      —
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {candidateDetail.profile?.bio && (
-                                <div style={{ gridColumn: "1 / -1" }}>
-                                  <span
-                                    style={{
-                                      color: "var(--w97-text-secondary)",
-                                      fontSize: 10,
-                                      textTransform: "uppercase",
-                                      letterSpacing: 0.5,
-                                    }}
-                                  >
-                                    Bio
+                        {/* ══ ROW 1 — Compact single-line profile strip ══ */}
+                        <div style={{ borderBottom: "1px solid var(--w97-border)", background: "var(--w97-panel-bg, #f4f4f4)" }}>
+                          {/* Main info row */}
+                          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "3px 0", padding: "8px 14px", fontSize: 12 }}>
+                            {(
+                              [
+                                { v: candidateDetail.profile?.current_role, bold: true },
+                                { v: candidateDetail.profile?.current_company },
+                                { v: candidateDetail.profile?.location },
+                                { v: candidateDetail.profile?.expected_hourly_rate ? `$${candidateDetail.profile.expected_hourly_rate}/hr` : null },
+                                { v: candidateDetail.profile?.experience_years != null ? `${candidateDetail.profile.experience_years} yrs` : null },
+                                { v: candidateDetail.profile?.phone },
+                                { v: candidateDetail.roster.candidate_email },
+                              ] as { v: string | null | undefined; bold?: boolean }[]
+                            ).filter((x) => x.v).map((x, i, arr) => (
+                              <React.Fragment key={i}>
+                                <span style={{ fontWeight: x.bold ? 700 : 400, color: x.bold ? "var(--w97-titlebar-from)" : "inherit" }}>{x.v}</span>
+                                {i < arr.length - 1 && <span style={{ margin: "0 7px", color: "var(--w97-text-secondary)", fontWeight: 300 }}>·</span>}
+                              </React.Fragment>
+                            ))}
+                            {/* Stats badges — right side */}
+                            <div style={{ marginLeft: "auto", display: "flex", gap: 5, flexWrap: "nowrap", alignItems: "center", paddingLeft: 12 }}>
+                              {(() => {
+                                const status = candidateDetail.roster.invite_status || "none";
+                                const accepted = status === "accepted";
+                                return (
+                                  <span style={{ padding: "2px 7px", borderRadius: 10, fontSize: 10, fontWeight: 600, background: accepted ? "#e8f5e9" : "#fff3e0", color: accepted ? "#2e7d32" : "#b8860b", whiteSpace: "nowrap" }}>
+                                    {accepted ? "✓ Accepted" : "⏳ Pending"}
                                   </span>
-                                  <div
-                                    style={{
-                                      fontWeight: 400,
-                                      marginTop: 2,
-                                      fontSize: 11,
-                                      color: "var(--w97-text-secondary)",
-                                      fontStyle: "italic",
-                                    }}
-                                  >
-                                    {candidateDetail.profile.bio}
-                                  </div>
-                                </div>
-                              )}
+                                );
+                              })()}
+                              <span className="matchdb-type-pill" style={{ whiteSpace: "nowrap" }}>{candidateDetail.projects.filter((p) => p.is_active).length} active</span>
+                              <span className="matchdb-type-pill" style={{ whiteSpace: "nowrap" }}>{candidateDetail.vendor_activity.length} interactions</span>
+                              <span className="matchdb-type-pill" style={{ whiteSpace: "nowrap" }}>{candidateDetail.forwarded_openings.length} forwarded</span>
+                              <span style={{ fontSize: 10, color: "var(--w97-text-secondary)", whiteSpace: "nowrap", paddingLeft: 4 }}>
+                                Rostered {fmtDate(candidateDetail.roster.created_at)}
+                              </span>
                             </div>
                           </div>
-
-                          {/* ── RIGHT: Quick stats sidebar (unchanged from legacy) ── */}
-                          <div
-                            style={{
-                              flex: "0 0 220px",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 10,
-                            }}
-                          >
-                            <div
-                              className="matchdb-card"
-                              style={{
-                                padding: 14,
-                                textAlign: "center",
-                                borderLeft:
-                                  (candidateDetail.roster.invite_status ||
-                                    "none") === "accepted"
-                                    ? "4px solid var(--w97-green)"
-                                    : "4px solid var(--w97-yellow)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  fontSize: 10,
-                                  color: "var(--w97-text-secondary)",
-                                  textTransform: "uppercase",
-                                  letterSpacing: 0.5,
-                                  marginBottom: 4,
-                                }}
-                              >
-                                Invite Status
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 16,
-                                  fontWeight: 700,
-                                  color:
-                                    (candidateDetail.roster.invite_status ||
-                                      "none") === "accepted"
-                                      ? "var(--w97-green)"
-                                      : "var(--w97-yellow)",
-                                }}
-                              >
-                                {(candidateDetail.roster.invite_status ||
-                                  "none") === "accepted"
-                                  ? "✓ Accepted"
-                                  : "⏳ Pending"}
-                              </div>
+                          {/* Skills row */}
+                          {(candidateDetail.profile?.skills || []).length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "0 14px 7px", alignItems: "center" }}>
+                              <span style={{ fontSize: 10, color: "var(--w97-text-secondary)", textTransform: "uppercase", letterSpacing: 0.5, marginRight: 4 }}>Skills</span>
+                              {candidateDetail.profile!.skills.map((s) => (
+                                <span key={s} style={{ background: "#e8f0fe", color: "var(--w97-blue)", padding: "2px 8px", borderRadius: 12, fontSize: 10, fontWeight: 500 }}>{s}</span>
+                              ))}
                             </div>
-                            <div
-                              className="matchdb-card"
-                              style={{
-                                padding: 14,
-                                textAlign: "center",
-                                borderLeft: "4px solid var(--w97-blue)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  fontSize: 10,
-                                  color: "var(--w97-text-secondary)",
-                                  textTransform: "uppercase",
-                                  letterSpacing: 0.5,
-                                  marginBottom: 4,
-                                }}
-                              >
-                                Active Projects
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 24,
-                                  fontWeight: 700,
-                                  color: "var(--w97-blue)",
-                                }}
-                              >
-                                {
-                                  candidateDetail.projects.filter(
-                                    (p) => p.is_active,
-                                  ).length
-                                }
-                              </div>
-                            </div>
-                            <div
-                              className="matchdb-card"
-                              style={{
-                                padding: 14,
-                                textAlign: "center",
-                                borderLeft: "4px solid var(--w97-orange)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  fontSize: 10,
-                                  color: "var(--w97-text-secondary)",
-                                  textTransform: "uppercase",
-                                  letterSpacing: 0.5,
-                                  marginBottom: 4,
-                                }}
-                              >
-                                Vendor Interactions
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 24,
-                                  fontWeight: 700,
-                                  color: "var(--w97-orange)",
-                                }}
-                              >
-                                {candidateDetail.vendor_activity.length}
-                              </div>
-                            </div>
-                            <div
-                              className="matchdb-card"
-                              style={{
-                                padding: 14,
-                                textAlign: "center",
-                                borderLeft: "4px solid var(--w97-red)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  fontSize: 10,
-                                  color: "var(--w97-text-secondary)",
-                                  textTransform: "uppercase",
-                                  letterSpacing: 0.5,
-                                  marginBottom: 4,
-                                }}
-                              >
-                                Forwarded Openings
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 24,
-                                  fontWeight: 700,
-                                  color: "var(--w97-red)",
-                                }}
-                              >
-                                {candidateDetail.forwarded_openings.length}
-                              </div>
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 10,
-                                color: "var(--w97-text-secondary)",
-                                textAlign: "center",
-                                marginTop: 4,
-                              }}
-                            >
-                              Rostered{" "}
-                              {fmtDate(candidateDetail.roster.created_at)}
-                            </div>
-                          </div>
+                          )}
                         </div>
 
                         {/* ══ ROW 2 — Modern financial KPI strip (only when financials exist) ══ */}
@@ -2439,405 +2098,305 @@ const MarketerDashboard: React.FC<Props> = () => {
                           </div>
                         )}
 
-                        {/* ══ ROW 3 — Projects financial summary table ══ */}
-                        {candidateDetail.projects.length > 0 && (
-                          <div
-                            className="ov-projects-card"
-                            style={{ margin: "14px 16px 0" }}
-                          >
-                            <div className="ov-section-hdr">
-                              Projects — Financial Summary
-                              <span className="ov-hdr-badge">
-                                {candidateDetail.projects.length} total ·{" "}
-                                {
-                                  candidateDetail.projects.filter(
-                                    (p) => p.is_active,
-                                  ).length
-                                }{" "}
-                                active
-                              </span>
+                        {/* ══ ROW 3 — Subtabs: Financial Summary / Monthly Pay ══ */}
+                        {(candidateDetail.projects.length > 0 || monthRows.length > 0) && (
+                          <div style={{ margin: "14px 16px 16px" }}>
+                            {/* Subtab bar */}
+                            <div style={{ display: "flex", gap: 0, marginBottom: 0 }}>
+                              <button
+                                type="button"
+                                onClick={() => setOverviewSubTab("financial")}
+                                style={{
+                                  padding: "5px 14px",
+                                  fontSize: 11.5,
+                                  fontWeight: overviewSubTab === "financial" ? 700 : 500,
+                                  background: overviewSubTab === "financial" ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
+                                  color: overviewSubTab === "financial" ? "#fff" : "var(--w97-text)",
+                                  border: "1px solid var(--w97-btn-shadow)",
+                                  borderBottom: overviewSubTab === "financial" ? "none" : "1px solid var(--w97-btn-shadow)",
+                                  borderRadius: "4px 4px 0 0",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                💼 Financial Summary
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setOverviewSubTab("monthly")}
+                                style={{
+                                  padding: "5px 14px",
+                                  fontSize: 11.5,
+                                  fontWeight: overviewSubTab === "monthly" ? 700 : 500,
+                                  background: overviewSubTab === "monthly" ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
+                                  color: overviewSubTab === "monthly" ? "#fff" : "var(--w97-text)",
+                                  border: "1px solid var(--w97-btn-shadow)",
+                                  borderBottom: overviewSubTab === "monthly" ? "none" : "1px solid var(--w97-btn-shadow)",
+                                  borderRadius: "4px 4px 0 0",
+                                  cursor: "pointer",
+                                  marginLeft: -1,
+                                }}
+                              >
+                                📅 Monthly Pay Summary
+                              </button>
                             </div>
-                            <div className="ov-proj-wrap">
-                              <table className="ov-proj-table">
-                                <thead>
-                                  <tr className="ov-pt-head">
-                                    <th className="ov-pt-th">Project / Role</th>
-                                    <th className="ov-pt-th ov-pt-r">Status</th>
-                                    <th className="ov-pt-th ov-pt-r">
-                                      Bill / Pay Rate
-                                    </th>
-                                    <th className="ov-pt-th ov-pt-r">Hours</th>
-                                    <th className="ov-pt-th ov-pt-r">
-                                      Vendor Billed
-                                    </th>
-                                    <th className="ov-pt-th ov-pt-r">
-                                      Your Margin
-                                    </th>
-                                    <th className="ov-pt-th ov-pt-r">
-                                      Net Pay
-                                    </th>
-                                    <th className="ov-pt-th ov-pt-r">Paid</th>
-                                    <th className="ov-pt-th ov-pt-r">
-                                      Balance
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {[
-                                    ...candidateDetail.projects.filter(
-                                      (p) => p.is_active,
+
+                            {/* Financial Summary subtab */}
+                            {overviewSubTab === "financial" && candidateDetail.projects.length > 0 && (
+                              <DataTable
+                                title="Projects — Financial Summary"
+                                titleIcon="💼"
+                                className="matchdb-auto-height"
+                                titleExtra={
+                                  <span style={{ fontSize: 10, opacity: 0.7 }}>
+                                    {candidateDetail.projects.length} total ·{" "}
+                                    {candidateDetail.projects.filter((p) => p.is_active).length} active
+                                  </span>
+                                }
+                                showRowNumbers={false}
+                                columns={[
+                                  {
+                                    key: "project",
+                                    header: "Project / Role",
+                                    width: "22%",
+                                    render: (p) => (
+                                      <>
+                                        <div style={{ fontWeight: 600 }}>{p.job_title || "Untitled"}</div>
+                                        <div style={{ fontSize: 10, color: "var(--w97-text-secondary)", marginTop: 1 }}>
+                                          {p.job_type}
+                                          {p.job_sub_type ? ` · ${p.job_sub_type.toUpperCase()}` : ""}
+                                          {p.financials?.stateCode ? ` · ${p.financials.stateCode}` : ""}
+                                        </div>
+                                      </>
                                     ),
-                                    ...candidateDetail.projects.filter(
-                                      (p) => !p.is_active,
+                                  },
+                                  {
+                                    key: "status",
+                                    header: "Status",
+                                    align: "right",
+                                    render: (p) => (
+                                      <span className={`ov-proj-badge ${p.is_active ? "ov-proj-active" : "ov-proj-closed"}`}>
+                                        {p.is_active ? "● Active" : "✓ Closed"}
+                                      </span>
                                     ),
-                                  ].map((p, idx) => {
-                                    const f = p.financials;
-                                    const margin = f
-                                      ? f.totalBilled - f.totalPay
-                                      : 0;
-                                    const balance = f
-                                      ? Math.max(0, f.amountPending)
-                                      : 0;
-                                    return (
-                                      <tr
-                                        key={p.id}
-                                        className={`ov-pt-row ${
-                                          idx % 2 === 1 ? "ov-pt-alt" : ""
-                                        }`}
-                                      >
-                                        <td className="ov-pt-td">
-                                          <div className="ov-proj-title">
-                                            {p.job_title || "Untitled"}
-                                          </div>
-                                          <div
-                                            style={{
-                                              fontSize: 10,
-                                              color:
-                                                "var(--w97-text-secondary)",
-                                              marginTop: 1,
-                                            }}
-                                          >
-                                            {p.job_type}
-                                            {p.job_sub_type
-                                              ? ` · ${p.job_sub_type.toUpperCase()}`
-                                              : ""}
-                                            {f?.stateCode
-                                              ? ` · ${f.stateCode}`
-                                              : ""}
-                                          </div>
-                                        </td>
-                                        <td className="ov-pt-td ov-pt-r">
-                                          <span
-                                            className={`ov-proj-badge ${
-                                              p.is_active
-                                                ? "ov-proj-active"
-                                                : "ov-proj-closed"
-                                            }`}
-                                          >
-                                            {p.is_active
-                                              ? "● Active"
-                                              : "✓ Closed"}
+                                  },
+                                  {
+                                    key: "rates",
+                                    header: "Bill / Pay Rate",
+                                    align: "right",
+                                    render: (p) => {
+                                      const f = p.financials;
+                                      return f ? (
+                                        <span style={{ fontFamily: "monospace", fontSize: 11 }}>
+                                          <span style={{ color: "var(--pf-green)" }}>${f.billRate}</span>
+                                          {" / "}
+                                          <span style={{ color: "var(--pf-blue)" }}>${f.payRate}</span>
+                                        </span>
+                                      ) : (
+                                        <span style={{ color: "var(--w97-border-dark)" }}>Not set</span>
+                                      );
+                                    },
+                                  },
+                                  {
+                                    key: "hours",
+                                    header: "Hours",
+                                    align: "right",
+                                    render: (p) => (
+                                      <span style={{ fontFamily: "monospace" }}>
+                                        {p.financials ? p.financials.hoursWorked.toLocaleString() : "—"}
+                                      </span>
+                                    ),
+                                  },
+                                  {
+                                    key: "billed",
+                                    header: "Vendor Billed",
+                                    align: "right",
+                                    render: (p) => (
+                                      <span className="ov-mono ov-val-green">
+                                        {p.financials ? fmtC(p.financials.totalBilled) : "—"}
+                                      </span>
+                                    ),
+                                  },
+                                  {
+                                    key: "margin",
+                                    header: "Your Margin",
+                                    align: "right",
+                                    render: (p) => {
+                                      const f = p.financials;
+                                      if (!f) return "—";
+                                      const m = f.totalBilled - f.totalPay;
+                                      return (
+                                        <span className="ov-mono ov-val-teal">
+                                          {fmtC(m)}{" "}
+                                          <span style={{ fontSize: 10, opacity: 0.7 }}>
+                                            {f.totalBilled > 0 ? `(${((m / f.totalBilled) * 100).toFixed(1)}%)` : ""}
                                           </span>
-                                        </td>
-                                        <td
-                                          className="ov-pt-td ov-pt-r ov-mono"
-                                          style={{ fontSize: 11 }}
-                                        >
-                                          {f ? (
-                                            <>
-                                              <span
-                                                style={{
-                                                  color: "var(--pf-green)",
-                                                }}
-                                              >
-                                                ${f.billRate}
-                                              </span>
-                                              {" / "}
-                                              <span
-                                                style={{
-                                                  color: "var(--pf-blue)",
-                                                }}
-                                              >
-                                                ${f.payRate}
-                                              </span>
-                                            </>
-                                          ) : (
-                                            <span
-                                              style={{
-                                                color: "var(--w97-border-dark)",
-                                              }}
-                                            >
-                                              Not set
-                                            </span>
-                                          )}
-                                        </td>
-                                        <td className="ov-pt-td ov-pt-r ov-mono">
-                                          {f
-                                            ? f.hoursWorked.toLocaleString()
-                                            : "—"}
-                                        </td>
-                                        <td className="ov-pt-td ov-pt-r ov-mono ov-val-green">
-                                          {f ? fmtC(f.totalBilled) : "—"}
-                                        </td>
-                                        <td className="ov-pt-td ov-pt-r ov-mono ov-val-teal">
-                                          {f ? (
-                                            <>
-                                              {fmtC(margin)}{" "}
-                                              <span
-                                                style={{
-                                                  fontSize: 10,
-                                                  opacity: 0.7,
-                                                }}
-                                              >
-                                                {f.totalBilled > 0
-                                                  ? `(${(
-                                                      (margin / f.totalBilled) *
-                                                      100
-                                                    ).toFixed(1)}%)`
-                                                  : ""}
-                                              </span>
-                                            </>
-                                          ) : (
-                                            "—"
-                                          )}
-                                        </td>
-                                        <td className="ov-pt-td ov-pt-r ov-mono ov-val-blue">
-                                          {f ? fmtC(f.netPayable) : "—"}
-                                        </td>
-                                        <td className="ov-pt-td ov-pt-r ov-mono ov-val-green">
-                                          {f ? fmtC(f.amountPaid) : "—"}
-                                        </td>
-                                        <td
-                                          className={`ov-pt-td ov-pt-r ov-mono ${
-                                            balance > 0
-                                              ? "ov-val-orange"
-                                              : "ov-val-green"
-                                          }`}
-                                        >
-                                          {f
-                                            ? balance <= 0
-                                              ? "✓ Settled"
-                                              : fmtC(balance)
-                                            : "—"}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                                {allFins.length > 1 && (
-                                  <tfoot>
-                                    <tr className="ov-pt-foot">
-                                      <td className="ov-pt-tf" colSpan={2}>
-                                        TOTAL — {allFins.length} projects with
-                                        financials
-                                      </td>
-                                      <td className="ov-pt-tf ov-pt-r" />
-                                      <td className="ov-pt-tf ov-pt-r ov-mono">
-                                        {totalHours.toLocaleString()}
-                                      </td>
-                                      <td className="ov-pt-tf ov-pt-r ov-mono ov-val-green">
-                                        {fmtC(totalBilled)}
-                                      </td>
-                                      <td className="ov-pt-tf ov-pt-r ov-mono ov-val-teal">
-                                        {fmtC(totalMargin)}
-                                      </td>
-                                      <td className="ov-pt-tf ov-pt-r ov-mono ov-val-blue">
-                                        {fmtC(totalNet)}
-                                      </td>
-                                      <td className="ov-pt-tf ov-pt-r ov-mono ov-val-green">
-                                        {fmtC(totalPaid)}
-                                      </td>
-                                      <td
-                                        className={`ov-pt-tf ov-pt-r ov-mono ${
-                                          totalPending > 0
-                                            ? "ov-val-orange"
-                                            : "ov-val-green"
-                                        }`}
-                                      >
-                                        {totalPending > 0
-                                          ? fmtC(totalPending)
-                                          : "✓ Settled"}
+                                        </span>
+                                      );
+                                    },
+                                  },
+                                  {
+                                    key: "net",
+                                    header: "Net Pay",
+                                    align: "right",
+                                    render: (p) => (
+                                      <span className="ov-mono ov-val-blue">
+                                        {p.financials ? fmtC(p.financials.netPayable) : "—"}
+                                      </span>
+                                    ),
+                                  },
+                                  {
+                                    key: "paid",
+                                    header: "Paid",
+                                    align: "right",
+                                    render: (p) => (
+                                      <span className="ov-mono ov-val-green">
+                                        {p.financials ? fmtC(p.financials.amountPaid) : "—"}
+                                      </span>
+                                    ),
+                                  },
+                                  {
+                                    key: "balance",
+                                    header: "Balance",
+                                    align: "right",
+                                    render: (p) => {
+                                      const bal = p.financials ? Math.max(0, p.financials.amountPending) : 0;
+                                      return (
+                                        <span className={`ov-mono ${bal > 0 ? "ov-val-orange" : "ov-val-green"}`}>
+                                          {p.financials ? (bal <= 0 ? "✓ Settled" : fmtC(bal)) : "—"}
+                                        </span>
+                                      );
+                                    },
+                                  },
+                                ] as DataTableColumn<(typeof candidateDetail.projects)[number]>[]}
+                                data={[
+                                  ...candidateDetail.projects.filter((p) => p.is_active),
+                                  ...candidateDetail.projects.filter((p) => !p.is_active),
+                                ]}
+                                keyExtractor={(p) => String(p.id)}
+                                emptyMessage="No projects found."
+                                footerRow={
+                                  allFins.length > 1 ? (
+                                    <tr className={`ov-pt-foot ${totalMargin > 0.01 ? "ov-foot-profit" : totalMargin < -0.01 ? "ov-foot-loss" : "ov-foot-neutral"}`}>
+                                      <td className="ov-pt-tf" colSpan={2}>TOTAL — {allFins.length} projects with financials</td>
+                                      <td className="ov-pt-tf" style={{ textAlign: "right" }} />
+                                      <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>{totalHours.toLocaleString()}</td>
+                                      <td className="ov-pt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmtC(totalBilled)}</td>
+                                      <td className="ov-pt-tf ov-mono ov-val-teal" style={{ textAlign: "right" }}>{fmtC(totalMargin)}</td>
+                                      <td className="ov-pt-tf ov-mono ov-val-blue" style={{ textAlign: "right" }}>{fmtC(totalNet)}</td>
+                                      <td className="ov-pt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmtC(totalPaid)}</td>
+                                      <td className={`ov-pt-tf ov-mono ${totalPending > 0 ? "ov-val-orange" : "ov-val-green"}`} style={{ textAlign: "right" }}>
+                                        {totalPending > 0 ? fmtC(totalPending) : "✓ Settled"}
                                       </td>
                                     </tr>
-                                  </tfoot>
-                                )}
-                              </table>
-                            </div>
-                          </div>
-                        )}
+                                  ) : undefined
+                                }
+                              />
+                            )}
 
-                        {/* ══ ROW 4 — Monthly aggregate pay table ══ */}
-                        {monthRows.length > 0 && (
-                          <div
-                            className="ov-monthly-card"
-                            style={{ margin: "14px 16px 16px" }}
-                          >
-                            <div className="ov-section-hdr">
-                              Monthly Pay Summary — All Projects Combined
-                              <span className="ov-hdr-badge">
-                                {monthRows.length} months
-                              </span>
-                            </div>
-                            <div className="ov-monthly-wrap">
-                              <table className="ov-monthly-table">
-                                <thead>
-                                  <tr className="ov-mt-head">
-                                    <th className="ov-mt-th">Month</th>
-                                    <th className="ov-mt-th ov-mt-r">Hours</th>
-                                    <th className="ov-mt-th ov-mt-r">
-                                      Vendor Billed
-                                    </th>
-                                    <th className="ov-mt-th ov-mt-r">
-                                      Gross Pay
-                                    </th>
-                                    <th className="ov-mt-th ov-mt-r">
-                                      Net Pay
-                                    </th>
-                                    <th className="ov-mt-th ov-mt-r">Paid</th>
-                                    <th className="ov-mt-th ov-mt-r">
-                                      Balance
-                                    </th>
-                                    <th
-                                      className="ov-mt-th ov-mt-r"
-                                      style={{ width: 130 }}
-                                    >
-                                      Pay Progress
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {monthRows.map((row, i) => {
-                                    const pct =
-                                      row.net > 0
-                                        ? Math.min(
-                                            100,
-                                            (row.paid / row.net) * 100,
-                                          )
-                                        : 0;
-                                    return (
-                                      <tr
-                                        key={row.label}
-                                        className={`ov-mt-row ${
-                                          i % 2 === 1 ? "ov-mt-alt" : ""
-                                        }`}
-                                      >
-                                        <td className="ov-mt-td ov-mt-period">
-                                          {row.label}
-                                        </td>
-                                        <td className="ov-mt-td ov-mt-r ov-mono">
-                                          {row.hours.toLocaleString(undefined, {
-                                            maximumFractionDigits: 1,
-                                          })}
-                                        </td>
-                                        <td className="ov-mt-td ov-mt-r ov-mono ov-val-green">
-                                          {fmtF(row.billed)}
-                                        </td>
-                                        <td className="ov-mt-td ov-mt-r ov-mono">
-                                          {fmtF(row.gross)}
-                                        </td>
-                                        <td className="ov-mt-td ov-mt-r ov-mono ov-val-blue">
-                                          {fmtF(row.net)}
-                                        </td>
-                                        <td className="ov-mt-td ov-mt-r ov-mono ov-val-green">
-                                          {row.paid > 0 ? fmtF(row.paid) : "—"}
-                                        </td>
-                                        <td
-                                          className={`ov-mt-td ov-mt-r ov-mono ${
-                                            row.balance > 0.01
-                                              ? "ov-val-orange"
-                                              : row.balance < -0.01
-                                              ? "ov-val-red"
-                                              : "ov-val-green"
-                                          }`}
-                                        >
-                                          {Math.abs(row.balance) < 0.01
-                                            ? "✓"
-                                            : row.balance > 0
-                                            ? fmtF(row.balance)
-                                            : `+${fmtF(Math.abs(row.balance))}`}
-                                        </td>
-                                        <td className="ov-mt-td ov-mt-r">
-                                          <div
-                                            style={{
-                                              display: "flex",
-                                              alignItems: "center",
-                                              gap: 5,
-                                              justifyContent: "flex-end",
-                                            }}
-                                          >
-                                            <div className="ov-mt-bar-wrap">
-                                              <div
-                                                className="ov-mt-bar-fill"
-                                                style={{ width: `${pct}%` }}
-                                              />
-                                            </div>
-                                            <span className="ov-mt-bar-pct">
-                                              {pct.toFixed(0)}%
-                                            </span>
+                            {/* Monthly Pay Summary subtab */}
+                            {overviewSubTab === "monthly" && monthRows.length > 0 && (
+                              <DataTable
+                                title="Monthly Pay Summary — All Projects Combined"
+                                titleIcon="📅"
+                                className="matchdb-auto-height"
+                                titleExtra={
+                                  <span style={{ fontSize: 10, opacity: 0.7 }}>
+                                    {monthRows.length} months
+                                  </span>
+                                }
+                                showRowNumbers={false}
+                                columns={[
+                                  {
+                                    key: "month",
+                                    header: "Month",
+                                    width: "14%",
+                                    render: (row) => <span style={{ fontWeight: 600 }}>{row.label}</span>,
+                                  },
+                                  {
+                                    key: "hours",
+                                    header: "Hours",
+                                    align: "right",
+                                    render: (row) => (
+                                      <span style={{ fontFamily: "monospace" }}>
+                                        {row.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                                      </span>
+                                    ),
+                                  },
+                                  {
+                                    key: "billed",
+                                    header: "Vendor Billed",
+                                    align: "right",
+                                    render: (row) => <span className="ov-mono ov-val-green">{fmtF(row.billed)}</span>,
+                                  },
+                                  {
+                                    key: "gross",
+                                    header: "Gross Pay",
+                                    align: "right",
+                                    render: (row) => <span style={{ fontFamily: "monospace" }}>{fmtF(row.gross)}</span>,
+                                  },
+                                  {
+                                    key: "net",
+                                    header: "Net Pay",
+                                    align: "right",
+                                    render: (row) => <span className="ov-mono ov-val-blue">{fmtF(row.net)}</span>,
+                                  },
+                                  {
+                                    key: "paid",
+                                    header: "Paid",
+                                    align: "right",
+                                    render: (row) => (
+                                      <span className="ov-mono ov-val-green">{row.paid > 0 ? fmtF(row.paid) : "—"}</span>
+                                    ),
+                                  },
+                                  {
+                                    key: "balance",
+                                    header: "Balance",
+                                    align: "right",
+                                    render: (row) => (
+                                      <span className={`ov-mono ${row.balance > 0.01 ? "ov-val-orange" : row.balance < -0.01 ? "ov-val-red" : "ov-val-green"}`}>
+                                        {Math.abs(row.balance) < 0.01 ? "✓" : row.balance > 0 ? fmtF(row.balance) : `+${fmtF(Math.abs(row.balance))}`}
+                                      </span>
+                                    ),
+                                  },
+                                  {
+                                    key: "progress",
+                                    header: "Pay Progress",
+                                    align: "right",
+                                    width: 130,
+                                    render: (row) => {
+                                      const pct = row.net > 0 ? Math.min(100, (row.paid / row.net) * 100) : 0;
+                                      return (
+                                        <div style={{ display: "flex", alignItems: "center", gap: 5, justifyContent: "flex-end" }}>
+                                          <div className="ov-mt-bar-wrap">
+                                            <div className="ov-mt-bar-fill" style={{ width: `${pct}%` }} />
                                           </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                                <tfoot>
-                                  <tr className="ov-mt-foot">
+                                          <span className="ov-mt-bar-pct">{pct.toFixed(0)}%</span>
+                                        </div>
+                                      );
+                                    },
+                                  },
+                                ] as DataTableColumn<MonthRow>[]}
+                                data={monthRows}
+                                keyExtractor={(row) => row.label}
+                                emptyMessage="No monthly data."
+                                footerRow={
+                                  <tr className={`ov-mt-foot ${totalMargin > 0.01 ? "ov-foot-profit" : totalMargin < -0.01 ? "ov-foot-loss" : "ov-foot-neutral"}`}>
                                     <td className="ov-mt-tf">TOTAL</td>
-                                    <td className="ov-mt-tf ov-mt-r ov-mono">
-                                      {monthRows
-                                        .reduce((a, r) => a + r.hours, 0)
-                                        .toLocaleString(undefined, {
-                                          maximumFractionDigits: 1,
-                                        })}
+                                    <td className="ov-mt-tf ov-mono" style={{ textAlign: "right" }}>
+                                      {monthRows.reduce((a, r) => a + r.hours, 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}
                                     </td>
-                                    <td className="ov-mt-tf ov-mt-r ov-mono ov-val-green">
-                                      {fmtF(
-                                        monthRows.reduce(
-                                          (a, r) => a + r.billed,
-                                          0,
-                                        ),
-                                      )}
-                                    </td>
-                                    <td className="ov-mt-tf ov-mt-r ov-mono">
-                                      {fmtF(
-                                        monthRows.reduce(
-                                          (a, r) => a + r.gross,
-                                          0,
-                                        ),
-                                      )}
-                                    </td>
-                                    <td className="ov-mt-tf ov-mt-r ov-mono ov-val-blue">
-                                      {fmtF(
-                                        monthRows.reduce(
-                                          (a, r) => a + r.net,
-                                          0,
-                                        ),
-                                      )}
-                                    </td>
-                                    <td className="ov-mt-tf ov-mt-r ov-mono ov-val-green">
-                                      {fmtF(
-                                        monthRows.reduce(
-                                          (a, r) => a + r.paid,
-                                          0,
-                                        ),
-                                      )}
-                                    </td>
-                                    <td
-                                      className={`ov-mt-tf ov-mt-r ov-mono ${
-                                        totalPending > 0
-                                          ? "ov-val-orange"
-                                          : "ov-val-green"
-                                      }`}
-                                    >
-                                      {totalPending > 0.01
-                                        ? fmtF(totalPending)
-                                        : "✓"}
+                                    <td className="ov-mt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmtF(monthRows.reduce((a, r) => a + r.billed, 0))}</td>
+                                    <td className="ov-mt-tf ov-mono" style={{ textAlign: "right" }}>{fmtF(monthRows.reduce((a, r) => a + r.gross, 0))}</td>
+                                    <td className="ov-mt-tf ov-mono ov-val-blue" style={{ textAlign: "right" }}>{fmtF(monthRows.reduce((a, r) => a + r.net, 0))}</td>
+                                    <td className="ov-mt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmtF(monthRows.reduce((a, r) => a + r.paid, 0))}</td>
+                                    <td className={`ov-mt-tf ov-mono ${totalPending > 0 ? "ov-val-orange" : "ov-val-green"}`} style={{ textAlign: "right" }}>
+                                      {totalPending > 0.01 ? fmtF(totalPending) : "✓"}
                                     </td>
                                     <td className="ov-mt-tf" />
                                   </tr>
-                                </tfoot>
-                              </table>
-                            </div>
+                                }
+                              />
+                            )}
                           </div>
                         )}
                       </div>
@@ -2848,17 +2407,6 @@ const MarketerDashboard: React.FC<Props> = () => {
                 {detailTab === "projects" &&
                   (() => {
                     const allProjects = candidateDetail.projects;
-                    // Active first, then closed
-                    const sorted = [
-                      ...allProjects.filter((p) => p.is_active),
-                      ...allProjects.filter((p) => !p.is_active),
-                    ];
-                    // Auto-select first project if none selected
-                    const effectiveId =
-                      selectedProjectId ?? sorted[0]?.id ?? null;
-                    const selectedProject =
-                      sorted.find((p) => p.id === effectiveId) ?? null;
-
                     if (allProjects.length === 0) {
                       return (
                         <div className="pf-empty">
@@ -2870,60 +2418,331 @@ const MarketerDashboard: React.FC<Props> = () => {
                       );
                     }
 
+                    // Active first, then closed
+                    const sorted = [
+                      ...allProjects.filter((p) => p.is_active),
+                      ...allProjects.filter((p) => !p.is_active),
+                    ];
+
+                    // Auto-select first project if none selected
+                    const activeProjectId = selectedProjectId && sorted.some((p) => p.id === selectedProjectId)
+                      ? selectedProjectId
+                      : sorted[0]?.id ?? null;
+
+                    const activeProject = sorted.find((p) => p.id === activeProjectId) ?? null;
+
+                    // Month names & variation factors for period generation
+                    const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                    const VAR = [1.0, 0.92, 1.08, 1.02, 0.94, 1.06, 1.0, 0.92, 1.08, 1.0, 0.94, 1.04];
+
+                    // Build pay rows for the selected project
+                    interface CombinedRow {
+                      key: string;
+                      payPeriod: string;
+                      sortKey: number;
+                      projectName: string;
+                      projectId: string;
+                      isActive: boolean;
+                      hours: number;
+                      billRate: number;
+                      payRate: number;
+                      billed: number;
+                      grossPay: number;
+                      stateTax: number;
+                      stateTaxPct: number;
+                      withholding: number;
+                      cashPct: number;
+                      netPay: number;
+                      paid: number;
+                      balance: number;
+                    }
+
+                    const buildRows = (proj: (typeof sorted)[number]): CombinedRow[] => {
+                      const fin = proj.financials;
+                      const bRate = fin?.billRate ?? 0;
+                      const pRate = fin?.payRate ?? 0;
+                      const sTaxPct = fin?.stateTaxPct ?? 0;
+                      const cPct = fin?.cashPct ?? 0;
+
+                      const now = new Date();
+                      const start = fin?.projectStart
+                        ? new Date(fin.projectStart)
+                        : new Date(now.getFullYear() - 1, now.getMonth(), 1);
+                      const rawH = fin?.hoursWorked && fin.hoursWorked > 0 ? fin.hoursWorked / 12 : 80;
+
+                      const periods = Array.from({ length: 12 }, (_, i) => {
+                        const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+                        return {
+                          label: `${MN[d.getMonth()]} ${d.getFullYear()}`,
+                          sortKey: d.getTime(),
+                          hours: Math.round(rawH * VAR[i] * 2) / 2,
+                          amountPaid: 0,
+                        };
+                      });
+
+                      if (fin?.hoursWorked && fin.hoursWorked > 0) {
+                        const sumH = periods.reduce((a, p) => a + p.hours, 0);
+                        const scale = fin.hoursWorked / sumH;
+                        periods.forEach((p) => { p.hours = Math.round(p.hours * scale * 2) / 2; });
+                        const diff = fin.hoursWorked - periods.reduce((a, p) => a + p.hours, 0);
+                        if (Math.abs(diff) > 0) periods[11].hours = Math.round((periods[11].hours + diff) * 2) / 2;
+                      }
+
+                      if (fin?.amountPaid && fin.amountPaid > 0) {
+                        const sumH = periods.reduce((a, p) => a + p.hours, 0);
+                        let allocated = 0;
+                        periods.forEach((p, i) => {
+                          if (i < 11) {
+                            const share = Math.round((p.hours / sumH) * fin.amountPaid * 100) / 100;
+                            p.amountPaid = share;
+                            allocated += share;
+                          } else {
+                            p.amountPaid = Math.round((fin.amountPaid - allocated) * 100) / 100;
+                          }
+                        });
+                      }
+
+                      const rows: CombinedRow[] = [];
+                      periods.forEach((period) => {
+                        const billed = bRate * period.hours;
+                        const gross = pRate * period.hours;
+                        const tax = (gross * sTaxPct) / 100;
+                        const withhold = (gross * cPct) / 100;
+                        const net = gross - tax - withhold;
+                        const bal = net - period.amountPaid;
+                        rows.push({
+                          key: `${proj.id}-${period.label}`,
+                          payPeriod: period.label,
+                          sortKey: period.sortKey,
+                          projectName: proj.job_title || "Untitled",
+                          projectId: proj.id,
+                          isActive: proj.is_active,
+                          hours: period.hours,
+                          billRate: bRate,
+                          payRate: pRate,
+                          billed,
+                          grossPay: gross,
+                          stateTax: tax,
+                          stateTaxPct: sTaxPct,
+                          withholding: withhold,
+                          cashPct: cPct,
+                          netPay: net,
+                          paid: period.amountPaid,
+                          balance: bal,
+                        });
+                      });
+                      rows.sort((a, b) => a.sortKey - b.sortKey);
+                      return rows;
+                    };
+
+                    const combinedRows = activeProject ? buildRows(activeProject) : [];
+
+                    const fmt$ = (v: number) =>
+                      v < 0
+                        ? `-$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                    const totals = combinedRows.reduce(
+                      (acc, r) => ({
+                        hours: acc.hours + r.hours,
+                        billed: acc.billed + r.billed,
+                        grossPay: acc.grossPay + r.grossPay,
+                        stateTax: acc.stateTax + r.stateTax,
+                        withholding: acc.withholding + r.withholding,
+                        netPay: acc.netPay + r.netPay,
+                        paid: acc.paid + r.paid,
+                        balance: acc.balance + r.balance,
+                      }),
+                      { hours: 0, billed: 0, grossPay: 0, stateTax: 0, withholding: 0, netPay: 0, paid: 0, balance: 0 },
+                    );
+
                     return (
-                      <div className="ppt-projects-layout">
-                        {/* ── Project pill sub-tabs ── */}
-                        <div className="ppt-pill-bar">
-                          {sorted.map((p) => {
-                            const isActive = p.is_active;
-                            const isSelected = p.id === effectiveId;
-                            const title = p.job_title || "Untitled";
-                            return (
-                              <button
-                                key={p.id}
-                                type="button"
-                                className={`ppt-pill ${
-                                  isSelected
-                                    ? "ppt-pill-active"
-                                    : isActive
-                                    ? ""
-                                    : "ppt-pill-closed"
-                                }`}
-                                onClick={() => setSelectedProjectId(p.id)}
-                              >
-                                <span className="ppt-pill-dot" />
-                                {title}
-                                {!isActive && (
-                                  <span style={{ fontSize: 9, opacity: 0.75 }}>
-                                    ✓
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
+                      <div>
+                        {/* ── Candidate + Project Info Line ── */}
+                        {activeProject && (
+                          <div style={{
+                            display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16,
+                            padding: "8px 14px", margin: "0 0 4px",
+                            fontSize: 11.5, color: "var(--w97-text-secondary)",
+                            background: "var(--w97-window-alt)",
+                            borderBottom: "1px solid var(--w97-btn-shadow)",
+                          }}>
+                            <span>
+                              👤 <strong style={{ color: "var(--w97-text)" }}>{candidateDetail.roster.candidate_name}</strong>
+                              {" · "}{candidateDetail.roster.candidate_email}
+                            </span>
+                            <span style={{ opacity: 0.4 }}>|</span>
+                            <span>
+                              💼 <strong style={{ color: "var(--w97-titlebar-from)" }}>{activeProject.job_title || "Untitled"}</strong>
+                              {" · "}{activeProject.job_type}{activeProject.job_sub_type ? ` · ${activeProject.job_sub_type.toUpperCase()}` : ""}
+                              {activeProject.financials?.stateCode ? ` · ${activeProject.financials.stateCode}` : ""}
+                            </span>
+                            <span style={{ opacity: 0.4 }}>|</span>
+                            <span className={activeProject.is_active ? "ov-proj-active" : "ov-proj-closed"} style={{
+                              padding: "1px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600,
+                            }}>
+                              {activeProject.is_active ? "● Active" : "✓ Closed"}
+                            </span>
+                            {activeProject.financials && (
+                              <>
+                                <span style={{ opacity: 0.4 }}>|</span>
+                                <span style={{ fontFamily: "monospace", fontSize: 11 }}>
+                                  Bill <span style={{ color: "var(--pf-green)" }}>${activeProject.financials.billRate}</span>
+                                  {" / "}Pay <span style={{ color: "var(--pf-blue)" }}>${activeProject.financials.payRate}</span>
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* ── Project Tabs ── */}
+                        <div style={{ display: "flex", gap: 0, margin: "0 14px" }}>
+                          {sorted.map((proj) => (
+                            <button
+                              key={proj.id}
+                              type="button"
+                              onClick={() => setSelectedProjectId(proj.id)}
+                              style={{
+                                padding: "5px 14px",
+                                fontSize: 11,
+                                fontWeight: proj.id === activeProjectId ? 700 : 500,
+                                background: proj.id === activeProjectId ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
+                                color: proj.id === activeProjectId ? "#fff" : "var(--w97-text)",
+                                border: "1px solid var(--w97-btn-shadow)",
+                                borderBottom: proj.id === activeProjectId ? "none" : "1px solid var(--w97-btn-shadow)",
+                                borderRadius: "4px 4px 0 0",
+                                cursor: "pointer",
+                                marginLeft: proj === sorted[0] ? 0 : -1,
+                                maxWidth: 180,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {proj.is_active ? "● " : ""}{proj.job_title || "Untitled"}
+                            </button>
+                          ))}
                         </div>
 
-                        {/* ── Selected project pay table ── */}
-                        <div className="ppt-projects-content">
-                          {selectedProject ? (
-                            <ProjectPayTable
-                              project={selectedProject}
-                              candidateId={
-                                candidateDetail.profile?.candidate_id ?? ""
-                              }
-                              candidateEmail={
-                                candidateDetail.roster.candidate_email
-                              }
-                            />
-                          ) : (
-                            <div className="pf-empty">
-                              <div className="pf-empty-icon">📋</div>
-                              <div className="pf-empty-text">
-                                Select a project above
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        {/* ── Pay Periods DataTable for selected project ── */}
+                        <DataTable
+                          title={`${activeProject?.job_title || "Project"} — Pay Periods`}
+                          titleIcon="💼"
+                          className="matchdb-auto-height"
+                          titleExtra={
+                            <span style={{ fontSize: 10, opacity: 0.7 }}>
+                              {combinedRows.length} periods
+                            </span>
+                          }
+                          showRowNumbers={false}
+                          columns={[
+                            {
+                              key: "payPeriod",
+                              header: "Pay Period",
+                              width: "14%",
+                              render: (r) => <span style={{ fontWeight: 600 }}>{r.payPeriod}</span>,
+                            },
+                            {
+                              key: "hours",
+                              header: "Hours",
+                              align: "right" as const,
+                              render: (r) => <span style={{ fontFamily: "monospace" }}>{r.hours}</span>,
+                            },
+                            {
+                              key: "billed",
+                              header: "Billed",
+                              align: "right" as const,
+                              render: (r) => <span className="ov-mono ov-val-green">{fmt$(r.billed)}</span>,
+                            },
+                            {
+                              key: "grossPay",
+                              header: "Gross Pay",
+                              align: "right" as const,
+                              render: (r) => <span style={{ fontFamily: "monospace" }}>{fmt$(r.grossPay)}</span>,
+                            },
+                            {
+                              key: "stateTax",
+                              header: "State Tax",
+                              align: "right" as const,
+                              render: (r) => (
+                                <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
+                                  {r.stateTax > 0 ? `−${fmt$(r.stateTax)}` : "—"}
+                                </span>
+                              ),
+                            },
+                            {
+                              key: "withholding",
+                              header: "Withholding",
+                              align: "right" as const,
+                              render: (r) => (
+                                <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
+                                  {r.withholding > 0 ? `−${fmt$(r.withholding)}` : "—"}
+                                </span>
+                              ),
+                            },
+                            {
+                              key: "netPay",
+                              header: "Net Pay",
+                              align: "right" as const,
+                              render: (r) => <span className="ov-mono ov-val-blue">{fmt$(r.netPay)}</span>,
+                            },
+                            {
+                              key: "paid",
+                              header: "Paid",
+                              align: "right" as const,
+                              render: (r) => (
+                                <span className={`ov-mono ${r.paid > 0 ? "ov-val-green" : ""}`}>
+                                  {r.paid > 0 ? fmt$(r.paid) : "—"}
+                                </span>
+                              ),
+                            },
+                            {
+                              key: "balance",
+                              header: "Balance",
+                              align: "right" as const,
+                              render: (r) => (
+                                <span
+                                  className={`ov-mono ${
+                                    r.balance > 0.01 ? "ov-val-orange" : r.balance < -0.01 ? "ov-val-red" : "ov-val-green"
+                                  }`}
+                                >
+                                  {Math.abs(r.balance) < 0.01
+                                    ? "✓"
+                                    : r.balance > 0
+                                    ? fmt$(r.balance)
+                                    : `+${fmt$(Math.abs(r.balance))}`}
+                                </span>
+                              ),
+                            },
+                          ] as DataTableColumn<CombinedRow>[]}
+                          data={combinedRows}
+                          keyExtractor={(r) => r.key}
+                          emptyMessage="No pay period data."
+                          footerRow={
+                            combinedRows.length > 0 ? (
+                              <tr className={`ov-pt-foot ${(totals.billed - totals.grossPay) > 0.01 ? "ov-foot-profit" : (totals.billed - totals.grossPay) < -0.01 ? "ov-foot-loss" : "ov-foot-neutral"}`}>
+                                <td className="ov-pt-tf" style={{ fontWeight: 700 }}>TOTAL</td>
+                                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>{totals.hours.toLocaleString()}</td>
+                                <td className="ov-pt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmt$(totals.billed)}</td>
+                                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>{fmt$(totals.grossPay)}</td>
+                                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right", color: "var(--w97-red)" }}>
+                                  {totals.stateTax > 0 ? `−${fmt$(totals.stateTax)}` : "—"}
+                                </td>
+                                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right", color: "var(--w97-red)" }}>
+                                  {totals.withholding > 0 ? `−${fmt$(totals.withholding)}` : "—"}
+                                </td>
+                                <td className="ov-pt-tf ov-mono ov-val-blue" style={{ textAlign: "right" }}>{fmt$(totals.netPay)}</td>
+                                <td className="ov-pt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmt$(totals.paid)}</td>
+                                <td
+                                  className={`ov-pt-tf ov-mono ${totals.balance > 0.01 ? "ov-val-orange" : "ov-val-green"}`}
+                                  style={{ textAlign: "right" }}
+                                >
+                                  {Math.abs(totals.balance) < 0.01 ? "✓ Settled" : totals.balance > 0 ? fmt$(totals.balance) : `Overpaid ${fmt$(Math.abs(totals.balance))}`}
+                                </td>
+                              </tr>
+                            ) : undefined
+                          }
+                        />
                       </div>
                     );
                   })()}
@@ -2968,6 +2787,23 @@ const MarketerDashboard: React.FC<Props> = () => {
                     const emailArc =
                       total > 0 ? (emailCount / total) * pieC : 0;
 
+                    // Year-based subtabs
+                    const joinDate = candidateDetail.roster.created_at
+                      ? new Date(candidateDetail.roster.created_at)
+                      : null;
+                    const startYear = joinDate ? joinDate.getFullYear() : new Date().getFullYear();
+                    const currentYear = new Date().getFullYear();
+                    const yearTabs: string[] = [];
+                    for (let y = startYear; y <= currentYear; y++) yearTabs.push(String(y));
+
+                    // Filter activities by selected year
+                    const filteredActivities = vendorActivitySubTab === "summary"
+                      ? activities
+                      : activities.filter((v) => {
+                          const d = new Date(v.created_at);
+                          return String(d.getFullYear()) === vendorActivitySubTab;
+                        });
+
                     return (
                       <div>
                         <Toolbar
@@ -2993,7 +2829,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                               {total} interactions
                             </span>
                           }
-                          style={{ marginBottom: 12 }}
+                          style={{ marginBottom: 8 }}
                         />
 
                         {total === 0 ? (
@@ -3013,355 +2849,340 @@ const MarketerDashboard: React.FC<Props> = () => {
                           </div>
                         ) : (
                           <>
-                            {/* ── Charts Row ── */}
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: 16,
-                                marginBottom: 16,
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              {/* Pie Chart */}
-                              <div
-                                className="matchdb-card"
+                            {/* ── Subtab Bar ── */}
+                            <div style={{ display: "flex", gap: 0, margin: "0 0 0 14px" }}>
+                              <button
+                                type="button"
+                                onClick={() => setVendorActivitySubTab("summary")}
                                 style={{
-                                  flex: "0 0 220px",
-                                  padding: 20,
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  alignItems: "center",
+                                  padding: "5px 14px",
+                                  fontSize: 11.5,
+                                  fontWeight: vendorActivitySubTab === "summary" ? 700 : 500,
+                                  background: vendorActivitySubTab === "summary" ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
+                                  color: vendorActivitySubTab === "summary" ? "#fff" : "var(--w97-text)",
+                                  border: "1px solid var(--w97-btn-shadow)",
+                                  borderBottom: vendorActivitySubTab === "summary" ? "none" : "1px solid var(--w97-btn-shadow)",
+                                  borderRadius: "4px 4px 0 0",
+                                  cursor: "pointer",
                                 }}
                               >
-                                <div
+                                📊 Summary
+                              </button>
+                              {yearTabs.map((yr, idx) => (
+                                <button
+                                  key={yr}
+                                  type="button"
+                                  onClick={() => setVendorActivitySubTab(yr)}
                                   style={{
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    color: "var(--w97-text-secondary)",
-                                    marginBottom: 12,
+                                    padding: "5px 14px",
+                                    fontSize: 11.5,
+                                    fontWeight: vendorActivitySubTab === yr ? 700 : 500,
+                                    background: vendorActivitySubTab === yr ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
+                                    color: vendorActivitySubTab === yr ? "#fff" : "var(--w97-text)",
+                                    border: "1px solid var(--w97-btn-shadow)",
+                                    borderBottom: vendorActivitySubTab === yr ? "none" : "1px solid var(--w97-btn-shadow)",
+                                    borderRadius: "4px 4px 0 0",
+                                    cursor: "pointer",
+                                    marginLeft: -1,
                                   }}
                                 >
-                                  Pokes vs Emails
-                                </div>
-                                <svg
-                                  width="120"
-                                  height="120"
-                                  viewBox="0 0 120 120"
-                                >
-                                  <circle
-                                    cx="60"
-                                    cy="60"
-                                    r={pieR}
-                                    fill="none"
-                                    stroke="var(--w97-border-light)"
-                                    strokeWidth="18"
-                                  />
-                                  <circle
-                                    cx="60"
-                                    cy="60"
-                                    r={pieR}
-                                    fill="none"
-                                    stroke="var(--w97-yellow)"
-                                    strokeWidth="18"
-                                    strokeDasharray={`${pokeArc} ${
-                                      pieC - pokeArc
-                                    }`}
-                                    strokeDashoffset={pieC / 4}
-                                    strokeLinecap="round"
-                                  />
-                                  <circle
-                                    cx="60"
-                                    cy="60"
-                                    r={pieR}
-                                    fill="none"
-                                    stroke="var(--w97-blue)"
-                                    strokeWidth="18"
-                                    strokeDasharray={`${emailArc} ${
-                                      pieC - emailArc
-                                    }`}
-                                    strokeDashoffset={pieC / 4 - pokeArc}
-                                    strokeLinecap="round"
-                                  />
-                                  <text
-                                    x="60"
-                                    y="58"
-                                    textAnchor="middle"
-                                    fontSize="18"
-                                    fontWeight="700"
-                                    fill="var(--w97-text)"
-                                  >
-                                    {total}
-                                  </text>
-                                  <text
-                                    x="60"
-                                    y="72"
-                                    textAnchor="middle"
-                                    fontSize="9"
-                                    fill="var(--w97-text-secondary)"
-                                  >
-                                    total
-                                  </text>
-                                </svg>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    gap: 16,
-                                    marginTop: 12,
-                                    fontSize: 10,
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 4,
-                                    }}
-                                  >
-                                    <span
-                                      style={{
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: "50%",
-                                        background: "var(--w97-yellow)",
-                                        display: "inline-block",
-                                      }}
-                                    />
-                                    Pokes ({pokeCount})
-                                  </div>
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 4,
-                                    }}
-                                  >
-                                    <span
-                                      style={{
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: "50%",
-                                        background: "var(--w97-blue)",
-                                        display: "inline-block",
-                                      }}
-                                    />
-                                    Emails ({emailCount})
-                                  </div>
-                                </div>
-                              </div>
+                                  📅 {yr}
+                                </button>
+                              ))}
+                            </div>
 
-                              {/* Bar Chart: By Vendor */}
+                            {/* ── Summary subtab: Charts ── */}
+                            {vendorActivitySubTab === "summary" && (
                               <div
-                                className="matchdb-card"
-                                style={{ flex: 1, padding: 20, minWidth: 280 }}
+                                style={{
+                                  display: "flex",
+                                  gap: 16,
+                                  marginBottom: 16,
+                                  marginTop: 12,
+                                  flexWrap: "wrap",
+                                }}
                               >
+                                {/* Pie Chart */}
                                 <div
+                                  className="matchdb-card"
                                   style={{
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    color: "var(--w97-text-secondary)",
-                                    marginBottom: 12,
-                                  }}
-                                >
-                                  Interactions by Vendor
-                                </div>
-                                <div
-                                  style={{
+                                    flex: "0 0 220px",
+                                    padding: 20,
                                     display: "flex",
                                     flexDirection: "column",
-                                    gap: 8,
+                                    alignItems: "center",
                                   }}
                                 >
-                                  {vendorEntries
-                                    .slice(0, 8)
-                                    .map(([vendor, counts]) => (
-                                      <div key={vendor}>
-                                        <div
-                                          style={{
-                                            fontSize: 10,
-                                            color: "var(--w97-text-secondary)",
-                                            marginBottom: 3,
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                            whiteSpace: "nowrap",
-                                          }}
-                                        >
-                                          {vendor}
-                                        </div>
-                                        <div
-                                          style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 6,
-                                            height: 16,
-                                          }}
-                                        >
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      color: "var(--w97-text-secondary)",
+                                      marginBottom: 12,
+                                    }}
+                                  >
+                                    Pokes vs Emails
+                                  </div>
+                                  <svg
+                                    width="120"
+                                    height="120"
+                                    viewBox="0 0 120 120"
+                                  >
+                                    <circle
+                                      cx="60"
+                                      cy="60"
+                                      r={pieR}
+                                      fill="none"
+                                      stroke="var(--w97-border-light)"
+                                      strokeWidth="18"
+                                    />
+                                    <circle
+                                      cx="60"
+                                      cy="60"
+                                      r={pieR}
+                                      fill="none"
+                                      stroke="var(--w97-yellow)"
+                                      strokeWidth="18"
+                                      strokeDasharray={`${pokeArc} ${
+                                        pieC - pokeArc
+                                      }`}
+                                      strokeDashoffset={pieC / 4}
+                                      strokeLinecap="round"
+                                    />
+                                    <circle
+                                      cx="60"
+                                      cy="60"
+                                      r={pieR}
+                                      fill="none"
+                                      stroke="var(--w97-blue)"
+                                      strokeWidth="18"
+                                      strokeDasharray={`${emailArc} ${
+                                        pieC - emailArc
+                                      }`}
+                                      strokeDashoffset={pieC / 4 - pokeArc}
+                                      strokeLinecap="round"
+                                    />
+                                    <text
+                                      x="60"
+                                      y="58"
+                                      textAnchor="middle"
+                                      fontSize="18"
+                                      fontWeight="700"
+                                      fill="var(--w97-text)"
+                                    >
+                                      {total}
+                                    </text>
+                                    <text
+                                      x="60"
+                                      y="72"
+                                      textAnchor="middle"
+                                      fontSize="9"
+                                      fill="var(--w97-text-secondary)"
+                                    >
+                                      total
+                                    </text>
+                                  </svg>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      gap: 16,
+                                      marginTop: 12,
+                                      fontSize: 10,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          width: 8,
+                                          height: 8,
+                                          borderRadius: "50%",
+                                          background: "var(--w97-yellow)",
+                                          display: "inline-block",
+                                        }}
+                                      />
+                                      Pokes ({pokeCount})
+                                    </div>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          width: 8,
+                                          height: 8,
+                                          borderRadius: "50%",
+                                          background: "var(--w97-blue)",
+                                          display: "inline-block",
+                                        }}
+                                      />
+                                      Emails ({emailCount})
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Bar Chart: By Vendor */}
+                                <div
+                                  className="matchdb-card"
+                                  style={{ flex: 1, padding: 20, minWidth: 280 }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      color: "var(--w97-text-secondary)",
+                                      marginBottom: 12,
+                                    }}
+                                  >
+                                    Interactions by Vendor
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: 8,
+                                    }}
+                                  >
+                                    {vendorEntries
+                                      .slice(0, 8)
+                                      .map(([vendor, counts]) => (
+                                        <div key={vendor}>
                                           <div
-                                            style={{
-                                              height: 14,
-                                              borderRadius: 3,
-                                              background:
-                                                "linear-gradient(90deg, var(--w97-yellow), #d4a017)",
-                                              width: `${
-                                                (counts.pokes / maxBar) * 100
-                                              }%`,
-                                              minWidth:
-                                                counts.pokes > 0 ? 4 : 0,
-                                              transition: "width 0.3s ease",
-                                            }}
-                                          />
-                                          <div
-                                            style={{
-                                              height: 14,
-                                              borderRadius: 3,
-                                              background:
-                                                "linear-gradient(90deg, var(--w97-blue), #4ba3ff)",
-                                              width: `${
-                                                (counts.emails / maxBar) * 100
-                                              }%`,
-                                              minWidth:
-                                                counts.emails > 0 ? 4 : 0,
-                                              transition: "width 0.3s ease",
-                                            }}
-                                          />
-                                          <span
                                             style={{
                                               fontSize: 10,
-                                              color:
-                                                "var(--w97-text-secondary)",
+                                              color: "var(--w97-text-secondary)",
+                                              marginBottom: 3,
+                                              overflow: "hidden",
+                                              textOverflow: "ellipsis",
                                               whiteSpace: "nowrap",
                                             }}
                                           >
-                                            {counts.pokes + counts.emails}
-                                          </span>
+                                            {vendor}
+                                          </div>
+                                          <div
+                                            style={{
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: 6,
+                                              height: 16,
+                                            }}
+                                          >
+                                            <div
+                                              style={{
+                                                height: 14,
+                                                borderRadius: 3,
+                                                background:
+                                                  "linear-gradient(90deg, var(--w97-yellow), #d4a017)",
+                                                width: `${
+                                                  (counts.pokes / maxBar) * 100
+                                                }%`,
+                                                minWidth:
+                                                  counts.pokes > 0 ? 4 : 0,
+                                                transition: "width 0.3s ease",
+                                              }}
+                                            />
+                                            <div
+                                              style={{
+                                                height: 14,
+                                                borderRadius: 3,
+                                                background:
+                                                  "linear-gradient(90deg, var(--w97-blue), #4ba3ff)",
+                                                width: `${
+                                                  (counts.emails / maxBar) * 100
+                                                }%`,
+                                                minWidth:
+                                                  counts.emails > 0 ? 4 : 0,
+                                                transition: "width 0.3s ease",
+                                              }}
+                                            />
+                                            <span
+                                              style={{
+                                                fontSize: 10,
+                                                color:
+                                                  "var(--w97-text-secondary)",
+                                                whiteSpace: "nowrap",
+                                              }}
+                                            >
+                                              {counts.pokes + counts.emails}
+                                            </span>
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
+                                      ))}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
+                            )}
 
-                            {/* ── Activity List ── */}
-                            <div
-                              className="matchdb-card"
-                              style={{ padding: 0, overflow: "hidden" }}
-                            >
-                              <table
-                                style={{
-                                  width: "100%",
-                                  fontSize: 11,
-                                  borderCollapse: "collapse",
-                                }}
-                              >
-                                <thead>
-                                  <tr
-                                    style={{
-                                      background: "var(--w97-window-alt)",
-                                      borderBottom:
-                                        "1px solid var(--w97-border-light)",
-                                      textAlign: "left",
-                                    }}
-                                  >
-                                    <th
+                            {/* ── Activity List (shown for both summary and year tabs) ── */}
+                            <DataTable
+                              title={vendorActivitySubTab === "summary" ? "All Vendor Activity" : `Vendor Activity — ${vendorActivitySubTab}`}
+                              titleIcon="📋"
+                              showRowNumbers={false}
+                              titleExtra={
+                                <span style={{ fontSize: 10, opacity: 0.7 }}>
+                                  {filteredActivities.length} interaction{filteredActivities.length !== 1 ? "s" : ""}
+                                </span>
+                              }
+                              columns={[
+                                {
+                                  key: "vendor",
+                                  header: "Vendor",
+                                  width: "30%",
+                                  render: (v) => <>{v.sender_email}</>,
+                                },
+                                {
+                                  key: "type",
+                                  header: "Type",
+                                  width: "8%",
+                                  render: (v) => (
+                                    <span
                                       style={{
-                                        padding: "8px 12px",
-                                        fontWeight: 600,
+                                        display: "inline-block",
+                                        padding: "1px 8px",
+                                        borderRadius: 10,
                                         fontSize: 10,
-                                        textTransform: "uppercase",
-                                        color: "var(--w97-text-secondary)",
-                                        letterSpacing: 0.5,
-                                      }}
-                                    >
-                                      Vendor
-                                    </th>
-                                    <th
-                                      style={{
-                                        padding: "8px 12px",
                                         fontWeight: 600,
-                                        fontSize: 10,
-                                        textTransform: "uppercase",
-                                        color: "var(--w97-text-secondary)",
-                                        letterSpacing: 0.5,
+                                        background: v.is_email ? "#e8f0fe" : "#fff8e1",
+                                        color: v.is_email ? "var(--w97-blue)" : "var(--w97-yellow)",
                                       }}
                                     >
-                                      Type
-                                    </th>
-                                    <th
-                                      style={{
-                                        padding: "8px 12px",
-                                        fontWeight: 600,
-                                        fontSize: 10,
-                                        textTransform: "uppercase",
-                                        color: "var(--w97-text-secondary)",
-                                        letterSpacing: 0.5,
-                                      }}
-                                    >
-                                      Subject / Job
-                                    </th>
-                                    <th
-                                      style={{
-                                        padding: "8px 12px",
-                                        fontWeight: 600,
-                                        fontSize: 10,
-                                        textTransform: "uppercase",
-                                        color: "var(--w97-text-secondary)",
-                                        letterSpacing: 0.5,
-                                      }}
-                                    >
-                                      Date
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {activities.map((v) => (
-                                    <tr
-                                      key={v.id}
-                                      style={{
-                                        borderBottom: "1px solid #f0f0f0",
-                                      }}
-                                    >
-                                      <td style={{ padding: "8px 12px" }}>
-                                        {v.sender_email}
-                                      </td>
-                                      <td style={{ padding: "8px 12px" }}>
-                                        <span
-                                          style={{
-                                            display: "inline-block",
-                                            padding: "1px 8px",
-                                            borderRadius: 10,
-                                            fontSize: 10,
-                                            fontWeight: 600,
-                                            background: v.is_email
-                                              ? "#e8f0fe"
-                                              : "#fff8e1",
-                                            color: v.is_email
-                                              ? "var(--w97-blue)"
-                                              : "var(--w97-yellow)",
-                                          }}
-                                        >
-                                          {v.is_email ? "Email" : "Poke"}
-                                        </span>
-                                      </td>
-                                      <td
-                                        style={{
-                                          padding: "8px 12px",
-                                          color: "var(--w97-text-secondary)",
-                                        }}
-                                      >
-                                        {v.subject || v.job_title || "—"}
-                                      </td>
-                                      <td
-                                        style={{
-                                          padding: "8px 12px",
-                                          color: "var(--w97-text-secondary)",
-                                        }}
-                                      >
-                                        {fmtDate(v.created_at)}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                                      {v.is_email ? "Email" : "Poke"}
+                                    </span>
+                                  ),
+                                },
+                                {
+                                  key: "subject",
+                                  header: "Subject / Job",
+                                  render: (v) => (
+                                    <span style={{ color: "var(--w97-text-secondary)" }}>
+                                      {v.subject || v.job_title || "—"}
+                                    </span>
+                                  ),
+                                },
+                                {
+                                  key: "date",
+                                  header: "Date",
+                                  render: (v) => (
+                                    <span style={{ color: "var(--w97-text-secondary)" }}>
+                                      {fmtDate(v.created_at)}
+                                    </span>
+                                  ),
+                                },
+                              ] as DataTableColumn<(typeof activities)[number]>[]}
+                              data={filteredActivities}
+                              keyExtractor={(v) => String(v.id)}
+                              emptyMessage={vendorActivitySubTab === "summary" ? "No vendor activity." : `No vendor activity in ${vendorActivitySubTab}.`}
+                              paginate
+                              pageSize={25}
+                            />
                           </>
                         )}
                       </div>
@@ -3434,200 +3255,93 @@ const MarketerDashboard: React.FC<Props> = () => {
                             No openings forwarded to this candidate yet
                           </div>
                         ) : (
-                          <div
-                            className="matchdb-card"
-                            style={{ padding: 0, overflow: "hidden" }}
-                          >
-                            <table
-                              style={{
-                                width: "100%",
-                                fontSize: 11,
-                                borderCollapse: "collapse",
-                              }}
-                            >
-                              <thead>
-                                <tr
-                                  style={{
-                                    background: "var(--w97-window-alt)",
-                                    borderBottom:
-                                      "1px solid var(--w97-border-light)",
-                                    textAlign: "left",
-                                  }}
-                                >
-                                  <th
+                          <DataTable
+                            title="Forwarded Openings"
+                            titleIcon="📤"
+                            showRowNumbers={false}
+                            columns={[
+                              {
+                                key: "title",
+                                header: "Job Title",
+                                width: "20%",
+                                render: (f) => (
+                                  <span style={{ fontWeight: 600, color: "var(--w97-titlebar-from)" }}>
+                                    {f.job_title}
+                                  </span>
+                                ),
+                              },
+                              {
+                                key: "location",
+                                header: "Location",
+                                width: "14%",
+                                render: (f) => (
+                                  <span style={{ color: "var(--w97-text-secondary)" }}>
+                                    {f.job_location || "—"}
+                                  </span>
+                                ),
+                              },
+                              {
+                                key: "type",
+                                header: "Type",
+                                render: (f) => (
+                                  <span style={{ color: "var(--w97-text-secondary)" }}>
+                                    {f.job_type || "—"}
+                                  </span>
+                                ),
+                              },
+                              {
+                                key: "subType",
+                                header: "Sub Type",
+                                render: (f) => (
+                                  <span style={{ color: "var(--w97-text-secondary)" }}>
+                                    {f.job_sub_type || "—"}
+                                  </span>
+                                ),
+                              },
+                              {
+                                key: "vendor",
+                                header: "Vendor",
+                                render: (f) => (
+                                  <span style={{ color: "var(--w97-text-secondary)" }}>
+                                    {f.vendor_email || "—"}
+                                  </span>
+                                ),
+                              },
+                              {
+                                key: "status",
+                                header: "Status",
+                                render: (f) => (
+                                  <span
                                     style={{
-                                      padding: "8px 12px",
-                                      fontWeight: 600,
+                                      display: "inline-block",
+                                      padding: "1px 8px",
+                                      borderRadius: 10,
                                       fontSize: 10,
-                                      textTransform: "uppercase",
-                                      color: "var(--w97-text-secondary)",
-                                      letterSpacing: 0.5,
-                                    }}
-                                  >
-                                    Job Title
-                                  </th>
-                                  <th
-                                    style={{
-                                      padding: "8px 12px",
                                       fontWeight: 600,
-                                      fontSize: 10,
-                                      textTransform: "uppercase",
-                                      color: "var(--w97-text-secondary)",
-                                      letterSpacing: 0.5,
+                                      background: f.status === "accepted" ? "#e8f5e9" : f.status === "rejected" ? "#ffebee" : "#fff3e0",
+                                      color: f.status === "accepted" ? "var(--w97-green)" : f.status === "rejected" ? "var(--w97-red)" : "var(--w97-orange)",
                                     }}
                                   >
-                                    Location
-                                  </th>
-                                  <th
-                                    style={{
-                                      padding: "8px 12px",
-                                      fontWeight: 600,
-                                      fontSize: 10,
-                                      textTransform: "uppercase",
-                                      color: "var(--w97-text-secondary)",
-                                      letterSpacing: 0.5,
-                                    }}
-                                  >
-                                    Type
-                                  </th>
-                                  <th
-                                    style={{
-                                      padding: "8px 12px",
-                                      fontWeight: 600,
-                                      fontSize: 10,
-                                      textTransform: "uppercase",
-                                      color: "var(--w97-text-secondary)",
-                                      letterSpacing: 0.5,
-                                    }}
-                                  >
-                                    Sub Type
-                                  </th>
-                                  <th
-                                    style={{
-                                      padding: "8px 12px",
-                                      fontWeight: 600,
-                                      fontSize: 10,
-                                      textTransform: "uppercase",
-                                      color: "var(--w97-text-secondary)",
-                                      letterSpacing: 0.5,
-                                    }}
-                                  >
-                                    Vendor
-                                  </th>
-                                  <th
-                                    style={{
-                                      padding: "8px 12px",
-                                      fontWeight: 600,
-                                      fontSize: 10,
-                                      textTransform: "uppercase",
-                                      color: "var(--w97-text-secondary)",
-                                      letterSpacing: 0.5,
-                                    }}
-                                  >
-                                    Status
-                                  </th>
-                                  <th
-                                    style={{
-                                      padding: "8px 12px",
-                                      fontWeight: 600,
-                                      fontSize: 10,
-                                      textTransform: "uppercase",
-                                      color: "var(--w97-text-secondary)",
-                                      letterSpacing: 0.5,
-                                    }}
-                                  >
-                                    Sent
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {fwd.map((f) => (
-                                  <tr
-                                    key={f.id}
-                                    style={{
-                                      borderBottom:
-                                        "1px solid var(--w97-border-light)",
-                                    }}
-                                  >
-                                    <td
-                                      style={{
-                                        padding: "8px 12px",
-                                        fontWeight: 600,
-                                        color: "var(--w97-titlebar-from)",
-                                      }}
-                                    >
-                                      {f.job_title}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "8px 12px",
-                                        color: "var(--w97-text-secondary)",
-                                      }}
-                                    >
-                                      {f.job_location || "—"}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "8px 12px",
-                                        color: "var(--w97-text-secondary)",
-                                      }}
-                                    >
-                                      {f.job_type || "—"}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "8px 12px",
-                                        color: "var(--w97-text-secondary)",
-                                      }}
-                                    >
-                                      {f.job_sub_type || "—"}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "8px 12px",
-                                        color: "var(--w97-text-secondary)",
-                                      }}
-                                    >
-                                      {f.vendor_email || "—"}
-                                    </td>
-                                    <td style={{ padding: "8px 12px" }}>
-                                      <span
-                                        style={{
-                                          display: "inline-block",
-                                          padding: "1px 8px",
-                                          borderRadius: 10,
-                                          fontSize: 10,
-                                          fontWeight: 600,
-                                          background:
-                                            f.status === "accepted"
-                                              ? "#e8f5e9"
-                                              : f.status === "rejected"
-                                              ? "#ffebee"
-                                              : "#fff3e0",
-                                          color:
-                                            f.status === "accepted"
-                                              ? "var(--w97-green)"
-                                              : f.status === "rejected"
-                                              ? "var(--w97-red)"
-                                              : "var(--w97-orange)",
-                                        }}
-                                      >
-                                        {f.status || "pending"}
-                                      </span>
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "8px 12px",
-                                        color: "var(--w97-text-secondary)",
-                                      }}
-                                    >
-                                      {fmtDate(f.created_at)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                                    {f.status || "pending"}
+                                  </span>
+                                ),
+                              },
+                              {
+                                key: "sent",
+                                header: "Sent",
+                                render: (f) => (
+                                  <span style={{ color: "var(--w97-text-secondary)" }}>
+                                    {fmtDate(f.created_at)}
+                                  </span>
+                                ),
+                              },
+                            ] as DataTableColumn<(typeof fwd)[number]>[]}
+                            data={fwd}
+                            keyExtractor={(f) => String(f.id)}
+                            emptyMessage="No forwarded openings."
+                            paginate
+                            pageSize={25}
+                          />
                         )}
                       </div>
                     );
@@ -3903,132 +3617,47 @@ const MarketerDashboard: React.FC<Props> = () => {
             </div>
 
             {/* Current candidate list */}
-            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6 }}>
-              Current Roster ({companyCandidates.length})
-            </div>
-            <div style={{ maxHeight: 320, overflow: "auto" }}>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: 11,
-                }}
-              >
-                <thead>
-                  <tr
-                    style={{
-                      background: "var(--w97-window-alt)",
-                      textAlign: "left",
-                    }}
-                  >
-                    <th
-                      style={{
-                        padding: "4px 8px",
-                        borderBottom: "1px solid #ddd",
-                      }}
-                    >
-                      #
-                    </th>
-                    <th
-                      style={{
-                        padding: "4px 8px",
-                        borderBottom: "1px solid #ddd",
-                      }}
-                    >
-                      Name
-                    </th>
-                    <th
-                      style={{
-                        padding: "4px 8px",
-                        borderBottom: "1px solid #ddd",
-                      }}
-                    >
-                      Email
-                    </th>
-                    <th
-                      style={{
-                        padding: "4px 8px",
-                        borderBottom: "1px solid #ddd",
-                      }}
-                    >
-                      Invite
-                    </th>
-                    <th
-                      style={{
-                        padding: "4px 8px",
-                        borderBottom: "1px solid #ddd",
-                      }}
-                    >
-                      Added
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {companyCandidates.map((c, i) => (
-                    <tr key={c.id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td
-                        style={{
-                          padding: "3px 8px",
-                          color: "var(--w97-text-secondary)",
-                        }}
-                      >
-                        {i + 1}
-                      </td>
-                      <td style={{ padding: "3px 8px" }}>
-                        {c.candidate_name || "—"}
-                      </td>
-                      <td
-                        style={{ padding: "3px 8px", color: "var(--w97-blue)" }}
-                      >
-                        {c.candidate_email}
-                      </td>
-                      <td style={{ padding: "3px 8px" }}>
-                        {c.invite_status === "accepted" ? (
-                          <span
-                            style={{
-                              color: "var(--w97-green)",
-                              fontWeight: 600,
-                            }}
-                          >
-                            ✓ Accepted
-                          </span>
-                        ) : c.invite_status === "invited" ? (
-                          <span style={{ color: "var(--w97-yellow)" }}>
-                            ⏳ Invited
-                          </span>
-                        ) : (
-                          <span style={{ color: "var(--w97-text-secondary)" }}>
-                            —
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        style={{
-                          padding: "3px 8px",
-                          color: "var(--w97-text-secondary)",
-                        }}
-                      >
-                        {fmtDate(c.created_at)}
-                      </td>
-                    </tr>
-                  ))}
-                  {companyCandidates.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        style={{
-                          padding: 12,
-                          textAlign: "center",
-                          color: "var(--w97-text-secondary)",
-                        }}
-                      >
-                        No candidates yet. Add one above.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              title={`Current Roster`}
+              titleIcon="👥"
+              showRowNumbers
+              columns={[
+                {
+                  key: "name",
+                  header: "Name",
+                  render: (c) => <>{c.candidate_name || "—"}</>,
+                },
+                {
+                  key: "email",
+                  header: "Email",
+                  render: (c) => (
+                    <span style={{ color: "var(--w97-blue)" }}>{c.candidate_email}</span>
+                  ),
+                },
+                {
+                  key: "invite",
+                  header: "Invite",
+                  render: (c) =>
+                    c.invite_status === "accepted" ? (
+                      <span style={{ color: "var(--w97-green)", fontWeight: 600 }}>✓ Accepted</span>
+                    ) : c.invite_status === "invited" ? (
+                      <span style={{ color: "var(--w97-yellow)" }}>⏳ Invited</span>
+                    ) : (
+                      <span style={{ color: "var(--w97-text-secondary)" }}>—</span>
+                    ),
+                },
+                {
+                  key: "added",
+                  header: "Added",
+                  render: (c) => (
+                    <span style={{ color: "var(--w97-text-secondary)" }}>{fmtDate(c.created_at)}</span>
+                  ),
+                },
+              ] as DataTableColumn<(typeof companyCandidates)[number]>[]}
+              data={companyCandidates}
+              keyExtractor={(c) => String(c.id)}
+              emptyMessage="No candidates yet. Add one above."
+            />
           </div>
         </div>
       )}

@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "matchdb-component-library";
 import {
   useGetStateTaxRatesQuery,
@@ -10,27 +16,60 @@ import "./ProjectFinancialForm.css";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"] as const;
+const MN = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt = (v: number) =>
   v < 0
-    ? `-$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    ? `-$${Math.abs(v).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`
+    : `$${v.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
 
 const fmtC = (v: number) =>
-  `$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  `$${Math.abs(v).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
 
 const fmtDate = (iso: string | null) => {
   if (!iso) return "—";
-  try { return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
-  catch { return "—"; }
+  try {
+    return new Date(iso).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return "—";
+  }
 };
 
 const toDateInput = (iso: string | null) => {
   if (!iso) return "";
-  try { return new Date(iso).toISOString().split("T")[0]; } catch { return ""; }
+  try {
+    return new Date(iso).toISOString().split("T")[0];
+  } catch {
+    return "";
+  }
 };
 
 // ─── Pay period type ──────────────────────────────────────────────────────────
@@ -49,9 +88,12 @@ function generatePeriods(fin: ProjectFinancialData | null): PayPeriod[] {
     ? new Date(fin.projectStart)
     : new Date(now.getFullYear() - 1, now.getMonth(), 1);
 
-  const rawH = fin?.hoursWorked && fin.hoursWorked > 0 ? fin.hoursWorked / 12 : 80;
+  const rawH =
+    fin?.hoursWorked && fin.hoursWorked > 0 ? fin.hoursWorked / 12 : 80;
   // Slight realistic variation across months
-  const variationPct = [1.0, 0.92, 1.08, 1.02, 0.94, 1.06, 1.0, 0.92, 1.08, 1.0, 0.94, 1.04];
+  const variationPct = [
+    1.0, 0.92, 1.08, 1.02, 0.94, 1.06, 1.0, 0.92, 1.08, 1.0, 0.94, 1.04,
+  ];
 
   const periods: PayPeriod[] = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
@@ -67,9 +109,12 @@ function generatePeriods(fin: ProjectFinancialData | null): PayPeriod[] {
     // Normalize hours to exactly match stored total
     const sumH = periods.reduce((a, p) => a + p.hours, 0);
     const scale = fin.hoursWorked / sumH;
-    periods.forEach((p) => { p.hours = Math.round(p.hours * scale * 2) / 2; });
+    periods.forEach((p) => {
+      p.hours = Math.round(p.hours * scale * 2) / 2;
+    });
     const diff = fin.hoursWorked - periods.reduce((a, p) => a + p.hours, 0);
-    if (Math.abs(diff) > 0) periods[11].hours = Math.round((periods[11].hours + diff) * 2) / 2;
+    if (Math.abs(diff) > 0)
+      periods[11].hours = Math.round((periods[11].hours + diff) * 2) / 2;
   }
 
   if (fin?.amountPaid && fin.amountPaid > 0) {
@@ -101,25 +146,36 @@ interface Props {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail, onSaved }) => {
+const ProjectPayTable: React.FC<Props> = ({
+  project,
+  candidateId,
+  candidateEmail,
+  onSaved,
+}) => {
   const { data: states = [] } = useGetStateTaxRatesQuery();
   const [upsert, { isLoading: saving }] = useUpsertProjectFinancialMutation();
   const fin = project.financials;
 
   // ── Project-level settings ────────────────────────────────────────────────
-  const [billRate, setBillRate]   = useState(fin?.billRate ?? 0);
-  const [payRate, setPayRate]     = useState(fin?.payRate ?? 0);
+  const [billRate, setBillRate] = useState(fin?.billRate ?? 0);
+  const [payRate, setPayRate] = useState(fin?.payRate ?? 0);
   const [stateCode, setStateCode] = useState(fin?.stateCode ?? "");
-  const [cashPct, setCashPct]     = useState(fin?.cashPct ?? 0);
-  const [projectStart, setProjectStart] = useState(toDateInput(fin?.projectStart ?? null));
-  const [projectEnd, setProjectEnd]     = useState(toDateInput(fin?.projectEnd ?? null));
-  const [notes, setNotes]         = useState(fin?.notes ?? "");
+  const [cashPct, setCashPct] = useState(fin?.cashPct ?? 0);
+  const [projectStart, setProjectStart] = useState(
+    toDateInput(fin?.projectStart ?? null),
+  );
+  const [projectEnd, setProjectEnd] = useState(
+    toDateInput(fin?.projectEnd ?? null),
+  );
+  const [notes, setNotes] = useState(fin?.notes ?? "");
 
   const [editingSettings, setEditingSettings] = useState(!fin);
-  const [editingRows, setEditingRows]         = useState(!fin);
+  const [editingRows, setEditingRows] = useState(!fin);
 
   // ── Pay period rows ───────────────────────────────────────────────────────
-  const [periods, setPeriods] = useState<PayPeriod[]>(() => generatePeriods(fin));
+  const [periods, setPeriods] = useState<PayPeriod[]>(() =>
+    generatePeriods(fin),
+  );
 
   // Re-generate periods if fin changes (after save)
   const finRef = useRef(fin);
@@ -150,13 +206,13 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
   // ── Per-row computation ───────────────────────────────────────────────────
   const computeRow = useCallback(
     (period: PayPeriod) => {
-      const billed     = billRate * period.hours;
-      const gross      = payRate  * period.hours;
-      const tax        = (gross * stateTaxPct) / 100;
-      const withhold   = (gross * cashPct) / 100;
-      const net        = gross - tax - withhold;
-      const margin     = billed - gross;
-      const balance    = net - period.amountPaid;
+      const billed = billRate * period.hours;
+      const gross = payRate * period.hours;
+      const tax = (gross * stateTaxPct) / 100;
+      const withhold = (gross * cashPct) / 100;
+      const net = gross - tax - withhold;
+      const margin = billed - gross;
+      const balance = net - period.amountPaid;
       return { billed, gross, tax, withhold, net, margin, balance };
     },
     [billRate, payRate, stateTaxPct, cashPct],
@@ -168,42 +224,56 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
       (acc, p) => {
         const r = computeRow(p);
         return {
-          hours:       acc.hours       + p.hours,
-          billed:      acc.billed      + r.billed,
-          gross:       acc.gross       + r.gross,
-          tax:         acc.tax         + r.tax,
-          withhold:    acc.withhold    + r.withhold,
-          net:         acc.net         + r.net,
-          margin:      acc.margin      + r.margin,
-          amountPaid:  acc.amountPaid  + p.amountPaid,
-          balance:     acc.balance     + r.balance,
+          hours: acc.hours + p.hours,
+          billed: acc.billed + r.billed,
+          gross: acc.gross + r.gross,
+          tax: acc.tax + r.tax,
+          withhold: acc.withhold + r.withhold,
+          net: acc.net + r.net,
+          margin: acc.margin + r.margin,
+          amountPaid: acc.amountPaid + p.amountPaid,
+          balance: acc.balance + r.balance,
         };
       },
-      { hours: 0, billed: 0, gross: 0, tax: 0, withhold: 0, net: 0, margin: 0, amountPaid: 0, balance: 0 },
+      {
+        hours: 0,
+        billed: 0,
+        gross: 0,
+        tax: 0,
+        withhold: 0,
+        net: 0,
+        margin: 0,
+        amountPaid: 0,
+        balance: 0,
+      },
     );
   }, [periods, computeRow]);
 
   // ── Row field updater ─────────────────────────────────────────────────────
   const setHours = (idx: number, v: number) =>
-    setPeriods((prev) => prev.map((p, i) => (i === idx ? { ...p, hours: v } : p)));
+    setPeriods((prev) =>
+      prev.map((p, i) => (i === idx ? { ...p, hours: v } : p)),
+    );
   const setPaid = (idx: number, v: number) =>
-    setPeriods((prev) => prev.map((p, i) => (i === idx ? { ...p, amountPaid: v } : p)));
+    setPeriods((prev) =>
+      prev.map((p, i) => (i === idx ? { ...p, amountPaid: v } : p)),
+    );
 
   // ── Save ─────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     try {
       await upsert({
-        applicationId:  project.id,
+        applicationId: project.id,
         candidateId,
         candidateEmail,
         billRate,
         payRate,
-        hoursWorked:    totals.hours,
-        projectStart:   projectStart || undefined,
-        projectEnd:     projectEnd   || undefined,
+        hoursWorked: totals.hours,
+        projectStart: projectStart || undefined,
+        projectEnd: projectEnd || undefined,
         stateCode,
         cashPct,
-        amountPaid:     totals.amountPaid,
+        amountPaid: totals.amountPaid,
         notes,
       }).unwrap();
       setEditingSettings(false);
@@ -212,10 +282,25 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
     } catch (e: any) {
       alert(e?.data?.error || "Failed to save");
     }
-  }, [upsert, project.id, candidateId, candidateEmail, billRate, payRate, totals, projectStart, projectEnd, stateCode, cashPct, notes, onSaved]);
+  }, [
+    upsert,
+    project.id,
+    candidateId,
+    candidateEmail,
+    billRate,
+    payRate,
+    totals,
+    projectStart,
+    projectEnd,
+    stateCode,
+    cashPct,
+    notes,
+    onSaved,
+  ]);
 
   const isActive = project.is_active;
-  const paidPct  = totals.net > 0 ? Math.min(100, (totals.amountPaid / totals.net) * 100) : 0;
+  const paidPct =
+    totals.net > 0 ? Math.min(100, (totals.amountPaid / totals.net) * 100) : 0;
 
   return (
     <div className="ppt-root">
@@ -227,17 +312,25 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
               <div className="ppt-sfield">
                 <label className="ppt-slabel">Bill Rate ($/hr)</label>
                 <input
-                  type="number" className="ppt-sinput ppt-sinput-rate"
-                  value={billRate || ""} onChange={(e) => setBillRate(Number(e.target.value) || 0)}
-                  min={0} step={0.01} placeholder="0.00"
+                  type="number"
+                  className="ppt-sinput ppt-sinput-rate"
+                  value={billRate || ""}
+                  onChange={(e) => setBillRate(Number(e.target.value) || 0)}
+                  min={0}
+                  step={0.01}
+                  placeholder="0.00"
                 />
               </div>
               <div className="ppt-sfield">
                 <label className="ppt-slabel">Pay Rate ($/hr)</label>
                 <input
-                  type="number" className="ppt-sinput ppt-sinput-rate"
-                  value={payRate || ""} onChange={(e) => setPayRate(Number(e.target.value) || 0)}
-                  min={0} step={0.01} placeholder="0.00"
+                  type="number"
+                  className="ppt-sinput ppt-sinput-rate"
+                  value={payRate || ""}
+                  onChange={(e) => setPayRate(Number(e.target.value) || 0)}
+                  min={0}
+                  step={0.01}
+                  placeholder="0.00"
                 />
               </div>
               <div className="ppt-sfield ppt-sfield-wide">
@@ -258,18 +351,33 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
               <div className="ppt-sfield">
                 <label className="ppt-slabel">Withholding %</label>
                 <input
-                  type="number" className="ppt-sinput"
-                  value={cashPct || ""} onChange={(e) => setCashPct(Number(e.target.value) || 0)}
-                  min={0} max={100} step={0.1} placeholder="0.0"
+                  type="number"
+                  className="ppt-sinput"
+                  value={cashPct || ""}
+                  onChange={(e) => setCashPct(Number(e.target.value) || 0)}
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  placeholder="0.0"
                 />
               </div>
               <div className="ppt-sfield">
                 <label className="ppt-slabel">Project Start</label>
-                <input type="date" className="ppt-sinput" value={projectStart} onChange={(e) => setProjectStart(e.target.value)} />
+                <input
+                  type="date"
+                  className="ppt-sinput"
+                  value={projectStart}
+                  onChange={(e) => setProjectStart(e.target.value)}
+                />
               </div>
               <div className="ppt-sfield">
                 <label className="ppt-slabel">Project End</label>
-                <input type="date" className="ppt-sinput" value={projectEnd} onChange={(e) => setProjectEnd(e.target.value)} />
+                <input
+                  type="date"
+                  className="ppt-sinput"
+                  value={projectEnd}
+                  onChange={(e) => setProjectEnd(e.target.value)}
+                />
               </div>
             </>
           ) : (
@@ -288,7 +396,11 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
                 <span className="ppt-sval-label">Margin</span>
                 <span className="ppt-sval ppt-sval-margin">
                   ${billRate - payRate}/hr
-                  {billRate > 0 ? ` (${(((billRate - payRate) / billRate) * 100).toFixed(1)}%)` : ""}
+                  {billRate > 0
+                    ? ` (${(((billRate - payRate) / billRate) * 100).toFixed(
+                        1,
+                      )}%)`
+                    : ""}
                 </span>
               </div>
               <div className="ppt-sdivider" />
@@ -308,8 +420,12 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
                   <div className="ppt-sdivider" />
                   <div className="ppt-sval-group">
                     <span className="ppt-sval-label">Period</span>
-                    <span className="ppt-sval" style={{ color: "#374151", fontSize: 11 }}>
-                      {fmtDate(fin?.projectStart ?? null)} — {fin?.projectEnd ? fmtDate(fin.projectEnd) : "ongoing"}
+                    <span
+                      className="ppt-sval"
+                      style={{ color: "#374151", fontSize: 11 }}
+                    >
+                      {fmtDate(fin?.projectStart ?? null)} —{" "}
+                      {fin?.projectEnd ? fmtDate(fin.projectEnd) : "ongoing"}
                     </span>
                   </div>
                 </>
@@ -322,18 +438,38 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
           {editingSettings || editingRows ? (
             <>
               {fin && (
-                <Button size="xs"
-                  onClick={() => { setEditingSettings(false); setEditingRows(false); setPeriods(generatePeriods(fin)); setBillRate(fin.billRate); setPayRate(fin.payRate); setStateCode(fin.stateCode); setCashPct(fin.cashPct); }}>
+                <Button
+                  size="xs"
+                  onClick={() => {
+                    setEditingSettings(false);
+                    setEditingRows(false);
+                    setPeriods(generatePeriods(fin));
+                    setBillRate(fin.billRate);
+                    setPayRate(fin.payRate);
+                    setStateCode(fin.stateCode);
+                    setCashPct(fin.cashPct);
+                  }}
+                >
                   Cancel
                 </Button>
               )}
-              <Button variant="primary" size="xs" onClick={handleSave} disabled={saving}>
+              <Button
+                variant="primary"
+                size="xs"
+                onClick={handleSave}
+                disabled={saving}
+              >
                 {saving ? "Saving…" : "Save All"}
               </Button>
             </>
           ) : (
-            <Button size="xs"
-              onClick={() => { setEditingSettings(true); setEditingRows(true); }}>
+            <Button
+              size="xs"
+              onClick={() => {
+                setEditingSettings(true);
+                setEditingRows(true);
+              }}
+            >
               Edit
             </Button>
           )}
@@ -345,8 +481,10 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
         <div className="ppt-notes-bar">
           <label className="ppt-slabel">Notes</label>
           <input
-            type="text" className="ppt-notes-input"
-            value={notes} onChange={(e) => setNotes(e.target.value)}
+            type="text"
+            className="ppt-notes-input"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
             placeholder="Engagement notes…"
           />
         </div>
@@ -361,14 +499,18 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
         <div className="ppt-ts-divider" />
         <div className="ppt-ts-tile">
           <span className="ppt-ts-label">Vendor Billed</span>
-          <span className="ppt-ts-value ppt-ts-green">{fmtC(totals.billed)}</span>
+          <span className="ppt-ts-value ppt-ts-green">
+            {fmtC(totals.billed)}
+          </span>
         </div>
         <div className="ppt-ts-divider" />
         <div className="ppt-ts-tile">
           <span className="ppt-ts-label">Your Margin</span>
           <span className="ppt-ts-value ppt-ts-teal">
             {fmtC(totals.margin)}
-            {totals.billed > 0 ? ` (${((totals.margin / totals.billed) * 100).toFixed(1)}%)` : ""}
+            {totals.billed > 0
+              ? ` (${((totals.margin / totals.billed) * 100).toFixed(1)}%)`
+              : ""}
           </span>
         </div>
         <div className="ppt-ts-divider" />
@@ -384,13 +526,27 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
         <div className="ppt-ts-divider" />
         <div className="ppt-ts-tile">
           <span className="ppt-ts-label">Paid to Date</span>
-          <span className="ppt-ts-value ppt-ts-green">{fmtC(totals.amountPaid)}</span>
+          <span className="ppt-ts-value ppt-ts-green">
+            {fmtC(totals.amountPaid)}
+          </span>
         </div>
         <div className="ppt-ts-divider" />
         <div className="ppt-ts-tile">
           <span className="ppt-ts-label">Outstanding</span>
-          <span className={`ppt-ts-value ${totals.balance > 0 ? "ppt-ts-orange" : totals.balance < 0 ? "ppt-ts-red" : "ppt-ts-green"}`}>
-            {totals.balance > 0 ? fmtC(totals.balance) : totals.balance < 0 ? `+${fmtC(Math.abs(totals.balance))}` : "$0"}
+          <span
+            className={`ppt-ts-value ${
+              totals.balance > 0
+                ? "ppt-ts-orange"
+                : totals.balance < 0
+                ? "ppt-ts-red"
+                : "ppt-ts-green"
+            }`}
+          >
+            {totals.balance > 0
+              ? fmtC(totals.balance)
+              : totals.balance < 0
+              ? `+${fmtC(Math.abs(totals.balance))}`
+              : "$0"}
           </span>
         </div>
         <div className="ppt-ts-divider" />
@@ -398,7 +554,10 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
         <div className="ppt-ts-tile ppt-ts-progress-tile">
           <span className="ppt-ts-label">{paidPct.toFixed(0)}% Paid</span>
           <div className="ppt-ts-progress-wrap">
-            <div className="ppt-ts-progress-fill" style={{ width: `${paidPct}%` }} />
+            <div
+              className="ppt-ts-progress-fill"
+              style={{ width: `${paidPct}%` }}
+            />
           </div>
         </div>
       </div>
@@ -412,15 +571,21 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
               <th className="ppt-th ppt-th-num">Hours</th>
               <th className="ppt-th ppt-th-money">
                 <span>Billed</span>
-                {billRate > 0 && <span className="ppt-th-sub">@${billRate}/hr</span>}
+                {billRate > 0 && (
+                  <span className="ppt-th-sub">@${billRate}/hr</span>
+                )}
               </th>
               <th className="ppt-th ppt-th-money">
                 <span>Gross Pay</span>
-                {payRate > 0 && <span className="ppt-th-sub">@${payRate}/hr</span>}
+                {payRate > 0 && (
+                  <span className="ppt-th-sub">@${payRate}/hr</span>
+                )}
               </th>
               <th className="ppt-th ppt-th-money">
                 <span>State Tax</span>
-                {stateTaxPct > 0 && <span className="ppt-th-sub">{stateTaxPct}%</span>}
+                {stateTaxPct > 0 && (
+                  <span className="ppt-th-sub">{stateTaxPct}%</span>
+                )}
               </th>
               <th className="ppt-th ppt-th-money">
                 <span>Withholding</span>
@@ -436,7 +601,10 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
               const r = computeRow(period);
               const isFuture = r.net === 0 && period.hours === 0;
               return (
-                <tr key={period.label} className={`ppt-row ${idx % 2 === 1 ? "ppt-row-alt" : ""}`}>
+                <tr
+                  key={period.label}
+                  className={`ppt-row ${idx % 2 === 1 ? "ppt-row-alt" : ""}`}
+                >
                   <td className="ppt-td ppt-td-period">{period.label}</td>
 
                   {/* Hours — editable */}
@@ -446,23 +614,32 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
                         type="number"
                         className="ppt-cell-input ppt-cell-input-sm"
                         value={period.hours || ""}
-                        onChange={(e) => setHours(idx, Number(e.target.value) || 0)}
-                        min={0} step={0.5}
+                        onChange={(e) =>
+                          setHours(idx, Number(e.target.value) || 0)
+                        }
+                        min={0}
+                        step={0.5}
                       />
                     ) : (
                       <span>{period.hours}</span>
                     )}
                   </td>
 
-                  <td className="ppt-td ppt-td-money ppt-val-billed">{fmt(r.billed)}</td>
-                  <td className="ppt-td ppt-td-money ppt-val-gross">{fmt(r.gross)}</td>
+                  <td className="ppt-td ppt-td-money ppt-val-billed">
+                    {fmt(r.billed)}
+                  </td>
+                  <td className="ppt-td ppt-td-money ppt-val-gross">
+                    {fmt(r.gross)}
+                  </td>
                   <td className="ppt-td ppt-td-money ppt-val-deduct">
                     {r.tax > 0 ? `−${fmt(r.tax)}` : "—"}
                   </td>
                   <td className="ppt-td ppt-td-money ppt-val-deduct">
                     {r.withhold > 0 ? `−${fmt(r.withhold)}` : "—"}
                   </td>
-                  <td className="ppt-td ppt-td-money ppt-val-net">{fmt(r.net)}</td>
+                  <td className="ppt-td ppt-td-money ppt-val-net">
+                    {fmt(r.net)}
+                  </td>
 
                   {/* Paid — editable */}
                   <td className="ppt-td ppt-td-money">
@@ -471,19 +648,40 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
                         type="number"
                         className="ppt-cell-input ppt-cell-input-sm ppt-cell-paid"
                         value={period.amountPaid || ""}
-                        onChange={(e) => setPaid(idx, Number(e.target.value) || 0)}
-                        min={0} step={0.01}
+                        onChange={(e) =>
+                          setPaid(idx, Number(e.target.value) || 0)
+                        }
+                        min={0}
+                        step={0.01}
                       />
                     ) : (
-                      <span className={period.amountPaid > 0 ? "ppt-val-paid" : "ppt-val-zero"}>
+                      <span
+                        className={
+                          period.amountPaid > 0
+                            ? "ppt-val-paid"
+                            : "ppt-val-zero"
+                        }
+                      >
                         {period.amountPaid > 0 ? fmt(period.amountPaid) : "—"}
                       </span>
                     )}
                   </td>
 
                   {/* Balance */}
-                  <td className={`ppt-td ppt-td-balance ${r.balance > 0.01 ? "ppt-bal-pos" : r.balance < -0.01 ? "ppt-bal-neg" : "ppt-bal-zero"}`}>
-                    {Math.abs(r.balance) < 0.01 ? "✓" : r.balance > 0 ? fmt(r.balance) : `+${fmt(Math.abs(r.balance))}`}
+                  <td
+                    className={`ppt-td ppt-td-balance ${
+                      r.balance > 0.01
+                        ? "ppt-bal-pos"
+                        : r.balance < -0.01
+                        ? "ppt-bal-neg"
+                        : "ppt-bal-zero"
+                    }`}
+                  >
+                    {Math.abs(r.balance) < 0.01
+                      ? "✓"
+                      : r.balance > 0
+                      ? fmt(r.balance)
+                      : `+${fmt(Math.abs(r.balance))}`}
                   </td>
                 </tr>
               );
@@ -492,19 +690,41 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
           <tfoot>
             <tr className="ppt-tfoot-row">
               <td className="ppt-tf ppt-tf-label">TOTAL</td>
-              <td className="ppt-tf ppt-tf-num">{totals.hours.toLocaleString()}</td>
-              <td className="ppt-tf ppt-tf-money ppt-val-billed">{fmt(totals.billed)}</td>
-              <td className="ppt-tf ppt-tf-money ppt-val-gross">{fmt(totals.gross)}</td>
+              <td className="ppt-tf ppt-tf-num">
+                {totals.hours.toLocaleString()}
+              </td>
+              <td className="ppt-tf ppt-tf-money ppt-val-billed">
+                {fmt(totals.billed)}
+              </td>
+              <td className="ppt-tf ppt-tf-money ppt-val-gross">
+                {fmt(totals.gross)}
+              </td>
               <td className="ppt-tf ppt-tf-money ppt-val-deduct">
                 {totals.tax > 0 ? `−${fmt(totals.tax)}` : "—"}
               </td>
               <td className="ppt-tf ppt-tf-money ppt-val-deduct">
                 {totals.withhold > 0 ? `−${fmt(totals.withhold)}` : "—"}
               </td>
-              <td className="ppt-tf ppt-tf-money ppt-val-net">{fmt(totals.net)}</td>
-              <td className="ppt-tf ppt-tf-money ppt-val-paid">{fmt(totals.amountPaid)}</td>
-              <td className={`ppt-tf ppt-tf-balance ${totals.balance > 0.01 ? "ppt-bal-pos" : totals.balance < -0.01 ? "ppt-bal-neg" : "ppt-bal-zero"}`}>
-                {Math.abs(totals.balance) < 0.01 ? "✓ Settled" : totals.balance > 0 ? fmt(totals.balance) : `Overpaid ${fmt(Math.abs(totals.balance))}`}
+              <td className="ppt-tf ppt-tf-money ppt-val-net">
+                {fmt(totals.net)}
+              </td>
+              <td className="ppt-tf ppt-tf-money ppt-val-paid">
+                {fmt(totals.amountPaid)}
+              </td>
+              <td
+                className={`ppt-tf ppt-tf-balance ${
+                  totals.balance > 0.01
+                    ? "ppt-bal-pos"
+                    : totals.balance < -0.01
+                    ? "ppt-bal-neg"
+                    : "ppt-bal-zero"
+                }`}
+              >
+                {Math.abs(totals.balance) < 0.01
+                  ? "✓ Settled"
+                  : totals.balance > 0
+                  ? fmt(totals.balance)
+                  : `Overpaid ${fmt(Math.abs(totals.balance))}`}
               </td>
             </tr>
           </tfoot>
@@ -513,9 +733,7 @@ const ProjectPayTable: React.FC<Props> = ({ project, candidateId, candidateEmail
 
       {/* ── Footer notes (read-only) ──────────────────────────────────────── */}
       {notes && !editingSettings && (
-        <div className="ppt-notes-footer">
-          {notes}
-        </div>
+        <div className="ppt-notes-footer">{notes}</div>
       )}
     </div>
   );

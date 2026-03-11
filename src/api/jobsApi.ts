@@ -301,6 +301,24 @@ export interface CandidateDetailProject {
   financials: ProjectFinancialData | null;
 }
 
+// Same as CandidateDetailProject but financials is always an array (all marketers)
+export interface CandidateMyDetailProject {
+  id: string;
+  job_id: string;
+  job_title: string;
+  vendor_email: string;
+  location: string;
+  job_type: string;
+  job_sub_type: string;
+  pay_per_hour: number | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  status: string;
+  is_active: boolean;
+  applied_at: string;
+  financials: (ProjectFinancialData & { marketer_id: string })[];
+}
+
 export interface USStateTax {
   code: string;
   name: string;
@@ -372,6 +390,54 @@ export interface CandidateDetailResponse {
     created_at: string;
   }[];
   vendor_activity: CandidateDetailVendorActivity[];
+}
+
+export interface CandidateMyDetailResponse {
+  profile: {
+    id: string;
+    candidate_id: string;
+    name: string;
+    email: string;
+    phone: string;
+    current_company: string;
+    current_role: string;
+    preferred_job_type: string;
+    expected_hourly_rate: number | null;
+    experience_years: number;
+    skills: string[];
+    location: string;
+    bio: string;
+    resume_summary: string;
+    resume_experience: string;
+    resume_education: string;
+    resume_achievements: string;
+  } | null;
+  projects: CandidateMyDetailProject[];
+  forwarded_openings: {
+    id: string;
+    job_id: string;
+    job_title: string;
+    job_location: string;
+    job_type: string;
+    job_sub_type: string;
+    vendor_email: string;
+    marketer_email: string;
+    company_name: string;
+    status: string;
+    note: string;
+    created_at: string;
+  }[];
+  vendor_activity: CandidateDetailVendorActivity[];
+  marketer_info: {
+    id: string;
+    marketer_id: string;
+    company_id: string;
+    company_name: string;
+    invite_status: string;
+    invite_sent_at: string | null;
+    forwarded_count: number;
+    created_at: string;
+  }[];
 }
 
 export interface CompanyInviteInfo {
@@ -450,6 +516,7 @@ export const jobsApi = createApi({
     "CandidateForwarded",
     "CompanyInvites",
     "ProjectFinancials",
+    "CandidateMyDetail",
   ],
   endpoints: (builder) => ({
     // ── Jobs ──────────────────────────────────────────────────────────────────
@@ -642,6 +709,13 @@ export const jobsApi = createApi({
       providesTags: ["CandidateForwarded"],
     }),
 
+    // ── Candidate My Detail (self-view: overview/projects/marketer/forwarded) ──
+
+    getCandidateMyDetail: builder.query<CandidateMyDetailResponse, void>({
+      query: () => "api/jobs/candidate/my-detail",
+      providesTags: ["CandidateMyDetail"],
+    }),
+
     // ── Invite Candidate (marketer sends invite email) ────────────────────────
 
     inviteCandidate: builder.mutation<
@@ -794,6 +868,8 @@ export const {
   useGetForwardedOpeningsQuery,
   // Candidate Forwarded Openings
   useGetCandidateForwardedOpeningsQuery,
+  // Candidate My Detail
+  useGetCandidateMyDetailQuery,
   // Invite / Accept / Search
   useInviteCandidateMutation,
   useForwardOpeningWithEmailMutation,

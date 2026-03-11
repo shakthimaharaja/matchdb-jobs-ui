@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import React, {
   useCallback,
   useEffect,
@@ -6,7 +7,7 @@ import React, {
   useState,
 } from "react";
 import { MatchRow } from "../components/MatchDataTable";
-import { DataTable, Button, Input, Select } from "matchdb-component-library";
+import { DataTable, Button, Input, Select, Tabs, Panel } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import DBLayout, { NavGroup } from "../components/DBLayout";
 import DetailModal from "../components/DetailModal";
@@ -22,6 +23,7 @@ import {
   useGetPokesReceivedQuery,
   useSendPokeMutation,
   useGetCandidateForwardedOpeningsQuery,
+  useGetCandidateMyDetailQuery,
   type Job,
   type CandidateProfile as CandidateProfileType,
   type PokeRecord,
@@ -47,7 +49,10 @@ type ActiveView =
   | "pokes-received"
   | "mails-sent"
   | "mails-received"
-  | "forwarded";
+  | "forwarded"
+  | "my-detail";
+
+type MyDetailTab = "overview" | "projects" | "marketer-activity" | "forwarded-openings";
 
 const formatRate = (value?: number | null) =>
   value ? `$${Number(value).toFixed(0)}` : "-";
@@ -185,19 +190,51 @@ const CandidateDashboard: React.FC<Props> = ({
   membershipConfig,
   hasPurchasedVisibility = false,
 }) => {
-  const [searchText, setSearchText] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [filterType, setFilterType] = useState("");
-  const [filterSubType, setFilterSubType] = useState("");
-  const [filterWorkMode, setFilterWorkMode] = useState("");
-  const [activeView, setActiveView] = useState<ActiveView>("matches");
+  // ── URL-driven state — all navigation, filters, and pagination live in the URL
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeView = (searchParams.get("view") as ActiveView) || "matches";
+  const myDetailTab =
+    (searchParams.get("dtab") as MyDetailTab) || "overview";
+  const filterType = searchParams.get("type") || "";
+  const filterSubType = searchParams.get("sub") || "";
+  const filterWorkMode = searchParams.get("mode") || "";
+  const currentPage = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const currentPageSize = Math.max(
+    1,
+    parseInt(searchParams.get("size") || "25", 10),
+  );
+  const [searchText, setSearchText] = useState(() => searchParams.get("q") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(
+    () => searchParams.get("q") || "",
+  );
 
-  // Server-side pagination state — keyed by activeView so each section remembers
-  const [paginationMap, setPaginationMap] = useState<
-    Record<string, { page: number; pageSize: number }>
-  >({});
-  const currentPage = paginationMap[activeView]?.page ?? 1;
-  const currentPageSize = paginationMap[activeView]?.pageSize ?? 25;
+  /** Update multiple URL params atomically in one navigate() call */
+  const navParams = (
+    updates: Record<string, string | null>,
+    resetPage = true,
+  ) =>
+    setSearchParams(
+      (prev) => {
+        const n = new URLSearchParams(prev);
+        for (const [k, v] of Object.entries(updates)) {
+          if (v === null) n.delete(k);
+          else n.set(k, v);
+        }
+        if (resetPage) n.delete("page");
+        return n;
+      },
+      { replace: true },
+    );
+
+  // On mount: stamp ?view=matches if no view param exists yet (e.g. fresh login)
+  useEffect(() => {
+    if (!searchParams.get("view")) {
+      setSearchParams(
+        (prev) => { const n = new URLSearchParams(prev); n.set("view", "matches"); return n; },
+        { replace: true },
+      );
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [selectedJob, setSelectedJob] = useState<Record<
     string,
@@ -221,7 +258,15 @@ const CandidateDashboard: React.FC<Props> = ({
   const [premiumUnlocked, setPremiumUnlocked] = useState(false);
 
   // ── RTK Query data hooks ───────────────────────────────────────────────────
-  const [matchFilters, setMatchFilters] = useState<CandidateMatchesArgs>({});
+  // Seed initial query args from URL so a reload lands on the same filtered page
+  const [matchFilters, setMatchFilters] = useState<CandidateMatchesArgs>({
+    page: currentPage,
+    limit: currentPageSize,
+    filter_type: filterType || undefined,
+    sub_type: filterSubType || undefined,
+    work_mode: filterWorkMode || undefined,
+    search: debouncedSearch || undefined,
+  });
   const {
     data: matchesData,
     isLoading: matchesLoading,
@@ -249,6 +294,14 @@ const CandidateDashboard: React.FC<Props> = ({
   // Forwarded openings from marketer companies
   const { data: forwardedOpenings = [] } =
     useGetCandidateForwardedOpeningsQuery();
+
+  // My Detail — only fetched when the "my-detail" view is active
+  const {
+    data: myDetail,
+    isLoading: myDetailLoading,
+  } = useGetCandidateMyDetailQuery(undefined, {
+    skip: activeView !== "my-detail",
+  });
 
   // Derive flat arrays and metadata from RTK Query responses
   const candidateMatches: Job[] = Array.isArray(matchesData)
@@ -387,9 +440,21 @@ const CandidateDashboard: React.FC<Props> = ({
     return Object.keys(membershipConfig);
   }, [membershipConfig]);
 
-  // Debounce search text to avoid spamming the server on every keystroke
+  // Debounce search text — also syncs ?q= in URL after 350 ms idle
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchText), 350);
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchText);
+      setSearchParams(
+        (prev) => {
+          const n = new URLSearchParams(prev);
+          if (searchText) n.set("q", searchText);
+          else n.delete("q");
+          n.delete("page");
+          return n;
+        },
+        { replace: true },
+      );
+    }, 350);
     return () => clearTimeout(t);
   }, [searchText]);
 
@@ -407,21 +472,17 @@ const CandidateDashboard: React.FC<Props> = ({
     search: debouncedSearch.trim() || undefined,
   });
 
-  // Re-fetch when type / subtype / work-mode / search filters change
+  // Re-fetch when any URL filter / page param changes
+  // On first mount skip — matchFilters already seeded from URL in useState init
   const filtersInitialized = useRef(false);
   useEffect(() => {
     if (!filtersInitialized.current) {
       filtersInitialized.current = true;
-      return; // skip the initial mount
+      return;
     }
-    // Reset page to 1 for the current view
-    setPaginationMap((prev) => ({
-      ...prev,
-      [activeView]: { page: 1, pageSize: currentPageSize },
-    }));
-    setMatchFilters(buildFilterArgs(1, currentPageSize));
+    setMatchFilters(buildFilterArgs(currentPage, currentPageSize));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterType, filterSubType, filterWorkMode, debouncedSearch]);
+  }, [filterType, filterSubType, filterWorkMode, debouncedSearch, currentPage, currentPageSize]);
 
   useEffect(() => {
     if (profileChecked.current) return;
@@ -497,6 +558,8 @@ const CandidateDashboard: React.FC<Props> = ({
         ? mailsReceivedOnly.length
         : activeView === "forwarded"
         ? forwardedOpenings.length
+        : activeView === "my-detail"
+        ? (myDetail?.projects.length ?? 0)
         : 0;
     window.dispatchEvent(
       new CustomEvent("matchdb:footerInfo", {
@@ -520,11 +583,15 @@ const CandidateDashboard: React.FC<Props> = ({
   ]);
 
   const handlePageChange = (page: number, pageSize: number) => {
-    setPaginationMap((prev) => ({
-      ...prev,
-      [activeView]: { page, pageSize },
-    }));
-    setMatchFilters(buildFilterArgs(page, pageSize));
+    setSearchParams(
+      (prev) => {
+        const n = new URLSearchParams(prev);
+        n.set("page", String(page));
+        n.set("size", String(pageSize));
+        return n;
+      },
+      { replace: true },
+    );
   };
 
   const hasMembership =
@@ -1062,11 +1129,7 @@ const CandidateDashboard: React.FC<Props> = ({
         count: grandTotal,
         active:
           activeView === "matches" && filterType === "" && filterSubType === "",
-        onClick: () => {
-          setActiveView("matches");
-          setFilterType("");
-          setFilterSubType("");
-        },
+        onClick: () => navParams({ view: "matches", type: null, sub: null }),
       },
     ];
     if (showType("contract")) {
@@ -1078,11 +1141,7 @@ const CandidateDashboard: React.FC<Props> = ({
           activeView === "matches" &&
           filterType === "contract" &&
           filterSubType === "",
-        onClick: () => {
-          setActiveView("matches");
-          setFilterType("contract");
-          setFilterSubType("");
-        },
+        onClick: () => navParams({ view: "matches", type: "contract", sub: null }),
       });
       CONTRACT_SUB_TYPES.filter((st) =>
         showSubtype("contract", st.value),
@@ -1096,11 +1155,8 @@ const CandidateDashboard: React.FC<Props> = ({
             activeView === "matches" &&
             filterType === "contract" &&
             filterSubType === st.value,
-          onClick: () => {
-            setActiveView("matches");
-            setFilterType("contract");
-            setFilterSubType(st.value);
-          },
+          onClick: () =>
+            navParams({ view: "matches", type: "contract", sub: st.value }),
         }),
       );
     }
@@ -1113,11 +1169,7 @@ const CandidateDashboard: React.FC<Props> = ({
           activeView === "matches" &&
           filterType === "full_time" &&
           filterSubType === "",
-        onClick: () => {
-          setActiveView("matches");
-          setFilterType("full_time");
-          setFilterSubType("");
-        },
+        onClick: () => navParams({ view: "matches", type: "full_time", sub: null }),
       });
       FULL_TIME_SUB_TYPES.filter((st) =>
         showSubtype("full_time", st.value),
@@ -1131,11 +1183,8 @@ const CandidateDashboard: React.FC<Props> = ({
             activeView === "matches" &&
             filterType === "full_time" &&
             filterSubType === st.value,
-          onClick: () => {
-            setActiveView("matches");
-            setFilterType("full_time");
-            setFilterSubType(st.value);
-          },
+          onClick: () =>
+            navParams({ view: "matches", type: "full_time", sub: st.value }),
         }),
       );
     }
@@ -1148,11 +1197,7 @@ const CandidateDashboard: React.FC<Props> = ({
           activeView === "matches" &&
           filterType === "part_time" &&
           filterSubType === "",
-        onClick: () => {
-          setActiveView("matches");
-          setFilterType("part_time");
-          setFilterSubType("");
-        },
+        onClick: () => navParams({ view: "matches", type: "part_time", sub: null }),
       });
     }
     return items;
@@ -1210,14 +1255,14 @@ const CandidateDashboard: React.FC<Props> = ({
           label: "Pokes Sent",
           count: pokesSentOnly.length,
           active: activeView === "pokes-sent",
-          onClick: () => setActiveView("pokes-sent"),
+          onClick: () => navParams({ view: "pokes-sent" }),
         },
         {
           id: "pokes-received",
           label: "Pokes Received",
           count: pokesReceivedOnly.length,
           active: activeView === "pokes-received",
-          onClick: () => setActiveView("pokes-received"),
+          onClick: () => navParams({ view: "pokes-received" }),
         },
         ...(isFinite(pokeLimit)
           ? [
@@ -1239,14 +1284,14 @@ const CandidateDashboard: React.FC<Props> = ({
           label: "Mails Sent",
           count: mailsSentOnly.length,
           active: activeView === "mails-sent",
-          onClick: () => setActiveView("mails-sent"),
+          onClick: () => navParams({ view: "mails-sent" }),
         },
         {
           id: "mails-received",
           label: "Mails Received",
           count: mailsReceivedOnly.length,
           active: activeView === "mails-received",
-          onClick: () => setActiveView("mails-received"),
+          onClick: () => navParams({ view: "mails-received" }),
         },
         ...(hasPurchasedVisibility && rows.length > 0
           ? [
@@ -1256,12 +1301,58 @@ const CandidateDashboard: React.FC<Props> = ({
                 tooltip:
                   "Compose a personalised email with your resume — click ✉ next to any row",
                 onClick: () => {
-                  setActiveView("matches");
+                  navParams({ view: "matches" });
                   if (rows.length > 0) handlePokeEmail(rows[0]);
                 },
               },
             ]
           : []),
+      ],
+    },
+    {
+      label: "My Dashboard",
+      icon: "",
+      items: [
+        {
+          id: "my-detail",
+          label: "My Dashboard",
+          active: activeView === "my-detail",
+          onClick: () => navParams({ view: "my-detail", dtab: "overview" }),
+        },
+        {
+          id: "my-detail-overview",
+          label: "Overview",
+          depth: 1,
+          active: activeView === "my-detail" && myDetailTab === "overview",
+          onClick: () => navParams({ view: "my-detail", dtab: "overview" }),
+        },
+        {
+          id: "my-detail-projects",
+          label: "Projects",
+          depth: 1,
+          count: myDetail?.projects.length ?? 0,
+          active: activeView === "my-detail" && myDetailTab === "projects",
+          onClick: () => navParams({ view: "my-detail", dtab: "projects" }),
+        },
+        {
+          id: "my-detail-activity",
+          label: "Marketer Activity",
+          depth: 1,
+          count: myDetail?.vendor_activity.length ?? 0,
+          active: activeView === "my-detail" && myDetailTab === "marketer-activity",
+          onClick: () =>
+            navParams({ view: "my-detail", dtab: "marketer-activity" }),
+        },
+        {
+          id: "my-detail-forwarded",
+          label: "Forwarded Openings",
+          depth: 1,
+          count: myDetail?.forwarded_openings.length ?? 0,
+          active:
+            activeView === "my-detail" && myDetailTab === "forwarded-openings",
+          onClick: () =>
+            navParams({ view: "my-detail", dtab: "forwarded-openings" }),
+        },
       ],
     },
     {
@@ -1273,16 +1364,20 @@ const CandidateDashboard: React.FC<Props> = ({
           label: `Forwarded Openings`,
           count: forwardedOpenings.length,
           active: activeView === "forwarded",
-          onClick: () => setActiveView("forwarded"),
+          onClick: () => navParams({ view: "forwarded" }),
         },
         {
           id: "refresh",
           label: "Refresh Data",
           onClick: () => {
-            setPaginationMap((prev) => ({
-              ...prev,
-              [activeView]: { page: 1, pageSize: currentPageSize },
-            }));
+            setSearchParams(
+              (prev) => {
+                const n = new URLSearchParams(prev);
+                n.delete("page");
+                return n;
+              },
+              { replace: true },
+            );
             setMatchFilters(buildFilterArgs(1, currentPageSize));
             refetchPokesSent();
             refetchPokesReceived();
@@ -1293,9 +1388,7 @@ const CandidateDashboard: React.FC<Props> = ({
           label: "Reset Filters",
           onClick: () => {
             setSearchText("");
-            setFilterType("");
-            setFilterSubType("");
-            setFilterWorkMode("");
+            navParams({ type: null, sub: null, mode: null, q: null });
           },
         },
         ...(profileUrl
@@ -1328,6 +1421,15 @@ const CandidateDashboard: React.FC<Props> = ({
     return `${typeLabel} › ${subLabel}`;
   })();
 
+  const myDetailTabLabel =
+    myDetailTab === "overview"
+      ? "Overview"
+      : myDetailTab === "projects"
+      ? "Projects"
+      : myDetailTab === "marketer-activity"
+      ? "Marketer Activity"
+      : "Forwarded Openings";
+
   const breadcrumb: [string, string, string] =
     activeView === "pokes-sent"
       ? ["Candidate Portal", "Pokes", "Pokes Sent"]
@@ -1339,6 +1441,8 @@ const CandidateDashboard: React.FC<Props> = ({
       ? ["Candidate Portal", "Mails", "Mails Received"]
       : activeView === "forwarded"
       ? ["Candidate Portal", "Actions", "Forwarded Openings"]
+      : activeView === "my-detail"
+      ? ["Candidate Portal", "My Dashboard", myDetailTabLabel]
       : ["Candidate Portal", "Matched Jobs", filterLabel];
 
   return (
@@ -1467,10 +1571,10 @@ const CandidateDashboard: React.FC<Props> = ({
                   }`}
                   onClick={() => {
                     if (card.view) {
-                      setActiveView(card.view);
                       if (card.view === "matches") {
-                        setFilterType("");
-                        setFilterSubType("");
+                        navParams({ view: "matches", type: null, sub: null });
+                      } else {
+                        navParams({ view: card.view });
                       }
                     }
                   }}
@@ -1646,6 +1750,319 @@ const CandidateDashboard: React.FC<Props> = ({
               />
             )}
 
+            {/* My Dashboard view — 4 tabs */}
+            {activeView === "my-detail" && (
+              <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                {myDetailLoading ? (
+                  <div style={{ textAlign: "center", padding: 60, fontSize: 13, color: "var(--w97-text-secondary)" }}>
+                    Loading your dashboard…
+                  </div>
+                ) : !myDetail ? (
+                  <div style={{ textAlign: "center", padding: 60, fontSize: 13, color: "var(--w97-text-secondary)" }}>
+                    No data found. Complete your profile to see details here.
+                  </div>
+                ) : (
+                  <>
+                    <Tabs
+                      activeKey={myDetailTab}
+                      onSelect={(key) => navParams({ dtab: key }, false)}
+                      tabs={[
+                        { key: "overview", label: "👤 Overview" },
+                        {
+                          key: "projects",
+                          label: (
+                            <>
+                              📋 Projects{" "}
+                              <span className="matchdb-tab-badge">{myDetail.projects.length}</span>
+                            </>
+                          ),
+                        },
+                        {
+                          key: "marketer-activity",
+                          label: (
+                            <>
+                              📊 Marketer Activity{" "}
+                              <span className="matchdb-tab-badge">{myDetail.vendor_activity.length}</span>
+                            </>
+                          ),
+                        },
+                        {
+                          key: "forwarded-openings",
+                          label: (
+                            <>
+                              📤 Forwarded Openings{" "}
+                              <span className="matchdb-tab-badge">{myDetail.forwarded_openings.length}</span>
+                            </>
+                          ),
+                        },
+                      ]}
+                    />
+
+                    {/* ── Tab: Overview ── */}
+                    {myDetailTab === "overview" && (() => {
+                      const allFins = myDetail.projects.flatMap((p) => p.financials);
+                      const totalBilled = allFins.reduce((a, f) => a + f.totalBilled, 0);
+                      const totalPay = allFins.reduce((a, f) => a + f.totalPay, 0);
+                      const totalNet = allFins.reduce((a, f) => a + f.netPayable, 0);
+                      const totalPaid = allFins.reduce((a, f) => a + f.amountPaid, 0);
+                      const totalPending = allFins.reduce((a, f) => a + Math.max(0, f.amountPending), 0);
+                      const totalHours = allFins.reduce((a, f) => a + f.hoursWorked, 0);
+                      const fmtC = (v: number) =>
+                        `$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          {/* ── Single-line profile strip ── */}
+                          <div style={{ borderBottom: "1px solid var(--w97-border)", background: "var(--w97-panel-bg, #f4f4f4)" }}>
+                            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "3px 0", padding: "8px 14px", fontSize: 12 }}>
+                              {(
+                                [
+                                  { v: myDetail.profile?.current_role, bold: true },
+                                  { v: myDetail.profile?.current_company },
+                                  { v: myDetail.profile?.location },
+                                  { v: myDetail.profile?.expected_hourly_rate != null ? `$${myDetail.profile.expected_hourly_rate}/hr` : null },
+                                  { v: myDetail.profile?.experience_years != null ? `${myDetail.profile.experience_years} yrs` : null },
+                                  { v: myDetail.profile?.phone },
+                                  { v: myDetail.profile?.email },
+                                ] as { v: string | null | undefined; bold?: boolean }[]
+                              ).filter((x) => x.v).map((x, i, arr) => (
+                                <React.Fragment key={i}>
+                                  <span style={{ fontWeight: x.bold ? 700 : 400, color: x.bold ? "var(--w97-titlebar-from)" : "inherit" }}>{x.v}</span>
+                                  {i < arr.length - 1 && <span style={{ margin: "0 7px", color: "var(--w97-text-secondary)", fontWeight: 300 }}>·</span>}
+                                </React.Fragment>
+                              ))}
+                              {/* Stats badges — right side */}
+                              <div style={{ marginLeft: "auto", display: "flex", gap: 5, flexWrap: "nowrap", alignItems: "center", paddingLeft: 12 }}>
+                                <span className="matchdb-type-pill" style={{ whiteSpace: "nowrap" }}>{myDetail.projects.filter((p) => p.is_active).length} active projects</span>
+                                <span className="matchdb-type-pill" style={{ whiteSpace: "nowrap" }}>{myDetail.vendor_activity.length} interactions</span>
+                                <span className="matchdb-type-pill" style={{ whiteSpace: "nowrap" }}>{myDetail.forwarded_openings.length} forwarded</span>
+                                <span className="matchdb-type-pill" style={{ whiteSpace: "nowrap" }}>{myDetail.marketer_info.length} marketers</span>
+                              </div>
+                            </div>
+                            {/* Skills row */}
+                            {(myDetail.profile?.skills || []).length > 0 && (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "0 14px 7px", alignItems: "center" }}>
+                                <span style={{ fontSize: 10, color: "var(--w97-text-secondary)", textTransform: "uppercase", letterSpacing: 0.5, marginRight: 4 }}>Skills</span>
+                                {(myDetail.profile?.skills || []).map((s) => (
+                                  <span key={s} style={{ background: "#e8f0fe", color: "var(--w97-blue)", padding: "2px 8px", borderRadius: 12, fontSize: 10, fontWeight: 500 }}>{s}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* ── Financial KPI strip ── */}
+                          {allFins.length > 0 && (
+                            <div className="ov-kpi-strip" style={{ margin: "10px 14px 0" }}>
+                              {[
+                                { label: "Hours", value: totalHours.toFixed(0), cls: "ov-kv-blue" },
+                                { label: "Total Pay", value: fmtC(totalPay), cls: "ov-kv-green" },
+                                { label: "Net Payable", value: fmtC(totalNet), cls: "ov-kv-teal" },
+                                { label: "Paid", value: fmtC(totalPaid), cls: "ov-kv-blue" },
+                                { label: "Pending", value: fmtC(totalPending), cls: totalPending > 0 ? "ov-kv-red" : "ov-kv-blue" },
+                              ].map((k, i, arr) => (
+                                <React.Fragment key={k.label}>
+                                  <div className="ov-kpi">
+                                    <span className="ov-kpi-label">{k.label}</span>
+                                    <span className={`ov-kpi-value ${k.cls}`}>{k.value}</span>
+                                  </div>
+                                  {i < arr.length - 1 && <div className="ov-kpi-div" />}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* ── Marketer roster summary table ── */}
+                          {myDetail.marketer_info.length > 0 && (
+                            <div style={{ padding: "10px 14px 0" }}>
+                              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+                                <thead>
+                                  <tr>
+                                    {["Company", "Invite Status", "Forwarded", "Joined"].map((h) => (
+                                      <th key={h} style={{ textAlign: "left", padding: "4px 8px", borderBottom: "1px solid var(--w97-border)", color: "var(--w97-text-secondary)", fontWeight: 600, fontSize: 11 }}>{h}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {myDetail.marketer_info.map((mc) => (
+                                    <tr key={mc.id} style={{ borderBottom: "1px solid var(--w97-border-light)" }}>
+                                      <td style={{ padding: "4px 8px", fontWeight: 500 }}>{mc.company_name || "—"}</td>
+                                      <td style={{ padding: "4px 8px" }}><span className="matchdb-type-pill">{mc.invite_status}</span></td>
+                                      <td style={{ padding: "4px 8px", textAlign: "center" }}>{mc.forwarded_count}</td>
+                                      <td style={{ padding: "4px 8px", color: "var(--w97-text-secondary)" }}>{new Date(mc.created_at).toLocaleDateString()}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── Tab: Projects ── */}
+                    {myDetailTab === "projects" && (
+                      <div style={{ padding: 16 }}>
+                        {myDetail.projects.length === 0 ? (
+                          <Panel>
+                            <div style={{ padding: 32, textAlign: "center", fontSize: 13, color: "var(--w97-text-secondary)" }}>
+                              No projects found. Apply to jobs to see them here.
+                            </div>
+                          </Panel>
+                        ) : (
+                          myDetail.projects.map((proj) => (
+                            <div key={proj.id} className="matchdb-card" style={{ marginBottom: 16, padding: 16 }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                                <div>
+                                  <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--w97-titlebar-from)" }}>{proj.job_title}</h4>
+                                  <div style={{ fontSize: 11, color: "var(--w97-text-secondary)", marginTop: 2 }}>
+                                    {proj.vendor_email} · {proj.location || "—"} · {proj.job_type}{proj.job_sub_type ? ` › ${proj.job_sub_type}` : ""}
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                  <span className="matchdb-type-pill">{proj.status}</span>
+                                  {proj.is_active ? (
+                                    <span className="matchdb-type-pill" style={{ background: "#e8f5e9", color: "#2e7d32" }}>Active</span>
+                                  ) : (
+                                    <span className="matchdb-type-pill" style={{ background: "#fff5f5", color: "#bb3333" }}>Closed</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {proj.financials.length === 0 ? (
+                                <div style={{ fontSize: 12, color: "var(--w97-text-secondary)", fontStyle: "italic" }}>
+                                  No financial data recorded yet.
+                                </div>
+                              ) : (
+                                <div style={{ overflowX: "auto" }}>
+                                  <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", minWidth: 700 }}>
+                                    <thead>
+                                      <tr>
+                                        {["Bill Rate", "Pay Rate", "Hours", "Total Billed", "Total Pay", "Tax", "Cash", "Net Payable", "Paid", "Pending", "Period"].map((h) => (
+                                          <th key={h} style={{ textAlign: "right", padding: "4px 8px", borderBottom: "1px solid var(--w97-border)", color: "var(--w97-text-secondary)", fontWeight: 600, fontSize: 10 }}>{h}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {proj.financials.map((fin) => (
+                                        <tr key={fin.id} style={{ borderBottom: "1px solid var(--w97-border-light)" }}>
+                                          {[
+                                            `$${fin.billRate}/hr`,
+                                            `$${fin.payRate}/hr`,
+                                            `${fin.hoursWorked}h`,
+                                            `$${fin.totalBilled.toLocaleString()}`,
+                                            `$${fin.totalPay.toLocaleString()}`,
+                                            `$${fin.taxAmount.toLocaleString()}`,
+                                            `$${fin.cashAmount.toLocaleString()}`,
+                                            `$${fin.netPayable.toLocaleString()}`,
+                                            `$${fin.amountPaid.toLocaleString()}`,
+                                            fin.amountPending > 0 ? `$${fin.amountPending.toLocaleString()}` : "—",
+                                            [fin.projectStart ? new Date(fin.projectStart).toLocaleDateString("en-US", { month: "short", year: "2-digit" }) : "—",
+                                             fin.projectEnd ? new Date(fin.projectEnd).toLocaleDateString("en-US", { month: "short", year: "2-digit" }) : "now"].join(" – "),
+                                          ].map((v, i) => (
+                                            <td key={i} style={{ textAlign: "right", padding: "5px 8px", fontFamily: "monospace" }}>{v}</td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                  {proj.financials[0]?.notes && (
+                                    <div style={{ marginTop: 6, fontSize: 11, color: "var(--w97-text-secondary)", fontStyle: "italic" }}>
+                                      Note: {proj.financials[0].notes}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── Tab: Marketer Activity ── */}
+                    {myDetailTab === "marketer-activity" && (
+                      <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+                        {/* Marketer summary */}
+                        {myDetail.marketer_info.length > 0 && (
+                          <div className="matchdb-card" style={{ padding: 16 }}>
+                            <h3 style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "var(--w97-titlebar-from)" }}>
+                              Marketing Companies Representing You
+                            </h3>
+                            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr>
+                                  {["Company", "Status", "Forwarded to You", "Added"].map((h) => (
+                                    <th key={h} style={{ textAlign: "left", padding: "4px 8px", borderBottom: "1px solid var(--w97-border)", color: "var(--w97-text-secondary)", fontWeight: 600, fontSize: 11 }}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {myDetail.marketer_info.map((mc) => (
+                                  <tr key={mc.id} style={{ borderBottom: "1px solid var(--w97-border-light)" }}>
+                                    <td style={{ padding: "5px 8px", fontWeight: 500 }}>{mc.company_name || "—"}</td>
+                                    <td style={{ padding: "5px 8px" }}>
+                                      <span className="matchdb-type-pill">{mc.invite_status}</span>
+                                    </td>
+                                    <td style={{ padding: "5px 8px", textAlign: "center" }}>{mc.forwarded_count}</td>
+                                    <td style={{ padding: "5px 8px", color: "var(--w97-text-secondary)" }}>{new Date(mc.created_at).toLocaleDateString()}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
+                        {/* Poke / Email activity received */}
+                        <DataTable<(typeof myDetail.vendor_activity)[number]>
+                          columns={[
+                            { key: "sender_name", header: "From", width: "15%", skeletonWidth: 100, render: (r) => <>{r.sender_name || r.sender_email}</> },
+                            { key: "sender_email", header: "Email", width: "18%", skeletonWidth: 120, render: (r) => <a href={`mailto:${r.sender_email}`} style={{ color: "#2a5fa0", textDecoration: "none" }}>{r.sender_email}</a> },
+                            { key: "sender_type", header: "Type", width: "8%", skeletonWidth: 60, render: (r) => <span className="matchdb-type-pill">{r.sender_type}</span> },
+                            { key: "kind", header: "Kind", width: "7%", skeletonWidth: 50, render: (r) => <>{r.is_email ? "✉ Email" : "👋 Poke"}</> },
+                            { key: "subject", header: "Subject", width: "22%", skeletonWidth: 140, render: (r) => <>{r.subject || "—"}</> },
+                            { key: "job_title", header: "Job", width: "18%", skeletonWidth: 110, render: (r) => <>{r.job_title || "—"}</> },
+                            { key: "created_at", header: "Date", width: "12%", skeletonWidth: 70, render: (r) => <>{new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</> },
+                          ]}
+                          data={myDetail.vendor_activity}
+                          keyExtractor={(r) => r.id}
+                          loading={myDetailLoading}
+                          paginate
+                          titleIcon="📊"
+                          title="Vendor Interactions (Pokes & Emails Sent to You)"
+                          emptyMessage="No vendor activity recorded yet."
+                        />
+                      </div>
+                    )}
+
+                    {/* ── Tab: Forwarded Openings ── */}
+                    {myDetailTab === "forwarded-openings" && (
+                      <div style={{ padding: 16 }}>
+                        <DataTable<(typeof myDetail.forwarded_openings)[number]>
+                          columns={[
+                            { key: "job_title", header: "Job Title", width: "18%", skeletonWidth: 120, render: (f) => <>{f.job_title}</> },
+                            { key: "company_name", header: "From Company", width: "14%", skeletonWidth: 100, render: (f) => <>{f.company_name || "—"}</> },
+                            { key: "marketer_email", header: "Marketer", width: "16%", skeletonWidth: 110, render: (f) => <a href={`mailto:${f.marketer_email}`} style={{ color: "#2a5fa0", textDecoration: "none" }}>{f.marketer_email}</a> },
+                            { key: "job_type", header: "Type", width: "10%", skeletonWidth: 70, render: (f) => <>{f.job_type}{f.job_sub_type ? ` › ${f.job_sub_type}` : ""}</> },
+                            { key: "job_location", header: "Location", width: "10%", skeletonWidth: 70, render: (f) => <>{f.job_location || "—"}</> },
+                            { key: "vendor_email", header: "Vendor", width: "14%", skeletonWidth: 90, render: (f) => <>{f.vendor_email || "—"}</> },
+                            { key: "note", header: "Note", width: "9%", skeletonWidth: 60, render: (f) => <span style={{ fontSize: 10 }}>{f.note || "—"}</span> },
+                            { key: "status", header: "Status", width: "7%", skeletonWidth: 50, render: (f) => <span className="matchdb-type-pill">{f.status}</span> },
+                            { key: "created_at", header: "Date", width: "8%", skeletonWidth: 60, render: (f) => <>{new Date(f.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</> },
+                          ]}
+                          data={myDetail.forwarded_openings}
+                          keyExtractor={(f) => f.id}
+                          loading={myDetailLoading}
+                          paginate
+                          titleIcon="📤"
+                          title="Job Openings Forwarded to You by Your Marketing Company"
+                          emptyMessage="No openings have been forwarded to you yet."
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Matched Jobs view */}
             {activeView === "matches" && (
               <>
@@ -1678,10 +2095,9 @@ const CandidateDashboard: React.FC<Props> = ({
                         id="candidate-type"
                         className="matchdb-title-select"
                         value={filterType}
-                        onChange={(e) => {
-                          setFilterType(e.target.value);
-                          setFilterSubType("");
-                        }}
+                        onChange={(e) =>
+                          navParams({ type: e.target.value || null, sub: null })
+                        }
                       >
                         <option value="">All Types</option>
                         {JOB_TYPES.filter((t) => showType(t.value)).map((t) => (
@@ -1696,7 +2112,9 @@ const CandidateDashboard: React.FC<Props> = ({
                           id="candidate-subtype"
                           className="matchdb-title-select"
                           value={filterSubType}
-                          onChange={(e) => setFilterSubType(e.target.value)}
+                          onChange={(e) =>
+                            navParams({ sub: e.target.value || null })
+                          }
                         >
                           <option value="">All Sub</option>
                           {(filterType === "contract"
@@ -1715,7 +2133,9 @@ const CandidateDashboard: React.FC<Props> = ({
                         id="candidate-workmode"
                         className="matchdb-title-select"
                         value={filterWorkMode}
-                        onChange={(e) => setFilterWorkMode(e.target.value)}
+                        onChange={(e) =>
+                          navParams({ mode: e.target.value || null })
+                        }
                       >
                         <option value="">All Modes</option>
                         {WORK_MODES.map((wm) => (
@@ -1728,9 +2148,7 @@ const CandidateDashboard: React.FC<Props> = ({
                         size="xs"
                         onClick={() => {
                           setSearchText("");
-                          setFilterType("");
-                          setFilterSubType("");
-                          setFilterWorkMode("");
+                          navParams({ type: null, sub: null, mode: null, q: null });
                         }}
                       >
                         Reset
@@ -1738,13 +2156,14 @@ const CandidateDashboard: React.FC<Props> = ({
                       <Button
                         size="xs"
                         onClick={() => {
-                          setPaginationMap((prev) => ({
-                            ...prev,
-                            [activeView]: {
-                              page: 1,
-                              pageSize: currentPageSize,
+                          setSearchParams(
+                            (prev) => {
+                              const n = new URLSearchParams(prev);
+                              n.delete("page");
+                              return n;
                             },
-                          }));
+                            { replace: true },
+                          );
                           setMatchFilters(buildFilterArgs(1, currentPageSize));
                         }}
                       >

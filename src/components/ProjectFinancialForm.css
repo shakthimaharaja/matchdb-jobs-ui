@@ -1659,15 +1659,18 @@
 }
 
 .ov-pt-foot {
-  background: var(--pf-hdr-bg);
+  border-top: 2px solid var(--pf-border);
 }
+.ov-pt-foot.ov-foot-profit  { background: #e8f5e9; }
+.ov-pt-foot.ov-foot-loss    { background: #ffebee; }
+.ov-pt-foot.ov-foot-neutral { background: var(--pf-section-bg); }
 
 .ov-pt-tf {
   padding: 7px 10px;
   font-size: 11.5px;
   font-family: "Consolas", "Courier New", monospace;
   font-weight: 700;
-  color: #fff;
+  color: var(--pf-text);
   white-space: nowrap;
 }
 
@@ -1789,14 +1792,19 @@
 }
 
 .ov-mt-foot {
-  background: var(--pf-hdr-bg);
+  border-top: 2px solid var(--pf-border);
 }
+.ov-mt-foot.ov-foot-profit  { background: #e8f5e9; }
+.ov-mt-foot.ov-foot-loss    { background: #ffebee; }
+.ov-mt-foot.ov-foot-neutral { background: var(--pf-section-bg); }
 
 .ov-mt-tf {
   padding: 7px 10px;
   font-size: 11.5px;
   font-family: "Consolas", "Courier New", monospace;
   font-weight: 700;
-  color: #fff;
+  color: var(--pf-text);
   white-space: nowrap;
 }
+
+/* Footer value colours — use the standard ov-val-* classes as-is */

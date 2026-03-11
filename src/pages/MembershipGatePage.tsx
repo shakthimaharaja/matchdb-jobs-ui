@@ -253,10 +253,7 @@ const CandidateGate: React.FC = () => (
 
         {/* CTA */}
         <div className="mg-cta-row">
-          <Button
-            variant="primary"
-            onClick={() => openPricing("candidate")}
-          >
+          <Button variant="primary" onClick={() => openPricing("candidate")}>
             Get Visibility Package →
           </Button>
           <span className="mg-cta-note">
@@ -416,10 +413,7 @@ const MarketerGate: React.FC = () => (
         </div>
 
         <div className="mg-cta-row">
-          <Button
-            variant="primary"
-            onClick={() => openPricing("marketer")}
-          >
+          <Button variant="primary" onClick={() => openPricing("marketer")}>
             View Marketer Plans &amp; Pricing →
           </Button>
           <span className="mg-cta-note">

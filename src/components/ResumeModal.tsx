@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   type CandidateProfile as IProfile,
   useGetProfileQuery,
   useUpsertProfileMutation,
-} from '../api/jobsApi';
-import { Button, Input } from 'matchdb-component-library';
-import './ResumeModal.css';
+} from "../api/jobsApi";
+import { Button, Input } from "matchdb-component-library";
+import "./ResumeModal.css";
 
 interface Props {
   open: boolean;
@@ -15,29 +15,34 @@ interface Props {
 }
 
 const EMPTY: Partial<IProfile> = {
-  name: '',
-  email: '',
-  phone: '',
-  location: '',
-  current_company: '',
-  current_role: '',
-  resume_summary: '',
-  resume_experience: '',
-  resume_education: '',
-  resume_achievements: '',
-  bio: '',
+  name: "",
+  email: "",
+  phone: "",
+  location: "",
+  current_company: "",
+  current_role: "",
+  resume_summary: "",
+  resume_experience: "",
+  resume_education: "",
+  resume_achievements: "",
+  bio: "",
 };
 
 const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
-  const { data: profile, isLoading: profileFetching, error: profileQueryError, refetch } =
-    useGetProfileQuery(undefined, { skip: !open });
+  const {
+    data: profile,
+    isLoading: profileFetching,
+    error: profileQueryError,
+    refetch,
+  } = useGetProfileQuery(undefined, { skip: !open });
   const [doUpsert, { isLoading: isSaving }] = useUpsertProfileMutation();
 
   const profileLoading = profileFetching || isSaving;
-  const profileError =
-    profileQueryError
-      ? String((profileQueryError as any)?.data?.message || 'Failed to load profile')
-      : null;
+  const profileError = profileQueryError
+    ? String(
+        (profileQueryError as any)?.data?.message || "Failed to load profile",
+      )
+    : null;
 
   const [form, setForm] = useState<Partial<IProfile>>(EMPTY);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -75,7 +80,7 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
       await doUpsert(form as IProfile).unwrap();
       setSaveSuccess(true);
     } catch (err: any) {
-      setSaveError(err?.data?.message || 'Failed to save profile');
+      setSaveError(err?.data?.message || "Failed to save profile");
     }
   };
 
@@ -86,28 +91,32 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
         <div className="rm-titlebar">
           <span className="rm-titlebar-icon">📄</span>
           <span className="rm-titlebar-title">
-            {isLocked ? 'My Resume (Read-Only)' : 'Fill In Your Resume'}
+            {isLocked ? "My Resume (Read-Only)" : "Fill In Your Resume"}
           </span>
-          <Button variant="close" size="xs" onClick={onClose} title="Close">✕</Button>
+          <Button variant="close" size="xs" onClick={onClose} title="Close">
+            ✕
+          </Button>
         </div>
 
         {/* Status bar below titlebar */}
         <div className="rm-statusbar">
           {isLocked
-            ? '🔒 Resume is locked after first save. You may still update contact info and preferences.'
-            : 'Fill in your details below — skills will be auto-extracted on save. Copy-paste from your existing resume.'}
+            ? "🔒 Resume is locked after first save. You may still update contact info and preferences."
+            : "Fill in your details below — skills will be auto-extracted on save. Copy-paste from your existing resume."}
         </div>
 
         {/* Scrollable body */}
         <div className="rm-body">
           {(profileError || saveError) && (
-            <div className="rm-alert rm-alert-error">{profileError || saveError}</div>
+            <div className="rm-alert rm-alert-error">
+              {profileError || saveError}
+            </div>
           )}
           {saveSuccess && (
             <div className="rm-alert rm-alert-success">
               {isLocked
-                ? '✓ Preferences updated successfully!'
-                : '✓ Resume saved! Skills have been extracted automatically.'}
+                ? "✓ Preferences updated successfully!"
+                : "✓ Resume saved! Skills have been extracted automatically."}
             </div>
           )}
 
@@ -119,8 +128,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
                 <label>Full Name *</label>
                 <Input
                   type="text"
-                  value={form.name || ''}
-                  onChange={(e) => set('name', e.target.value)}
+                  value={form.name || ""}
+                  onChange={(e) => set("name", e.target.value)}
                   placeholder="John Smith"
                 />
               </div>
@@ -128,8 +137,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
                 <label>Email *</label>
                 <Input
                   type="email"
-                  value={form.email || ''}
-                  onChange={(e) => set('email', e.target.value)}
+                  value={form.email || ""}
+                  onChange={(e) => set("email", e.target.value)}
                   disabled={isLocked}
                 />
               </div>
@@ -137,8 +146,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
                 <label>Phone</label>
                 <Input
                   type="text"
-                  value={form.phone || ''}
-                  onChange={(e) => set('phone', e.target.value)}
+                  value={form.phone || ""}
+                  onChange={(e) => set("phone", e.target.value)}
                   placeholder="+1-555-0100"
                 />
               </div>
@@ -146,8 +155,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
                 <label>Location</label>
                 <Input
                   type="text"
-                  value={form.location || ''}
-                  onChange={(e) => set('location', e.target.value)}
+                  value={form.location || ""}
+                  onChange={(e) => set("location", e.target.value)}
                   placeholder="City, State"
                 />
               </div>
@@ -162,8 +171,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
                 <label>Current Company</label>
                 <Input
                   type="text"
-                  value={form.current_company || ''}
-                  onChange={(e) => set('current_company', e.target.value)}
+                  value={form.current_company || ""}
+                  onChange={(e) => set("current_company", e.target.value)}
                   disabled={isLocked}
                   placeholder="Acme Inc"
                 />
@@ -172,8 +181,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
                 <label>Current Role / Title</label>
                 <Input
                   type="text"
-                  value={form.current_role || ''}
-                  onChange={(e) => set('current_role', e.target.value)}
+                  value={form.current_role || ""}
+                  onChange={(e) => set("current_role", e.target.value)}
                   disabled={isLocked}
                   placeholder="Senior React Developer"
                 />
@@ -185,19 +194,21 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
           <fieldset className="rm-fieldset">
             <legend>
               Resume Sections
-              {isLocked && <span className="rm-locked-badge">🔒 Read-only</span>}
+              {isLocked && (
+                <span className="rm-locked-badge">🔒 Read-only</span>
+              )}
             </legend>
 
             <div className="rm-field">
               <label>Professional Summary / Objective</label>
               {isLocked ? (
-                <div className="rm-readonly">{form.resume_summary || '—'}</div>
+                <div className="rm-readonly">{form.resume_summary || "—"}</div>
               ) : (
                 <textarea
                   className="rm-textarea"
                   rows={3}
-                  value={form.resume_summary || ''}
-                  onChange={(e) => set('resume_summary', e.target.value)}
+                  value={form.resume_summary || ""}
+                  onChange={(e) => set("resume_summary", e.target.value)}
                   placeholder="Brief overview of your career goals and key strengths..."
                 />
               )}
@@ -206,13 +217,15 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             <div className="rm-field rm-field-mt">
               <label>Work Experience</label>
               {isLocked ? (
-                <div className="rm-readonly">{form.resume_experience || '—'}</div>
+                <div className="rm-readonly">
+                  {form.resume_experience || "—"}
+                </div>
               ) : (
                 <textarea
                   className="rm-textarea"
                   rows={6}
-                  value={form.resume_experience || ''}
-                  onChange={(e) => set('resume_experience', e.target.value)}
+                  value={form.resume_experience || ""}
+                  onChange={(e) => set("resume_experience", e.target.value)}
                   placeholder={`Sr. React Developer @ Acme Inc (2021–2024)\n- Built scalable dashboards using React, TypeScript, Redux\n- Led team of 4 engineers\n\nReact Developer @ Startup LLC (2019–2021)\n- Developed customer-facing web apps`}
                 />
               )}
@@ -221,13 +234,15 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             <div className="rm-field rm-field-mt">
               <label>Education</label>
               {isLocked ? (
-                <div className="rm-readonly">{form.resume_education || '—'}</div>
+                <div className="rm-readonly">
+                  {form.resume_education || "—"}
+                </div>
               ) : (
                 <textarea
                   className="rm-textarea"
                   rows={3}
-                  value={form.resume_education || ''}
-                  onChange={(e) => set('resume_education', e.target.value)}
+                  value={form.resume_education || ""}
+                  onChange={(e) => set("resume_education", e.target.value)}
                   placeholder={`B.S. Computer Science, State University (2018)\nRelevant coursework: Algorithms, Databases, Networks`}
                 />
               )}
@@ -236,13 +251,15 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             <div className="rm-field rm-field-mt">
               <label>Certifications &amp; Achievements</label>
               {isLocked ? (
-                <div className="rm-readonly">{form.resume_achievements || '—'}</div>
+                <div className="rm-readonly">
+                  {form.resume_achievements || "—"}
+                </div>
               ) : (
                 <textarea
                   className="rm-textarea"
                   rows={3}
-                  value={form.resume_achievements || ''}
-                  onChange={(e) => set('resume_achievements', e.target.value)}
+                  value={form.resume_achievements || ""}
+                  onChange={(e) => set("resume_achievements", e.target.value)}
                   placeholder={`AWS Certified Solutions Architect (2023)\nGoogle Cloud Professional Data Engineer`}
                 />
               )}
@@ -251,13 +268,13 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             <div className="rm-field rm-field-mt">
               <label>Brief Introduction / Bio</label>
               {isLocked ? (
-                <div className="rm-readonly">{form.bio || '—'}</div>
+                <div className="rm-readonly">{form.bio || "—"}</div>
               ) : (
                 <textarea
                   className="rm-textarea"
                   rows={3}
-                  value={form.bio || ''}
-                  onChange={(e) => set('bio', e.target.value)}
+                  value={form.bio || ""}
+                  onChange={(e) => set("bio", e.target.value)}
                   placeholder="Tell recruiters about your experience and goals..."
                 />
               )}
@@ -267,10 +284,17 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
           {/* Extracted skills read-only preview */}
           {profile?.skills && profile.skills.length > 0 && (
             <fieldset className="rm-fieldset">
-              <legend>Extracted Skills <span className="rm-skill-note">auto-detected from your resume</span></legend>
+              <legend>
+                Extracted Skills{" "}
+                <span className="rm-skill-note">
+                  auto-detected from your resume
+                </span>
+              </legend>
               <div className="rm-skill-list">
                 {profile.skills.map((s) => (
-                  <span key={s} className="rm-skill-tag">{s}</span>
+                  <span key={s} className="rm-skill-tag">
+                    {s}
+                  </span>
                 ))}
               </div>
             </fieldset>
@@ -286,7 +310,7 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
               disabled={profileLoading || !form.name || !form.email}
               title="Save your resume — skills will be extracted automatically"
             >
-              {profileLoading ? 'Saving...' : 'Save & Extract Skills'}
+              {profileLoading ? "Saving..." : "Save & Extract Skills"}
             </Button>
           )}
           {isLocked && (
@@ -296,12 +320,10 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
               disabled={profileLoading}
               title="Update your contact information and preferences"
             >
-              {profileLoading ? 'Saving...' : 'Update Preferences'}
+              {profileLoading ? "Saving..." : "Update Preferences"}
             </Button>
           )}
-          <Button onClick={onClose}>
-            Close
-          </Button>
+          <Button onClick={onClose}>Close</Button>
         </div>
       </div>
     </div>

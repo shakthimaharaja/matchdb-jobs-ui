@@ -19,7 +19,7 @@ interface PokeEmailModalProps {
     to_name: string;
     subject_context: string;
     email_body: string;
-    pdf_data?: string;   // base64 PDF (candidate resume)
+    pdf_data?: string; // base64 PDF (candidate resume)
   }) => void;
   onClose: () => void;
   sending: boolean;
@@ -87,7 +87,9 @@ ${senderEmail}`,
       subject: `${name} — Interested in ${row.pokeSubjectContext}`,
       body: `Dear ${row.pokeTargetName},
 
-I am writing to express my strong interest in the ${row.pokeSubjectContext} position at your company.
+I am writing to express my strong interest in the ${
+        row.pokeSubjectContext
+      } position at your company.
 My resume is attached as a PDF for your reference.
 
 ━━━ ABOUT ME ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -141,7 +143,13 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
 
   useEffect(() => {
     if (open && row) {
-      const tpl = buildTemplate(row, isVendor, senderName, senderEmail, senderProfile);
+      const tpl = buildTemplate(
+        row,
+        isVendor,
+        senderName,
+        senderEmail,
+        senderProfile,
+      );
       setSubject(tpl.subject);
       setBody(tpl.body);
     }
@@ -174,7 +182,13 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
 
   const handleReset = () => {
     if (!row) return;
-    const tpl = buildTemplate(row, isVendor, senderName, senderEmail, senderProfile);
+    const tpl = buildTemplate(
+      row,
+      isVendor,
+      senderName,
+      senderEmail,
+      senderProfile,
+    );
     setSubject(tpl.subject);
     setBody(tpl.body);
   };
@@ -185,7 +199,12 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
     <div className="rm-overlay" onClick={onClose}>
       <div
         className="rm-window"
-        style={{ width: 720, maxHeight: "90vh", display: "flex", flexDirection: "column" }}
+        style={{
+          width: 720,
+          maxHeight: "90vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Title bar */}
@@ -194,7 +213,9 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           <span className="rm-titlebar-title">
             Mail Template — {row.pokeTargetName}
           </span>
-          <Button variant="close" size="xs" onClick={onClose} title="Close">✕</Button>
+          <Button variant="close" size="xs" onClick={onClose} title="Close">
+            ✕
+          </Button>
         </div>
 
         {/* Status bar */}
@@ -216,7 +237,15 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           {/* To / From */}
           <fieldset className="rm-fieldset">
             <legend>Recipient</legend>
-            <div style={{ display: "grid", gridTemplateColumns: "60px 1fr", gap: 4, alignItems: "center", fontSize: 12 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "60px 1fr",
+                gap: 4,
+                alignItems: "center",
+                fontSize: 12,
+              }}
+            >
               <span style={{ fontWeight: 700, color: "#555" }}>To:</span>
               <span style={{ fontFamily: "monospace", fontSize: 12 }}>
                 {row.pokeTargetName} &lt;{row.pokeTargetEmail}&gt;
@@ -227,7 +256,9 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
               </span>
               {!isVendor && (
                 <>
-                  <span style={{ fontWeight: 700, color: "#555" }}>Attach:</span>
+                  <span style={{ fontWeight: 700, color: "#555" }}>
+                    Attach:
+                  </span>
                   <span style={{ fontSize: 11, color: "#2a5fa0" }}>
                     📎 resume.pdf (generated from your profile)
                   </span>
@@ -252,7 +283,14 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           <fieldset className="rm-fieldset" style={{ flex: 1 }}>
             <legend>
               Email Body
-              <span style={{ marginLeft: 8, fontSize: 10, color: "#888", fontWeight: 400 }}>
+              <span
+                style={{
+                  marginLeft: 8,
+                  fontSize: 10,
+                  color: "#888",
+                  fontWeight: 400,
+                }}
+              >
                 {isVendor
                   ? "— 3-part template: edit the [bracketed] sections · Part 1 intro · Part 2 job · Part 3 contact"
                   : "— resume details · a PDF copy will be attached · editable before sending"}
@@ -260,7 +298,14 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
             </legend>
             <textarea
               className="rm-textarea"
-              style={{ width: "100%", boxSizing: "border-box", minHeight: 340, fontFamily: "monospace", fontSize: 11, resize: "vertical" }}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                minHeight: 340,
+                fontFamily: "monospace",
+                fontSize: 11,
+                resize: "vertical",
+              }}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Compose your email here..."
@@ -280,9 +325,19 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
             className="rm-btn rm-btn-primary"
             onClick={handleSend}
             disabled={isBusy || !subject.trim() || !body.trim() || sentSuccess}
-            title={!isVendor ? "Send email with resume PDF attached" : "Send mail template"}
+            title={
+              !isVendor
+                ? "Send email with resume PDF attached"
+                : "Send mail template"
+            }
           >
-            {generatingPdf ? "⏳ Generating PDF..." : isBusy ? "⏳ Sending..." : sentSuccess ? "✓ Sent" : "📤 Send Mail Template"}
+            {generatingPdf
+              ? "⏳ Generating PDF..."
+              : isBusy
+              ? "⏳ Sending..."
+              : sentSuccess
+              ? "✓ Sent"
+              : "📤 Send Mail Template"}
           </button>
           <button
             type="button"
