@@ -3299,7 +3299,6 @@ const CandidateDashboard: React.FC<Props> = ({
             downloadLabel="Download CSV"
             pageResetKey={`${sortKey ?? ""}-${sortDir}`}
             onRowDoubleClick={(row) => setSelectedJob(row.rawData || null)}
-            rnColWidth="22px"
           />
         )}
       </>

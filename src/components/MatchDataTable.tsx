@@ -502,7 +502,6 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       onRowDoubleClick={onRowClick}
       flashIds={flashIds}
       deleteFlashIds={deleteFlashIds}
-      rnColWidth="22px"
     />
   );
 };

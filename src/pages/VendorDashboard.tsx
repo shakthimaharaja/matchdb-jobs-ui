@@ -587,28 +587,20 @@ const VendorDashboard: React.FC<Props> = ({
   const postingsColumns = useMemo<DataTableColumn<Job>[]>(
     () => [
       {
-        key: "expand",
-        header: "⊕",
-        width: "22px",
-        align: "center" as const,
-        skeletonWidth: 22,
-        thProps: { title: "Click to view full posting" },
-        render: (job: Job) => (
-          <Button
-            variant="expand"
-            title="View full job posting"
-            onClick={() => setSelectedJobPosting(job)}
-          >
-            ⊕
-          </Button>
-        ),
-      },
-      {
         key: "title",
         header: "Title",
         width: "14%",
         skeletonWidth: 100,
-        render: (job: Job) => <>{job.title}</>,
+        render: (job: Job) => (
+          <button
+            type="button"
+            className="matchdb-link-btn"
+            onClick={() => setSelectedJobPosting(job)}
+            title={`View details for ${job.title}`}
+          >
+            {job.title}
+          </button>
+        ),
         tooltip: (job: Job) => job.title,
       },
       {
