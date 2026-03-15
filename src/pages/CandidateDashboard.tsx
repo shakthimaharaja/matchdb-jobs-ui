@@ -828,22 +828,6 @@ const CandidateDashboard: React.FC<Props> = ({
 
     return [
       {
-        key: "expand",
-        header: "⊕",
-        width: "22px",
-        align: "center" as const,
-        skeletonWidth: 22,
-        render: (row: MatchRow) => (
-          <Button
-            variant="expand"
-            title="View details (or double-click row)"
-            onClick={() => onRowClick(row)}
-          >
-            ⊕
-          </Button>
-        ),
-      },
-      {
         key: "name",
         header: <>Name {indicator("name")}</>,
         width: "11%",
@@ -3315,6 +3299,7 @@ const CandidateDashboard: React.FC<Props> = ({
             downloadLabel="Download CSV"
             pageResetKey={`${sortKey ?? ""}-${sortDir}`}
             onRowDoubleClick={(row) => setSelectedJob(row.rawData || null)}
+            rnColWidth="22px"
           />
         )}
       </>

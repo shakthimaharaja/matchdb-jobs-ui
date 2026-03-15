@@ -302,30 +302,6 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
 
     return [
       {
-        key: "expand",
-        header: "⊕",
-        width: "22px",
-        align: "center" as const,
-        skeletonWidth: 22,
-        render: (row: MatchRow) =>
-          onRowClick ? (
-            <button
-              type="button"
-              className="matchdb-btn matchdb-btn-expand"
-              title="View details (or double-click row)"
-              onClick={() => onRowClick(row)}
-            >
-              ⊕
-            </button>
-          ) : (
-            <span
-              style={{ color: "var(--w97-btn-shadow, #c0c0c0)", fontSize: 13 }}
-            >
-              ⊕
-            </span>
-          ),
-      },
-      {
         key: "name",
         header: <>Name {indicator("name")}</>,
         width: "11%",
@@ -526,6 +502,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       onRowDoubleClick={onRowClick}
       flashIds={flashIds}
       deleteFlashIds={deleteFlashIds}
+      rnColWidth="22px"
     />
   );
 };

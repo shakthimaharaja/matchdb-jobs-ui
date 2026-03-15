@@ -3787,7 +3787,6 @@ const MarketerDashboard: React.FC<Props> = () => {
 
     const monthRows = buildMonthlyRows(allFins);
 
-
     const inviteAccepted = candidateDetail.roster.invite_status === "accepted";
     const inviteBadgeBg = inviteAccepted ? "#e8f5e9" : "#fff3e0";
     const inviteBadgeColor = inviteAccepted ? "#2e7d32" : "#b8860b";
@@ -4632,8 +4631,6 @@ const MarketerDashboard: React.FC<Props> = () => {
     };
 
     const combinedRows = activeProject ? buildRows(activeProject) : [];
-
-
 
     const totals = combinedRows.reduce(
       (acc, r) => ({

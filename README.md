@@ -105,28 +105,28 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 
 ## Props from Shell (JobsAppProps)
 
-| Prop                     | Type                              | Description                    |
-| ------------------------ | --------------------------------- | ------------------------------ |
-| `token`                  | `string \| null`                  | JWT access token               |
+| Prop                     | Type                              | Description                          |
+| ------------------------ | --------------------------------- | ------------------------------------ |
+| `token`                  | `string \| null`                  | JWT access token                     |
 | `userType`               | `string \| undefined`             | `candidate`, `vendor`, or `marketer` |
-| `userId`                 | `string \| undefined`             | User ID                        |
-| `userEmail`              | `string \| undefined`             | User email                     |
-| `username`               | `string \| undefined`             | Username slug for profile URLs |
-| `plan`                   | `string \| undefined`             | Subscription plan              |
-| `membershipConfig`       | `Record<string,string[]> \| null` | Purchased visibility domains   |
-| `hasPurchasedVisibility` | `boolean \| undefined`            | Unlocks matched jobs view      |
+| `userId`                 | `string \| undefined`             | User ID                              |
+| `userEmail`              | `string \| undefined`             | User email                           |
+| `username`               | `string \| undefined`             | Username slug for profile URLs       |
+| `plan`                   | `string \| undefined`             | Subscription plan                    |
+| `membershipConfig`       | `Record<string,string[]> \| null` | Purchased visibility domains         |
+| `hasPurchasedVisibility` | `boolean \| undefined`            | Unlocks matched jobs view            |
 
 ---
 
 ## Routing (JobsApp.tsx)
 
-| Condition                  | Component Rendered    | URL Paths                                  |
-| -------------------------- | --------------------- | ------------------------------------------ |
-| Not logged in              | `PublicJobsView`      | `/jobs`, `/jobs/candidate`, `/jobs/vendor` |
-| Logged in as **candidate** | `CandidateDashboard`  |                                            |
-| Logged in as **vendor**    | `VendorDashboard`     |                                            |
-| Logged in as **marketer**  | `MarketerDashboard`   |                                            |
-| Invite token in URL        | `InviteAcceptPage`    | `/jobs/invite/:token`                      |
+| Condition                  | Component Rendered   | URL Paths                                  |
+| -------------------------- | -------------------- | ------------------------------------------ |
+| Not logged in              | `PublicJobsView`     | `/jobs`, `/jobs/candidate`, `/jobs/vendor` |
+| Logged in as **candidate** | `CandidateDashboard` |                                            |
+| Logged in as **vendor**    | `VendorDashboard`    |                                            |
+| Logged in as **marketer**  | `MarketerDashboard`  |                                            |
+| Invite token in URL        | `InviteAcceptPage`   | `/jobs/invite/:token`                      |
 
 ---
 
