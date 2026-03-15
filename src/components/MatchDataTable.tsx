@@ -50,8 +50,7 @@ export interface MatchDataTableProps {
   pokedAtMap?: Map<string, string>;
   onPoke: (row: MatchRow) => void;
   onPokeEmail?: (row: MatchRow) => void;
-  onInvite?: (row: MatchRow) => void;
-  invitedRowIds?: Set<string>;
+
   onRowClick?: (row: MatchRow) => void;
   onDownload?: () => void;
   downloadLabel?: string;
@@ -164,8 +163,6 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
   pokedAtMap,
   onPoke,
   onPokeEmail,
-  onInvite,
-  invitedRowIds,
   onRowClick,
   onDownload,
   downloadLabel = "Download CSV",
@@ -266,37 +263,16 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
             {alreadyEmailed ? "✓" : "✉"}
           </button>
         )}
-        {onInvite ? (
-          <button
-            className="matchdb-btn matchdb-btn-call"
-            type="button"
-            disabled={invitedRowIds?.has(row.id)}
-            onClick={() => !invitedRowIds?.has(row.id) && onInvite(row)}
-            title={
-              invitedRowIds?.has(row.id)
-                ? `Already sent interview invite to ${row.pokeTargetName}`
-                : `Send screening call invite to ${row.pokeTargetName}`
-            }
-            aria-label="Send interview invite"
-            style={{
-              flex: 1,
-              ...(invitedRowIds?.has(row.id) ? { opacity: 0.45, cursor: "not-allowed" } : {}),
-            }}
-          >
-            {invitedRowIds?.has(row.id) ? "✓" : "📞"}
-          </button>
-        ) : (
-          <button
-            className="matchdb-btn matchdb-btn-call"
-            type="button"
-            disabled
-            title="Interview invite — available for vendors"
-            aria-label="Call (unavailable)"
-            style={{ flex: 1, opacity: 0.3, cursor: "not-allowed" }}
-          >
-            📞
-          </button>
-        )}
+        <button
+          className="matchdb-btn matchdb-btn-call"
+          type="button"
+          disabled
+          title="Call — coming soon"
+          aria-label="Call (coming soon)"
+          style={{ flex: 1, opacity: 0.3, cursor: "not-allowed" }}
+        >
+          📞
+        </button>
       </div>
     );
   }
@@ -501,8 +477,6 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
     isVendor,
     onPoke,
     onPokeEmail,
-    onInvite,
-    invitedRowIds,
     onRowClick,
   ]);
 

@@ -303,8 +303,7 @@ const VendorDashboard: React.FC<Props> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(25);
 
-  // Interview invite modal state
-  const [inviteRow, setInviteRow] = useState<MatchRow | null>(null);
+  // Interview invite state
   const [inviteProposedAt, setInviteProposedAt] = useState("");
   const [inviteMessage, setInviteMessage] = useState("");
   const [inviteSentSuccess, setInviteSentSuccess] = useState(false);
@@ -892,19 +891,13 @@ const VendorDashboard: React.FC<Props> = ({
   );
   const invitesSent: InterviewInvite[] = invitesSentData?.data ?? [];
 
-  const handleInvite = (row: MatchRow) => {
-    setInviteRow(row);
-    setInviteProposedAt("");
-    setInviteMessage("");
-    setInviteSentSuccess(false);
-  };
-
   const handleInviteSend = async () => {
-    if (!inviteRow) return;
+    const target = pokeEmailRow;
+    if (!target) return;
     try {
       await sendInterviewInvite({
-        candidateEmail: inviteRow.pokeTargetEmail,
-        candidateName: inviteRow.pokeTargetName,
+        candidateEmail: target.pokeTargetEmail,
+        candidateName: target.pokeTargetName,
         jobId: selectedJobId || undefined,
         jobTitle: selectedJobId ? selectedJobTitle : undefined,
         proposedAt: inviteProposedAt || undefined,
@@ -912,10 +905,6 @@ const VendorDashboard: React.FC<Props> = ({
       }).unwrap();
       setInviteSentSuccess(true);
       refetchInvites();
-      setTimeout(() => {
-        setInviteRow(null);
-        setInviteSentSuccess(false);
-      }, 2000);
     } catch {
       // error surfaced via inviteSending state
     }
@@ -1445,8 +1434,6 @@ const VendorDashboard: React.FC<Props> = ({
         pokedAtMap={pokedAtMap}
         onPoke={handlePoke}
         onPokeEmail={handlePokeEmail}
-        onInvite={handleInvite}
-        invitedRowIds={invitedRowIds}
         onRowClick={(row) => setSelectedCandidate(row.rawData || null)}
         onDownload={handleDownloadCSV}
         downloadLabel="Download CSV"
@@ -1818,184 +1805,7 @@ const VendorDashboard: React.FC<Props> = ({
         onReopen_job={handleReopenJob}
       />
 
-      {/* Interview Invite modal */}
-      {inviteRow && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.4)",
-            zIndex: 1200,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div
-            className="matchdb-panel"
-            style={{
-              width: 420,
-              padding: 24,
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
-            }}
-          >
-            {/* Header */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span style={{ fontWeight: 700, fontSize: 14 }}>
-                📞 Send Interview Invite
-              </span>
-              <button
-                type="button"
-                className="matchdb-btn"
-                style={{ padding: "2px 8px" }}
-                onClick={() => {
-                  setInviteRow(null);
-                  setInviteSentSuccess(false);
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {inviteSentSuccess ? (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "20px 0",
-                  color: "#2e7d32",
-                  fontWeight: 600,
-                }}
-              >
-                ✓ Invite sent! A Google Meet link has been emailed to{" "}
-                {inviteRow.pokeTargetName}.
-              </div>
-            ) : (
-              <>
-                {/* Candidate info */}
-                <div style={{ fontSize: 12, color: "#555" }}>
-                  <strong>To:</strong> {inviteRow.pokeTargetName}{" "}
-                  <span style={{ color: "#888" }}>
-                    ({inviteRow.pokeTargetEmail})
-                  </span>
-                </div>
-
-                {/* Position (read-only, from current job filter) */}
-                {selectedJobTitle && selectedJobTitle !== "All Openings" && (
-                  <div style={{ fontSize: 12, color: "#555" }}>
-                    <strong>Position:</strong> {selectedJobTitle}
-                  </div>
-                )}
-
-                {/* Proposed date/time */}
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                >
-                  <label
-                    htmlFor="invite-proposed-at"
-                    style={{ fontSize: 12, fontWeight: 600 }}
-                  >
-                    Proposed Date & Time
-                  </label>
-                  <input
-                    id="invite-proposed-at"
-                    type="datetime-local"
-                    value={inviteProposedAt}
-                    onChange={(e) => setInviteProposedAt(e.target.value)}
-                    style={{
-                      fontSize: 12,
-                      padding: "4px 6px",
-                      border: "1px solid var(--w97-border-dark)",
-                      fontFamily: "inherit",
-                    }}
-                  />
-                  <span style={{ fontSize: 11, color: "#888" }}>
-                    Leave blank if TBD
-                  </span>
-                </div>
-
-                {/* Message */}
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                >
-                  <label
-                    htmlFor="invite-message"
-                    style={{ fontSize: 12, fontWeight: 600 }}
-                  >
-                    Message (optional)
-                  </label>
-                  <textarea
-                    id="invite-message"
-                    rows={3}
-                    value={inviteMessage}
-                    onChange={(e) => setInviteMessage(e.target.value)}
-                    placeholder="e.g. Looking forward to connecting about the role…"
-                    style={{
-                      fontSize: 12,
-                      padding: "4px 6px",
-                      resize: "vertical",
-                      border: "1px solid var(--w97-border-dark)",
-                      fontFamily: "inherit",
-                    }}
-                  />
-                </div>
-
-                {/* Meet link notice */}
-                <div
-                  style={{
-                    background: "#e8f0fe",
-                    border: "1px solid #c5d5f5",
-                    borderRadius: 2,
-                    padding: "8px 12px",
-                    fontSize: 12,
-                    color: "#1a3e7a",
-                  }}
-                >
-                  🔗 A unique Google Meet link will be auto-generated and
-                  included in the email.
-                </div>
-
-                {/* Actions */}
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    justifyContent: "flex-end",
-                  }}
-                >
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setInviteRow(null);
-                      setInviteSentSuccess(false);
-                    }}
-                    disabled={inviteSending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={handleInviteSend}
-                    disabled={inviteSending}
-                  >
-                    {inviteSending ? "Sending…" : "Send Invite"}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Mail Template modal */}
+      {/* Mail Template modal (with integrated screening call scheduling) */}
       <PokeEmailModal
         open={pokeEmailRow !== null}
         row={pokeEmailRow}
@@ -2010,6 +1820,20 @@ const VendorDashboard: React.FC<Props> = ({
         }}
         sending={pokeLoading}
         sentSuccess={pokeEmailSentSuccess}
+        onScheduleCall={handleInviteSend}
+        schedulingCall={inviteSending}
+        callScheduled={inviteSentSuccess}
+        invitedRowIds={invitedRowIds}
+        selectedJobTitle={selectedJobTitle}
+        onInviteStateReset={() => {
+          setInviteProposedAt("");
+          setInviteMessage("");
+          setInviteSentSuccess(false);
+        }}
+        inviteProposedAt={inviteProposedAt}
+        setInviteProposedAt={setInviteProposedAt}
+        inviteMessage={inviteMessage}
+        setInviteMessage={setInviteMessage}
       />
     </DBLayout>
   );

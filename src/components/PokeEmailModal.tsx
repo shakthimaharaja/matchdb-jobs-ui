@@ -24,6 +24,17 @@ interface PokeEmailModalProps {
   onClose: () => void;
   sending: boolean;
   sentSuccess: boolean;
+  /* ── Screening call scheduling (vendor-only) ── */
+  onScheduleCall?: () => void;
+  schedulingCall?: boolean;
+  callScheduled?: boolean;
+  invitedRowIds?: Set<string>;
+  selectedJobTitle?: string;
+  onInviteStateReset?: () => void;
+  inviteProposedAt?: string;
+  setInviteProposedAt?: (v: string) => void;
+  inviteMessage?: string;
+  setInviteMessage?: (v: string) => void;
 }
 
 /* ── Build a vendor→candidate email template ── */
@@ -138,10 +149,24 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
   onClose,
   sending,
   sentSuccess,
+  onScheduleCall,
+  schedulingCall,
+  callScheduled,
+  invitedRowIds,
+  selectedJobTitle,
+  onInviteStateReset,
+  inviteProposedAt,
+  setInviteProposedAt,
+  inviteMessage,
+  setInviteMessage,
 }) => {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [showCallPanel, setShowCallPanel] = useState(false);
+
+  // Whether this candidate already has an invite
+  const alreadyInvited = row ? invitedRowIds?.has(row.pokeTargetEmail) : false;
 
   useEffect(() => {
     if (open && row) {
@@ -150,6 +175,8 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
         : buildCandidateTemplate(row, senderName, senderEmail, senderProfile);
       setSubject(tpl.subject);
       setBody(tpl.body);
+      setShowCallPanel(false);
+      onInviteStateReset?.();
     }
   }, [open, row]);
 
@@ -310,6 +337,88 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           <div style={{ fontSize: 10, color: "#888", textAlign: "right" }}>
             {body.length} characters · {body.split("\n").length} lines
           </div>
+
+          {/* ── Screening Call Panel (collapsible, vendor-only) ── */}
+          {isVendor && onScheduleCall && showCallPanel && (
+            <div
+              style={{
+                border: "1px solid var(--w97-border-dark, #999)",
+                borderRadius: 2,
+                padding: "10px 12px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                background: "#f9fafb",
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 12 }}>
+                📞 Schedule Screening Call
+                {selectedJobTitle && selectedJobTitle !== "All Openings" && (
+                  <span style={{ fontWeight: 400, color: "#555" }}> — {selectedJobTitle}</span>
+                )}
+              </div>
+
+              {callScheduled ? (
+                <div style={{ color: "#2e7d32", fontWeight: 600, fontSize: 12 }}>
+                  ✓ Screening call invite sent! A Google Meet link has been emailed.
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <label htmlFor="modal-invite-proposed-at" style={{ fontSize: 11, fontWeight: 600 }}>
+                      Proposed Date & Time
+                    </label>
+                    <input
+                      id="modal-invite-proposed-at"
+                      type="datetime-local"
+                      value={inviteProposedAt || ""}
+                      onChange={(e) => setInviteProposedAt?.(e.target.value)}
+                      style={{
+                        fontSize: 11,
+                        padding: "3px 6px",
+                        border: "1px solid var(--w97-border-dark)",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                    <span style={{ fontSize: 10, color: "#888" }}>Leave blank if TBD</span>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <label htmlFor="modal-invite-message" style={{ fontSize: 11, fontWeight: 600 }}>
+                      Message (optional)
+                    </label>
+                    <textarea
+                      id="modal-invite-message"
+                      rows={2}
+                      value={inviteMessage || ""}
+                      onChange={(e) => setInviteMessage?.(e.target.value)}
+                      placeholder="e.g. Looking forward to connecting about the role…"
+                      style={{
+                        fontSize: 11,
+                        padding: "3px 6px",
+                        resize: "vertical",
+                        border: "1px solid var(--w97-border-dark)",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      background: "#e8f0fe",
+                      border: "1px solid #c5d5f5",
+                      borderRadius: 2,
+                      padding: "6px 10px",
+                      fontSize: 11,
+                      color: "#1a3e7a",
+                    }}
+                  >
+                    🔗 A unique Google Meet link will be auto-generated and included in the email.
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -332,6 +441,63 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
               return "📤 Send Mail Template";
             })()}
           </button>
+
+          {/* Schedule Screening Call button (vendor-only) */}
+          {isVendor && onScheduleCall && (
+            (() => {
+              if (alreadyInvited) {
+                return (
+                  <button
+                    type="button"
+                    className="rm-btn"
+                    disabled
+                    title="Screening call already scheduled"
+                    style={{ marginLeft: 4, opacity: 0.5 }}
+                  >
+                    ✓ Call Scheduled
+                  </button>
+                );
+              }
+              if (callScheduled) {
+                return (
+                  <button
+                    type="button"
+                    className="rm-btn"
+                    disabled
+                    style={{ marginLeft: 4, opacity: 0.5 }}
+                  >
+                    ✓ Invite Sent
+                  </button>
+                );
+              }
+              if (showCallPanel) {
+                return (
+                  <button
+                    type="button"
+                    className="rm-btn rm-btn-primary"
+                    onClick={onScheduleCall}
+                    disabled={schedulingCall}
+                    title="Send screening call invite with Google Meet link"
+                    style={{ marginLeft: 4 }}
+                  >
+                    {schedulingCall ? "⏳ Sending…" : "📞 Send Call Invite"}
+                  </button>
+                );
+              }
+              return (
+                <button
+                  type="button"
+                  className="rm-btn"
+                  onClick={() => setShowCallPanel(true)}
+                  title="Schedule a screening call with this candidate"
+                  style={{ marginLeft: 4 }}
+                >
+                  📞 Schedule Call
+                </button>
+              );
+            })()
+          )}
+
           <button
             type="button"
             className="rm-btn"
