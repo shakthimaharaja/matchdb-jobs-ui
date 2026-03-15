@@ -8,3 +8,37 @@
 @import "matchdb-component-library/src/styles/w97-base.css";
 @import "matchdb-component-library/src/styles/components.css";
 @import "matchdb-component-library/src/styles/aws-theme.css";
+
+/* ── Modal centering — full dialog[open] reset ────────────────────────
+   The browser UA stylesheet gives <dialog open> { display: block;
+   position: absolute; width: fit-content; height: fit-content;
+   margin: auto; } which breaks our flex-based centering.
+   !important is intentional — it's the only reliable way to beat
+   UA stylesheet defaults across all browsers.
+   ──────────────────────────────────────────────────────────────────── */
+dialog[open].matchdb-modal-overlay,
+dialog[open].detail-modal-overlay,
+dialog[open].rm-overlay {
+  display: flex !important;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+dialog[open].rm-overlay {
+  align-items: flex-start !important;
+  padding: 32px 16px !important;
+}
+
+.rm-backdrop {
+  position: absolute;
+  inset: 0;
+  cursor: default;
+}

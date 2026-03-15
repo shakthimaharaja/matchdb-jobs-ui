@@ -63,7 +63,7 @@ export interface MatchDataTableProps {
   deleteFlashIds?: Set<string>;
 }
 
-const formatType = (value: string) => value.replace(/_/g, " ");
+const formatType = (value: string) => value.replaceAll("_", " ");
 
 const getMeterClass = (pct: number) => {
   if (pct >= 75) return "matchdb-meter-fill matchdb-meter-fill-high";
@@ -75,6 +75,76 @@ const sortValue = (row: MatchRow, key: SortKey): string | number => {
   if (key === "matchPercentage") return row.matchPercentage;
   return (row[key] || "").toLowerCase();
 };
+
+function getPokeTitle(
+  pokeMatchTooLow: boolean,
+  alreadyEmailed: boolean,
+  alreadyPoked: boolean,
+  targetName: string,
+): string {
+  if (pokeMatchTooLow)
+    return `Match below ${POKE_MATCH_THRESHOLD}% — not eligible to poke`;
+  if (alreadyEmailed) return `Already emailed ${targetName} — cannot also poke`;
+  if (alreadyPoked) return `Already poked ${targetName}`;
+  return `Quick poke — notify ${targetName} by email`;
+}
+
+function getMailTitle(
+  mailMatchTooLow: boolean,
+  alreadyEmailed: boolean,
+  pokeTooRecent: boolean,
+  targetName: string,
+  pokeAt: string | undefined,
+): string {
+  if (mailMatchTooLow)
+    return `Match below ${MAIL_MATCH_THRESHOLD}% — not eligible to send mail template`;
+  if (alreadyEmailed) return `Already sent a mail template to ${targetName}`;
+  if (pokeTooRecent)
+    return `Mail unlocks 24 h after poking (poked at ${new Date(
+      pokeAt!,
+    ).toLocaleTimeString()})`;
+  return `Compose mail template to ${targetName}`;
+}
+
+function getPokeStyle(
+  pokeMatchTooLow: boolean,
+  alreadyPoked: boolean,
+  alreadyEmailed: boolean,
+): React.CSSProperties {
+  if (pokeMatchTooLow) {
+    return {
+      background: "var(--w97-red, #bb3333)",
+      borderColor: "#fff #404040 #404040 #fff",
+      cursor: "not-allowed",
+    };
+  }
+  if (alreadyPoked || alreadyEmailed)
+    return { opacity: 0.45, cursor: "not-allowed" };
+  return {};
+}
+
+function getMailStyle(
+  mailMatchTooLow: boolean,
+  alreadyEmailed: boolean,
+  pokeTooRecent: boolean,
+): React.CSSProperties {
+  if (mailMatchTooLow) {
+    return {
+      background: "var(--w97-red, #bb3333)",
+      borderColor: "#fff #404040 #404040 #fff",
+      cursor: "not-allowed",
+    };
+  }
+  if (alreadyEmailed || pokeTooRecent)
+    return { opacity: 0.4, cursor: "not-allowed" };
+  return {};
+}
+
+function getPokeLabel(alreadyPoked: boolean, loading: boolean): string {
+  if (alreadyPoked) return "✓";
+  if (loading) return "…";
+  return "Poke";
+}
 
 const MatchDataTable: React.FC<MatchDataTableProps> = ({
   title,
@@ -118,15 +188,93 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
     });
   }, [rows, sortKey, sortDir]);
 
+  function renderActions(row: MatchRow) {
+    const alreadyPoked = pokedRowIds?.has(row.id) ?? false;
+    const alreadyEmailed = emailedRowIds?.has(row.id) ?? false;
+
+    const mailMatchTooLow =
+      !isVendor && row.matchPercentage < MAIL_MATCH_THRESHOLD;
+    const pokeMatchTooLow =
+      !isVendor && row.matchPercentage < POKE_MATCH_THRESHOLD;
+
+    const pokeAt = pokedAtMap?.get(row.id);
+    const pokeTooRecent =
+      !!pokeAt && Date.now() - new Date(pokeAt).getTime() < POKE_COOLDOWN_MS;
+
+    const pokeDisabled =
+      pokeLoading || alreadyPoked || alreadyEmailed || pokeMatchTooLow;
+    const mailDisabled = alreadyEmailed || mailMatchTooLow || pokeTooRecent;
+
+    const pokeTitle = getPokeTitle(
+      pokeMatchTooLow,
+      alreadyEmailed,
+      alreadyPoked,
+      row.pokeTargetName,
+    );
+    const mailTitle = getMailTitle(
+      mailMatchTooLow,
+      alreadyEmailed,
+      pokeTooRecent,
+      row.pokeTargetName,
+      pokeAt,
+    );
+    const pokeStyle = getPokeStyle(
+      pokeMatchTooLow,
+      alreadyPoked,
+      alreadyEmailed,
+    );
+    const pokeLabel = getPokeLabel(alreadyPoked, pokeLoading);
+    const mailStyle = getMailStyle(
+      mailMatchTooLow,
+      alreadyEmailed,
+      pokeTooRecent,
+    );
+
+    return (
+      <div style={{ display: "flex", gap: 2 }}>
+        <button
+          className="matchdb-btn matchdb-btn-poke"
+          type="button"
+          disabled={pokeDisabled}
+          onClick={() => !pokeDisabled && onPoke(row)}
+          title={pokeTitle}
+          aria-label={pokeTitle}
+          style={{
+            flex: 1,
+            ...pokeStyle,
+          }}
+        >
+          {pokeLabel}
+        </button>
+        {onPokeEmail && (
+          <button
+            className="matchdb-btn matchdb-btn-email"
+            type="button"
+            disabled={mailDisabled}
+            onClick={() => !mailDisabled && onPokeEmail(row)}
+            title={mailTitle}
+            aria-label={mailTitle}
+            style={{
+              flex: 1,
+              ...mailStyle,
+            }}
+          >
+            {alreadyEmailed ? "✓" : "✉"}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   // Build column definitions with sort-aware headers and per-column render
   const columns = useMemo<DataTableColumn<MatchRow>[]>(() => {
     const indicator = (key: SortKey) =>
-      sortKey !== key ? (
+      sortKey === key ? (
+        <span className="th-sort">{sortDir === "asc" ? "▲" : "▼"}</span>
+      ) : (
         <span className="th-sort" style={{ opacity: 0.3 }}>
           ⇅
         </span>
-      ) : (
-        <span className="th-sort">{sortDir === "asc" ? "▲" : "▼"}</span>
       );
 
     const onSort = (key: SortKey) => {
@@ -137,12 +285,10 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       }
     };
 
-    const ariaSort = (key: SortKey): "ascending" | "descending" | "none" =>
-      sortKey === key
-        ? sortDir === "asc"
-          ? "ascending"
-          : "descending"
-        : "none";
+    const ariaSort = (key: SortKey): "ascending" | "descending" | "none" => {
+      if (sortKey !== key) return "none";
+      return sortDir === "asc" ? "ascending" : "descending";
+    };
 
     return [
       {
@@ -329,93 +475,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         thProps: {
           title: "Actions: Poke (quick notify) · Mail Template (compose)",
         },
-        render: (row: MatchRow) => {
-          const alreadyPoked = pokedRowIds?.has(row.id) ?? false;
-          const alreadyEmailed = emailedRowIds?.has(row.id) ?? false;
-
-          const mailMatchTooLow =
-            !isVendor && row.matchPercentage < MAIL_MATCH_THRESHOLD;
-          const pokeMatchTooLow =
-            !isVendor && row.matchPercentage < POKE_MATCH_THRESHOLD;
-
-          const pokeAt = pokedAtMap?.get(row.id);
-          const pokeTooRecent =
-            !!pokeAt &&
-            Date.now() - new Date(pokeAt).getTime() < POKE_COOLDOWN_MS;
-
-          const pokeDisabled =
-            pokeLoading || alreadyPoked || alreadyEmailed || pokeMatchTooLow;
-          const mailDisabled =
-            alreadyEmailed || mailMatchTooLow || pokeTooRecent;
-
-          const pokeTitle = pokeMatchTooLow
-            ? `Match below ${POKE_MATCH_THRESHOLD}% — not eligible to poke`
-            : alreadyEmailed
-            ? `Already emailed ${row.pokeTargetName} — cannot also poke`
-            : alreadyPoked
-            ? `Already poked ${row.pokeTargetName}`
-            : `Quick poke — notify ${row.pokeTargetName} by email`;
-          const mailTitle = mailMatchTooLow
-            ? `Match below ${MAIL_MATCH_THRESHOLD}% — not eligible to send mail template`
-            : alreadyEmailed
-            ? `Already sent a mail template to ${row.pokeTargetName}`
-            : pokeTooRecent
-            ? `Mail unlocks 24 h after poking (poked at ${new Date(
-                pokeAt!,
-              ).toLocaleTimeString()})`
-            : `Compose mail template to ${row.pokeTargetName}`;
-
-          return (
-            <div style={{ display: "flex", gap: 2 }}>
-              <button
-                className="matchdb-btn matchdb-btn-poke"
-                type="button"
-                disabled={pokeDisabled}
-                onClick={() => !pokeDisabled && onPoke(row)}
-                title={pokeTitle}
-                aria-label={pokeTitle}
-                style={{
-                  flex: 1,
-                  ...(pokeMatchTooLow
-                    ? {
-                        background: "var(--w97-red, #bb3333)",
-                        borderColor: "#fff #404040 #404040 #fff",
-                        cursor: "not-allowed",
-                      }
-                    : alreadyPoked || alreadyEmailed
-                    ? { opacity: 0.45, cursor: "not-allowed" }
-                    : {}),
-                }}
-              >
-                {alreadyPoked ? "✓" : pokeLoading ? "…" : "Poke"}
-              </button>
-              {onPokeEmail && (
-                <button
-                  className="matchdb-btn matchdb-btn-email"
-                  type="button"
-                  disabled={mailDisabled}
-                  onClick={() => !mailDisabled && onPokeEmail(row)}
-                  title={mailTitle}
-                  aria-label={mailTitle}
-                  style={{
-                    flex: 1,
-                    ...(mailMatchTooLow
-                      ? {
-                          background: "var(--w97-red, #bb3333)",
-                          borderColor: "#fff #404040 #404040 #fff",
-                          cursor: "not-allowed",
-                        }
-                      : alreadyEmailed || pokeTooRecent
-                      ? { opacity: 0.4, cursor: "not-allowed" }
-                      : {}),
-                  }}
-                >
-                  {alreadyEmailed ? "✓" : "✉"}
-                </button>
-              )}
-            </div>
-          );
-        },
+        render: renderActions,
       },
     ];
   }, [

@@ -628,7 +628,7 @@
 /* ── Dark mode — PublicJobsView-specific ──────────────────────────── */
 [data-theme="dark"] .matchdb-footnote {
   background: #333;
-  color: #999;
+  color: #bbb;
   border-top-color: #555;
 }
 [data-theme="dark"] .pub-skill-tag {

@@ -67,7 +67,7 @@ const InviteAcceptPage: React.FC = () => {
   }
 
   const { status, invite } = data;
-  const info = STATUS_LABELS[status] || STATUS_LABELS.expired!;
+  const info = STATUS_LABELS[status] || STATUS_LABELS.expired;
 
   const handleAccept = async () => {
     if (!token) return;

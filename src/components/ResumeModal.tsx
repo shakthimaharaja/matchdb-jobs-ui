@@ -85,8 +85,9 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
   };
 
   return (
-    <div className="rm-overlay" onClick={onClose}>
-      <div className="rm-window" onClick={(e) => e.stopPropagation()}>
+    <dialog open className="rm-overlay">
+      <div className="rm-backdrop" role="none" onClick={onClose} />
+      <div className="rm-window">
         {/* Title bar */}
         <div className="rm-titlebar">
           <span className="rm-titlebar-icon">📄</span>
@@ -125,8 +126,9 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             <legend>Contact &amp; Basic Info</legend>
             <div className="rm-grid-2">
               <div className="rm-field">
-                <label>Full Name *</label>
+                <label htmlFor="rm-name">Full Name *</label>
                 <Input
+                  id="rm-name"
                   type="text"
                   value={form.name || ""}
                   onChange={(e) => set("name", e.target.value)}
@@ -134,8 +136,9 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
                 />
               </div>
               <div className="rm-field">
-                <label>Email *</label>
+                <label htmlFor="rm-email">Email *</label>
                 <Input
+                  id="rm-email"
                   type="email"
                   value={form.email || ""}
                   onChange={(e) => set("email", e.target.value)}
@@ -143,8 +146,9 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
                 />
               </div>
               <div className="rm-field">
-                <label>Phone</label>
+                <label htmlFor="rm-phone">Phone</label>
                 <Input
+                  id="rm-phone"
                   type="text"
                   value={form.phone || ""}
                   onChange={(e) => set("phone", e.target.value)}
@@ -152,8 +156,9 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
                 />
               </div>
               <div className="rm-field">
-                <label>Location</label>
+                <label htmlFor="rm-location">Location</label>
                 <Input
+                  id="rm-location"
                   type="text"
                   value={form.location || ""}
                   onChange={(e) => set("location", e.target.value)}
@@ -168,8 +173,9 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             <legend>Current Role</legend>
             <div className="rm-grid-2">
               <div className="rm-field">
-                <label>Current Company</label>
+                <label htmlFor="rm-company">Current Company</label>
                 <Input
+                  id="rm-company"
                   type="text"
                   value={form.current_company || ""}
                   onChange={(e) => set("current_company", e.target.value)}
@@ -178,8 +184,9 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
                 />
               </div>
               <div className="rm-field">
-                <label>Current Role / Title</label>
+                <label htmlFor="rm-role">Current Role / Title</label>
                 <Input
+                  id="rm-role"
                   type="text"
                   value={form.current_role || ""}
                   onChange={(e) => set("current_role", e.target.value)}
@@ -200,11 +207,12 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             </legend>
 
             <div className="rm-field">
-              <label>Professional Summary / Objective</label>
+              <label htmlFor="rm-summary">Professional Summary / Objective</label>
               {isLocked ? (
                 <div className="rm-readonly">{form.resume_summary || "—"}</div>
               ) : (
                 <textarea
+                  id="rm-summary"
                   className="rm-textarea"
                   rows={3}
                   value={form.resume_summary || ""}
@@ -215,13 +223,14 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             </div>
 
             <div className="rm-field rm-field-mt">
-              <label>Work Experience</label>
+              <label htmlFor="rm-experience">Work Experience</label>
               {isLocked ? (
                 <div className="rm-readonly">
                   {form.resume_experience || "—"}
                 </div>
               ) : (
                 <textarea
+                  id="rm-experience"
                   className="rm-textarea"
                   rows={6}
                   value={form.resume_experience || ""}
@@ -232,13 +241,14 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             </div>
 
             <div className="rm-field rm-field-mt">
-              <label>Education</label>
+              <label htmlFor="rm-education">Education</label>
               {isLocked ? (
                 <div className="rm-readonly">
                   {form.resume_education || "—"}
                 </div>
               ) : (
                 <textarea
+                  id="rm-education"
                   className="rm-textarea"
                   rows={3}
                   value={form.resume_education || ""}
@@ -249,13 +259,14 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             </div>
 
             <div className="rm-field rm-field-mt">
-              <label>Certifications &amp; Achievements</label>
+              <label htmlFor="rm-achievements">Certifications &amp; Achievements</label>
               {isLocked ? (
                 <div className="rm-readonly">
                   {form.resume_achievements || "—"}
                 </div>
               ) : (
                 <textarea
+                  id="rm-achievements"
                   className="rm-textarea"
                   rows={3}
                   value={form.resume_achievements || ""}
@@ -266,11 +277,12 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
             </div>
 
             <div className="rm-field rm-field-mt">
-              <label>Brief Introduction / Bio</label>
+              <label htmlFor="rm-bio">Brief Introduction / Bio</label>
               {isLocked ? (
                 <div className="rm-readonly">{form.bio || "—"}</div>
               ) : (
                 <textarea
+                  id="rm-bio"
                   className="rm-textarea"
                   rows={3}
                   value={form.bio || ""}
@@ -326,7 +338,7 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
           <Button onClick={onClose}>Close</Button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 };
 

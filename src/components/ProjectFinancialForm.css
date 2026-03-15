@@ -244,7 +244,7 @@
 
 .pf-status-closed {
   background: #f3f4f6;
-  color: #6b7280;
+  color: #4b5563;
 }
 .pf-status-closed::before {
   background: #9ca3af;

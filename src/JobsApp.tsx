@@ -94,49 +94,48 @@ const JobsApp: React.FC<JobsAppProps> = ({
           {/* Invite acceptance — available to all logged-in users */}
           <Route path="invite/:token" element={<InviteAcceptPage />} />
 
-          {userType === "marketer" ? (
-            <Route
-              path="*"
-              element={
-                <MarketerDashboard
-                  token={token}
-                  userId={userId}
-                  userEmail={userEmail}
-                />
-              }
-            />
-          ) : userType === "vendor" ? (
-            <>
-              <Route
-                path="post-job"
-                element={
-                  <PostJobPage
-                    token={token}
-                    onPosted={() => setShowPostJob(false)}
-                  />
-                }
-              />
+          {(() => {
+            if (userType === "marketer") return (
               <Route
                 path="*"
                 element={
-                  <VendorDashboard
+                  <MarketerDashboard
                     token={token}
                     userId={userId}
                     userEmail={userEmail}
-                    plan={plan}
-                    onPostJob={() => setShowPostJob(true)}
                   />
                 }
               />
-            </>
-          ) : (
-            <>
+            );
+            if (userType === "vendor") return (
+              <>
+                <Route
+                  path="post-job"
+                  element={
+                    <PostJobPage
+                      onPosted={() => setShowPostJob(false)}
+                    />
+                  }
+                />
+                <Route
+                  path="*"
+                  element={
+                    <VendorDashboard
+                      token={token}
+                      userEmail={userEmail}
+                      plan={plan}
+                      onPostJob={() => setShowPostJob(true)}
+                    />
+                  }
+                />
+              </>
+            );
+            return (
               <Route
                 path="*"
                 element={
                   <CandidateDashboard
                     token={token}
-                    userId={userId}
                     userEmail={userEmail}
                     username={username}
                     plan={plan}
@@ -145,16 +144,16 @@ const JobsApp: React.FC<JobsAppProps> = ({
                   />
                 }
               />
-            </>
-          )}
+            );
+          })()}
         </Routes>
 
         {/* Inline post-job overlay — W97 window chrome via rm-* classes */}
         {showPostJob && userType === "vendor" && (
-          <div className="rm-overlay" onClick={() => setShowPostJob(false)}>
+          <dialog open className="rm-overlay">
+            <div className="rm-backdrop" role="none" onClick={() => setShowPostJob(false)} />
             <div
               className="rm-window matchdb-postjob-window"
-              onClick={(e) => e.stopPropagation()}
             >
               {/* Title bar */}
               <div className="rm-titlebar">
@@ -176,11 +175,10 @@ const JobsApp: React.FC<JobsAppProps> = ({
               </div>
               {/* PostJobPage owns scroll + footer */}
               <PostJobPage
-                token={token}
                 onPosted={() => setShowPostJob(false)}
               />
             </div>
-          </div>
+          </dialog>
         )}
       </div>
     </Provider>

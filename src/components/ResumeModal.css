@@ -1,4 +1,25 @@
 /* ===== Resume Modal — Windows 97 Theme ===== */
+dialog[open].rm-overlay {
+  display: flex !important;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border: none !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding: 32px 16px !important;
+}
+
+.rm-backdrop {
+  position: absolute;
+  inset: 0;
+  cursor: default;
+}
+
 .rm-overlay {
   position: fixed;
   inset: 0;
@@ -13,6 +34,8 @@
 }
 
 .rm-window {
+  position: relative;
+  z-index: 1;
   background: var(--w97-window, #c0c0c0);
   border-top: 2px solid var(--w97-btn-highlight, #fff);
   border-left: 2px solid var(--w97-btn-highlight, #fff);

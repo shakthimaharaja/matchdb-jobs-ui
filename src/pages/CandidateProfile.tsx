@@ -10,7 +10,6 @@ import {
 } from "primereact/inputnumber";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
-import { Message } from "primereact/message";
 import {
   useGetProfileQuery,
   useUpsertProfileMutation,
@@ -102,8 +101,92 @@ const EMPTY: IProfile = {
   profile_locked: false,
 };
 
+const NUMBER_FIELD_DEFAULTS: Record<"expected_hourly_rate" | "experience_years", number | null> = {
+  expected_hourly_rate: null,
+  experience_years: 0,
+};
+
+function profileMetaLabel(isLocked: boolean, premiumUnlocked: boolean, editIntent: boolean): string {
+  if (isLocked && premiumUnlocked) return "🔓 Premium unlocked — all fields fully editable";
+  if (isLocked && editIntent) return "✏ Editing unlocked — proceed to billing to save changes";
+  if (isLocked) return "🔒 Some fields locked — see notice below";
+  return "New profile — fill in details, skills auto-extracted on save";
+}
+
+function saveButtonLabel(profileLoading: boolean, premiumLocked: boolean, editIntent: boolean, isLocked: boolean, premiumUnlocked: boolean): string {
+  if (profileLoading) return "⏳ Saving...";
+  if (premiumLocked && editIntent) return "✏ Update Profile → Billing";
+  if (isLocked && premiumUnlocked) return "💾 Save All Changes";
+  if (isLocked) return "✓ Update Profile";
+  return "💾 Save & Extract Skills";
+}
+
+type VisConfig = Record<string, string[]>;
+
+function applyToggleType(
+  vis: VisConfig,
+  key: string,
+  subTypes: { value: string }[],
+  checked: boolean,
+): VisConfig {
+  const next = { ...vis };
+  if (checked) {
+    next[key] = subTypes.map((s) => s.value);
+  } else {
+    delete next[key];
+  }
+  return next;
+}
+
+function applyToggleSub(
+  vis: VisConfig,
+  key: string,
+  subValue: string,
+  checked: boolean,
+  lockedType: boolean,
+): VisConfig {
+  const next = { ...vis };
+  const subs = [...(next[key] || [])];
+  if (checked && !subs.includes(subValue)) subs.push(subValue);
+  if (!checked) {
+    const idx = subs.indexOf(subValue);
+    if (idx >= 0) subs.splice(idx, 1);
+  }
+  const keepType = subs.length > 0 || lockedType;
+  if (keepType) {
+    next[key] = subs;
+  } else {
+    delete next[key];
+  }
+  return next;
+}
+
+function prepareSaveData(form: IProfile, premiumLocked: boolean, summaryAddition: string): IProfile {
+  const extra = premiumLocked && summaryAddition.trim();
+  if (!extra) return { ...form };
+  return {
+    ...form,
+    resume_summary: ((form.resume_summary || "") + "\n\n" + extra).trim(),
+  };
+}
+
+const deleteConfirmedStyle: React.CSSProperties = {
+  color: "#fff",
+  background: "#880000",
+  border: "2px solid #660000",
+  cursor: "pointer",
+  opacity: 1,
+};
+
+const deleteDisabledStyle: React.CSSProperties = {
+  color: "#fff",
+  background: "#999",
+  border: "2px solid #660000",
+  cursor: "not-allowed",
+  opacity: 0.5,
+};
+
 interface Props {
-  token?: string | null;
   userEmail: string | undefined;
   onSaved?: () => void;
   premiumUnlocked?: boolean;
@@ -121,9 +204,9 @@ const CandidateProfile: React.FC<Props> = ({
     isLoading: profileLoading,
     error: profileError,
   } = useGetProfileQuery();
-  const [upsertProfile, { isLoading: saving, reset: resetUpsert }] =
+  const [upsertProfile, { reset: resetUpsert }] =
     useUpsertProfileMutation();
-  const [deleteProfile, { isLoading: deleting }] = useDeleteProfileMutation();
+  const [deleteProfile] = useDeleteProfileMutation();
 
   const { saveDraft, getDraft, clearDraft, hasDraft } = useDraftCache<IProfile>(
     "matchdb_draft_candidate_profile",
@@ -138,6 +221,7 @@ const CandidateProfile: React.FC<Props> = ({
     null,
   );
   const [confirmText, setConfirmText] = useState("");
+  const isDeleteConfirmed = confirmText === "DELETE";
   const [additions, setAdditions] = useState({
     resume_summary: "",
     resume_experience: "",
@@ -163,22 +247,21 @@ const CandidateProfile: React.FC<Props> = ({
       setForm({ ...profile });
       clearDraft();
       setShowDraftBanner(false);
-    } else if (!profileLoading) {
-      // Load complete — no server profile found
-      if (hasDraft()) {
-        setShowDraftBanner(true);
-      } else if (userEmail) {
-        setForm((f) => (!f.email ? { ...f, email: userEmail } : f));
-      }
+      return;
+    }
+    if (profileLoading) return;
+    // Load complete — no server profile found
+    if (hasDraft()) {
+      setShowDraftBanner(true);
+    } else if (userEmail && !form.email) {
+      setForm((f) => ({ ...f, email: userEmail }));
     }
   }, [profile, profileLoading, userEmail]);
 
   // Auto-save form to localStorage while filling in (only when no confirmed server profile)
   useEffect(() => {
-    if (
-      !profile &&
-      (form.name || form.resume_summary || form.resume_experience || form.bio)
-    ) {
+    const hasDraftableContent = form.name || form.resume_summary || form.resume_experience || form.bio;
+    if (!profile && hasDraftableContent) {
       saveDraft(form);
     }
   }, [form, profile]);
@@ -195,30 +278,36 @@ const CandidateProfile: React.FC<Props> = ({
   // effectivelyLocked = premiumLocked but user hasn't clicked "OK" yet
   const effectivelyLocked = premiumLocked && !editIntent;
 
+  function getSaveClickHandler() {
+    return premiumLocked && editIntent ? onRequestPremiumUnlock : handleSave;
+  }
+
   const setField = <K extends keyof IProfile>(key: K, value: IProfile[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
     setSaveSuccess(false);
   };
 
+  const clearCompanySuggestions = () => {
+    setCompanySuggestions([]);
+    setShowCompanyDropdown(false);
+  };
+
   const handleCompanyInputChange = (value: string) => {
     setField("current_company", value);
-    if (companySearchTimerRef.current)
-      clearTimeout(companySearchTimerRef.current);
-    if (value.trim().length >= 2) {
-      companySearchTimerRef.current = setTimeout(async () => {
-        try {
-          const result = await searchCompanies(value.trim()).unwrap();
-          setCompanySuggestions(result || []);
-          setShowCompanyDropdown((result || []).length > 0);
-        } catch {
-          setCompanySuggestions([]);
-          setShowCompanyDropdown(false);
-        }
-      }, 300);
-    } else {
-      setCompanySuggestions([]);
-      setShowCompanyDropdown(false);
+    if (companySearchTimerRef.current != null) clearTimeout(companySearchTimerRef.current);
+    if (value.trim().length < 2) {
+      clearCompanySuggestions();
+      return;
     }
+    companySearchTimerRef.current = setTimeout(async () => {
+      try {
+        const result = await searchCompanies(value.trim()).unwrap();
+        setCompanySuggestions(result || []);
+        setShowCompanyDropdown((result || []).length > 0);
+      } catch {
+        clearCompanySuggestions();
+      }
+    }, 300);
   };
 
   const handleCompanySelect = (company: CompanySearchResult) => {
@@ -230,57 +319,42 @@ const CandidateProfile: React.FC<Props> = ({
   const onNumberChange =
     (field: "expected_hourly_rate" | "experience_years") =>
     (e: InputNumberValueChangeEvent) => {
-      if (field === "expected_hourly_rate") {
-        setField(field, e.value ?? null);
-      } else {
-        setField(field, e.value ?? 0);
-      }
+      setField(field, e.value ?? NUMBER_FIELD_DEFAULTS[field]);
     };
 
   const handleSave = async () => {
     setSaveSuccess(false);
     resetUpsert();
     // For locked profiles, merge appended text into the resume fields
-    let saveData = { ...form };
-    if (premiumLocked) {
-      // Only resume_summary has an append textarea when premium fields are locked
-      const extra = additions.resume_summary.trim();
-      if (extra) {
-        saveData = {
-          ...saveData,
-          resume_summary: (
-            (saveData.resume_summary || "") +
-            "\n\n" +
-            extra
-          ).trim(),
-        };
-      }
-    }
-    try {
-      await upsertProfile(saveData).unwrap();
-      clearDraft();
-      setSaveSuccess(true);
-      // Clear additions after successful save
-      setAdditions({
-        resume_summary: "",
-        resume_experience: "",
-        resume_education: "",
-        resume_achievements: "",
+    const saveData = prepareSaveData(form, premiumLocked, additions.resume_summary);
+    await upsertProfile(saveData)
+      .unwrap()
+      .then(() => {
+        clearDraft();
+        setSaveSuccess(true);
+        setAdditions({
+          resume_summary: "",
+          resume_experience: "",
+          resume_education: "",
+          resume_achievements: "",
+        });
+        onSaved?.();
+      })
+      .catch(() => {
+        // error is surfaced via profileError from useGetProfileQuery / upsertProfile mutation state
       });
-      onSaved?.();
-    } catch (_) {
-      // error is surfaced via profileError from useGetProfileQuery / upsertProfile mutation state
-    }
   };
 
   const handleDelete = async () => {
-    try {
-      await deleteProfile().unwrap();
-      setShowDeleteModal(false);
-      setForm(EMPTY);
-    } catch (_) {
-      // error surfaced via profileError
-    }
+    await deleteProfile()
+      .unwrap()
+      .then(() => {
+        setShowDeleteModal(false);
+        setForm(EMPTY);
+      })
+      .catch(() => {
+        // error surfaced via profileError
+      });
   };
 
   const handleDeleteAccount = async () => {
@@ -301,7 +375,7 @@ const CandidateProfile: React.FC<Props> = ({
       localStorage.removeItem("matchdb_refresh");
       localStorage.removeItem("matchdb_user");
       setShowDeleteAccountModal(false);
-      window.location.href = "/";
+      globalThis.location.href = "/";
     } catch (err: any) {
       setDeleteAccountError(
         err.response?.data?.error ||
@@ -320,13 +394,7 @@ const CandidateProfile: React.FC<Props> = ({
           <span className="matchdb-panel-title-icon">📋</span>
           <span className="matchdb-panel-title-text">Candidate Profile</span>
           <span className="matchdb-panel-title-meta">
-            {isLocked && premiumUnlocked
-              ? "🔓 Premium unlocked — all fields fully editable"
-              : isLocked && editIntent
-              ? "✏ Editing unlocked — proceed to billing to save changes"
-              : isLocked
-              ? "🔒 Some fields locked — see notice below"
-              : "New profile — fill in details, skills auto-extracted on save"}
+            {profileMetaLabel(isLocked, premiumUnlocked, editIntent)}
           </span>
         </div>
 
@@ -437,7 +505,7 @@ const CandidateProfile: React.FC<Props> = ({
                     whiteSpace: "nowrap",
                   }}
                   onClick={() =>
-                    window.dispatchEvent(
+                    globalThis.dispatchEvent(
                       new CustomEvent("matchdb:openPricing", {
                         detail: { tab: "candidate" },
                       }),
@@ -580,18 +648,24 @@ const CandidateProfile: React.FC<Props> = ({
                     }}
                   >
                     {companySuggestions.map((c) => (
-                      <div
+                      <button
+                        type="button"
                         key={c.id}
                         style={{
+                          display: "block",
+                          width: "100%",
+                          textAlign: "left",
                           padding: "6px 10px",
                           fontSize: 12,
                           cursor: "pointer",
                           borderBottom: "1px solid #f0f0f0",
+                          border: "none",
+                          background: "transparent",
                         }}
                         onMouseDown={() => handleCompanySelect(c)}
                       >
                         🏢 {c.name}
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -671,33 +745,11 @@ const CandidateProfile: React.FC<Props> = ({
               );
 
               const toggleType = (checked: boolean) => {
-                const next = { ...vis };
-                if (checked) {
-                  next[vt.key] =
-                    vt.subTypes.length > 0
-                      ? vt.subTypes.map((s) => s.value)
-                      : [];
-                } else {
-                  delete next[vt.key];
-                }
-                setField("visibility_config", next);
+                setField("visibility_config", applyToggleType(vis, vt.key, vt.subTypes, checked));
               };
 
               const toggleSub = (subValue: string, checked: boolean) => {
-                const next = { ...vis };
-                const subs = [...(next[vt.key] || [])];
-                if (checked && !subs.includes(subValue)) subs.push(subValue);
-                if (!checked) {
-                  const idx = subs.indexOf(subValue);
-                  if (idx >= 0) subs.splice(idx, 1);
-                }
-                // If all sub-types unchecked and not locked, remove the type entirely
-                if (subs.length === 0 && !lockedType) {
-                  delete next[vt.key];
-                } else {
-                  next[vt.key] = subs;
-                }
-                setField("visibility_config", next);
+                setField("visibility_config", applyToggleSub(vis, vt.key, subValue, checked, lockedType));
               };
 
               return (
@@ -774,29 +826,19 @@ const CandidateProfile: React.FC<Props> = ({
           <fieldset className="legacy-fieldset">
             <legend>
               Resume
-              {effectivelyLocked ? (
-                <span
-                  style={{
-                    marginLeft: 8,
-                    fontSize: 11,
-                    color: "#888",
-                    fontWeight: 400,
-                  }}
-                >
-                  🔒 Experience/education/bio locked · summary append below
-                </span>
-              ) : isLocked ? (
-                <span
-                  style={{
-                    marginLeft: 8,
-                    fontSize: 11,
-                    color: "#888",
-                    fontWeight: 400,
-                  }}
-                >
-                  🔓 Editing unlocked — all fields fully editable
-                </span>
-              ) : null}
+              {(() => {
+                if (effectivelyLocked) return (
+                  <span style={{ marginLeft: 8, fontSize: 11, color: "#888", fontWeight: 400 }}>
+                    🔒 Experience/education/bio locked · summary append below
+                  </span>
+                );
+                if (isLocked) return (
+                  <span style={{ marginLeft: 8, fontSize: 11, color: "#888", fontWeight: 400 }}>
+                    🔓 Editing unlocked — all fields fully editable
+                  </span>
+                );
+                return null;
+              })()}
             </legend>
 
             <div className="legacy-row">
@@ -921,7 +963,7 @@ const CandidateProfile: React.FC<Props> = ({
           {(isLocked || form.skills.length > 0) && (
             <fieldset className="legacy-fieldset">
               <legend>
-                Extracted Skills
+                Extracted Skills{" "}
                 <span
                   style={{
                     marginLeft: 8,
@@ -1017,9 +1059,7 @@ const CandidateProfile: React.FC<Props> = ({
           <button
             type="button"
             className="matchdb-btn matchdb-btn-primary"
-            onClick={
-              premiumLocked && editIntent ? onRequestPremiumUnlock : handleSave
-            }
+            onClick={getSaveClickHandler()}
             disabled={
               profileLoading ||
               !form.name ||
@@ -1027,15 +1067,7 @@ const CandidateProfile: React.FC<Props> = ({
               !form.profile_country
             }
           >
-            {profileLoading
-              ? "⏳ Saving..."
-              : premiumLocked && editIntent
-              ? "✏ Update Profile → Billing"
-              : isLocked && premiumUnlocked
-              ? "💾 Save All Changes"
-              : isLocked
-              ? "✓ Update Profile"
-              : "💾 Save & Extract Skills"}
+            {saveButtonLabel(profileLoading, premiumLocked, editIntent, isLocked, premiumUnlocked)}
           </button>
           {!isLocked && (
             <span
@@ -1079,14 +1111,14 @@ const CandidateProfile: React.FC<Props> = ({
 
       {/* ── Delete Account Confirmation Modal (W97 style) ── */}
       {showDeleteAccountModal && (
-        <div
+        <dialog
+          open
           className="rm-overlay"
-          onClick={() => setShowDeleteAccountModal(false)}
         >
+          <div className="rm-backdrop" role="none" onClick={() => setShowDeleteAccountModal(false)} />
           <div
             className="rm-window"
             style={{ width: 520 }}
-            onClick={(e) => e.stopPropagation()}
           >
             {/* Title bar */}
             <div
@@ -1202,15 +1234,9 @@ const CandidateProfile: React.FC<Props> = ({
             {/* Footer */}
             <div className="rm-footer">
               <MDBButton
-                style={{
-                  color: "#fff",
-                  background: confirmText === "DELETE" ? "#880000" : "#999",
-                  border: "2px solid #660000",
-                  cursor: confirmText === "DELETE" ? "pointer" : "not-allowed",
-                  opacity: confirmText === "DELETE" ? 1 : 0.5,
-                }}
+                style={isDeleteConfirmed ? deleteConfirmedStyle : deleteDisabledStyle}
                 onClick={handleDeleteAccount}
-                disabled={confirmText !== "DELETE" || deleteAccountLoading}
+                disabled={!isDeleteConfirmed || deleteAccountLoading}
               >
                 {deleteAccountLoading
                   ? "⏳ Deleting Account..."
@@ -1224,16 +1250,16 @@ const CandidateProfile: React.FC<Props> = ({
               </MDBButton>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {/* ── Delete Profile Confirmation Modal (W97 style) ── */}
       {showDeleteModal && (
-        <div className="rm-overlay" onClick={() => setShowDeleteModal(false)}>
+        <dialog open className="rm-overlay">
+          <div className="rm-backdrop" role="none" onClick={() => setShowDeleteModal(false)} />
           <div
             className="rm-window"
             style={{ width: 480 }}
-            onClick={(e) => e.stopPropagation()}
           >
             {/* Title bar */}
             <div
@@ -1331,7 +1357,7 @@ const CandidateProfile: React.FC<Props> = ({
               </MDBButton>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
     </>
   );

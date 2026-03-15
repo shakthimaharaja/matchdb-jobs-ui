@@ -176,8 +176,9 @@ const PokesTable: React.FC<PokesTableProps> = ({
   const filtered = jobId ? pokes.filter((p) => p.job_id === jobId) : pokes;
 
   const titleText = jobTitle ? `${meta.title} — ${jobTitle}` : meta.title;
+  const sectionLabel = section.includes("mail") ? "mails" : "pokes";
   const emptyMessage = jobId
-    ? `No ${section.includes("mail") ? "mails" : "pokes"} for this job opening.`
+    ? `No ${sectionLabel} for this job opening.`
     : meta.emptyMsg;
 
   const columns = buildColumns(personColLabel, isSent, defaults);

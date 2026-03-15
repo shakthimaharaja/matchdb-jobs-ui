@@ -48,8 +48,12 @@ matchdb-jobs-ui/
 │   ├── pages/
 │   │   ├── PublicJobsView.tsx   # Pre-login view — live WebSocket tables (jobs & profiles)
 │   │   ├── PublicJobsView.css
-│   │   ├── CandidateDashboard.tsx  # Candidate view — profile, matched jobs, visibility
+│   │   ├── CandidateDashboard.tsx  # Candidate view — profile, matched jobs, visibility, vendor/employer sections
 │   │   ├── VendorDashboard.tsx     # Vendor view — post jobs, browse candidates
+│   │   ├── MarketerDashboard.tsx   # Marketer view — roster, forwarding, financials, projects
+│   │   ├── MembershipGatePage.tsx  # Membership paywall / visibility purchase gate
+│   │   ├── MembershipGatePage.css
+│   │   ├── InviteAcceptPage.tsx    # Marketer invite acceptance flow
 │   │   ├── CandidateProfile.tsx    # Candidate profile edit form
 │   │   ├── PostJobPage.tsx         # Vendor job posting form
 │   │   ├── PostJobPage.css
@@ -59,7 +63,8 @@ matchdb-jobs-ui/
 │   │   └── jobsSlice.ts         # Jobs state, CRUD thunks, poke thunks
 │   ├── hooks/
 │   │   ├── useDraftCache.ts     # Draft form persistence hook
-│   │   └── useAutoRefreshFlash.ts # Auto-refresh + row flash animation hook
+│   │   ├── useAutoRefreshFlash.ts # Auto-refresh + row flash animation hook
+│   │   └── useLiveRefresh.ts    # SSE-based live data refresh hook
 │   ├── shared/
 │   │   ├── index.ts             # Re-exports DataTable & types from component library
 │   │   └── PokesTable.tsx       # Poke interactions table
@@ -103,7 +108,7 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 | Prop                     | Type                              | Description                    |
 | ------------------------ | --------------------------------- | ------------------------------ |
 | `token`                  | `string \| null`                  | JWT access token               |
-| `userType`               | `string \| undefined`             | `candidate` or `vendor`        |
+| `userType`               | `string \| undefined`             | `candidate`, `vendor`, or `marketer` |
 | `userId`                 | `string \| undefined`             | User ID                        |
 | `userEmail`              | `string \| undefined`             | User email                     |
 | `username`               | `string \| undefined`             | Username slug for profile URLs |
@@ -115,11 +120,13 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 
 ## Routing (JobsApp.tsx)
 
-| Condition                  | Component Rendered   | URL Paths                                  |
-| -------------------------- | -------------------- | ------------------------------------------ |
-| Not logged in              | `PublicJobsView`     | `/jobs`, `/jobs/candidate`, `/jobs/vendor` |
-| Logged in as **candidate** | `CandidateDashboard` |                                            |
-| Logged in as **vendor**    | `VendorDashboard`    |                                            |
+| Condition                  | Component Rendered    | URL Paths                                  |
+| -------------------------- | --------------------- | ------------------------------------------ |
+| Not logged in              | `PublicJobsView`      | `/jobs`, `/jobs/candidate`, `/jobs/vendor` |
+| Logged in as **candidate** | `CandidateDashboard`  |                                            |
+| Logged in as **vendor**    | `VendorDashboard`     |                                            |
+| Logged in as **marketer**  | `MarketerDashboard`   |                                            |
+| Invite token in URL        | `InviteAcceptPage`    | `/jobs/invite/:token`                      |
 
 ---
 
@@ -131,6 +138,32 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
   - **Matched jobs table** — ranked job matches with auto-refresh flash animations (yellow for new/changed, red for removed)
   - **Shareable profile URL** — displays `{origin}/resume/{username}` with a "Copy" button (clipboard integration)
   - Plan badge + poke counter
+
+### Candidate Portal — Vendor Section
+
+Shows forwarded openings grouped by sub-category (C2C, C2H, W2, 1099, Direct Hire, Salary). Each sub-category is displayed in a collapsible panel with a count badge.
+
+### Candidate Portal — Employer Section
+
+- **Forwarded Openings** — job openings forwarded by the candidate's marketer
+- **Financial (read-only)** — view project financial data (bill rate, pay rate, margins) computed by the marketer
+- **Immigration** — immigration status placeholder section
+
+---
+
+## Marketer Dashboard Features
+
+The marketer dashboard provides a comprehensive staffing management interface with the following sections:
+
+- **Roster** — manage rostered candidates (add, remove, invite via email link)
+- **Forwarded Openings** — forward jobs to candidates, track status, send email notifications
+- **Summary Views:**
+  - **Financial Summary** — company-wide financial metrics (total revenue, margins, tax withholdings)
+  - **Project Summary** — per-project breakdown with bill rates, pay rates, and margin calculations
+  - **Job Positions Summary** — candidates grouped by job position with financial details
+  - **Immigration Summary** — candidate immigration status overview
+- **Kebab Menus** — per-row action menus on roster entries for quick access to email, download resume, and view details
+- **Modals** — email composer modal, resume download modal with accessible backdrop buttons
 
 ---
 

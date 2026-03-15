@@ -26,19 +26,15 @@ interface PokeEmailModalProps {
   sentSuccess: boolean;
 }
 
-/* ── Build a default email template depending on context ── */
-function buildTemplate(
+/* ── Build a vendor→candidate email template ── */
+function buildVendorTemplate(
   row: MatchRow,
-  isVendor: boolean,
   senderName: string,
   senderEmail: string,
-  profile?: CandidateProfile | null,
 ): { subject: string; body: string } {
-  if (isVendor) {
-    // Vendor → Candidate — 3-part template
-    return {
-      subject: `${row.pokeSubjectContext} — Opportunity for ${row.pokeTargetName}`,
-      body: `Dear ${row.pokeTargetName},
+  return {
+    subject: `${row.pokeSubjectContext} — Opportunity for ${row.pokeTargetName}`,
+    body: `Dear ${row.pokeTargetName},
 
 ━━━ PART 1 — INTRODUCTION ━━━━━━━━━━━━━━━━━━━━━━━━━
 I am reaching out after reviewing your profile on MatchDB. We believe your
@@ -70,26 +66,33 @@ We would love to hear from you. Please reply to this email or reach out directly
 Best regards,
 ${senderName}
 ${senderEmail}`,
-    };
-  } else {
-    // Candidate → Vendor (recruiter)
-    const skills = profile?.skills?.slice(0, 10).join(", ") || "—";
-    const summary = profile?.resume_summary || "—";
-    const experience = profile?.resume_experience || "—";
-    const education = profile?.resume_education || "—";
-    const achievements = profile?.resume_achievements || "—";
-    const name = profile?.name || senderName;
-    const location = profile?.location || "—";
-    const role = profile?.current_role || "—";
-    const exp = profile?.experience_years ?? "—";
+  };
+}
 
-    return {
-      subject: `${name} — Interested in ${row.pokeSubjectContext}`,
-      body: `Dear ${row.pokeTargetName},
+/* ── Build a candidate→vendor email template ── */
+function buildCandidateTemplate(
+  row: MatchRow,
+  senderName: string,
+  senderEmail: string,
+  profile?: CandidateProfile | null,
+): { subject: string; body: string } {
+  const skills = profile?.skills?.slice(0, 10).join(", ") || "—";
+  const summary = profile?.resume_summary || "—";
+  const experience = profile?.resume_experience || "—";
+  const education = profile?.resume_education || "—";
+  const achievements = profile?.resume_achievements || "—";
+  const name = profile?.name || senderName;
+  const location = profile?.location || "—";
+  const role = profile?.current_role || "—";
+  const exp = profile?.experience_years ?? "—";
+
+  return {
+    subject: `${name} — Interested in ${row.pokeSubjectContext}`,
+    body: `Dear ${row.pokeTargetName},
 
 I am writing to express my strong interest in the ${
-        row.pokeSubjectContext
-      } position at your company.
+      row.pokeSubjectContext
+    } position at your company.
 My resume is attached as a PDF for your reference.
 
 ━━━ ABOUT ME ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -98,7 +101,7 @@ Email:        ${profile?.email || senderEmail}
 Phone:        ${profile?.phone || "—"}
 Location:     ${location}
 Current Role: ${role}
-Experience:   ${exp} year${Number(exp) !== 1 ? "s" : ""}
+Experience:   ${exp} year${Number(exp) === 1 ? "" : "s"}
 Top Skills:   ${skills}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -121,8 +124,7 @@ Best regards,
 ${name}
 ${profile?.email || senderEmail}
 ${profile?.phone || ""}`,
-    };
-  }
+  };
 }
 
 const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
@@ -143,13 +145,9 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
 
   useEffect(() => {
     if (open && row) {
-      const tpl = buildTemplate(
-        row,
-        isVendor,
-        senderName,
-        senderEmail,
-        senderProfile,
-      );
+      const tpl = isVendor
+        ? buildVendorTemplate(row, senderName, senderEmail)
+        : buildCandidateTemplate(row, senderName, senderEmail, senderProfile);
       setSubject(tpl.subject);
       setBody(tpl.body);
     }
@@ -182,13 +180,9 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
 
   const handleReset = () => {
     if (!row) return;
-    const tpl = buildTemplate(
-      row,
-      isVendor,
-      senderName,
-      senderEmail,
-      senderProfile,
-    );
+    const tpl = isVendor
+      ? buildVendorTemplate(row, senderName, senderEmail)
+      : buildCandidateTemplate(row, senderName, senderEmail, senderProfile);
     setSubject(tpl.subject);
     setBody(tpl.body);
   };
@@ -196,7 +190,8 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
   const isBusy = sending || generatingPdf;
 
   return (
-    <div className="rm-overlay" onClick={onClose}>
+    <dialog open className="rm-overlay">
+      <div className="rm-backdrop" role="none" onClick={onClose} />
       <div
         className="rm-window"
         style={{
@@ -205,7 +200,6 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           display: "flex",
           flexDirection: "column",
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Title bar */}
         <div className="rm-titlebar">
@@ -282,7 +276,7 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           {/* Body */}
           <fieldset className="rm-fieldset" style={{ flex: 1 }}>
             <legend>
-              Email Body
+              Email Body{" "}
               <span
                 style={{
                   marginLeft: 8,
@@ -326,18 +320,17 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
             onClick={handleSend}
             disabled={isBusy || !subject.trim() || !body.trim() || sentSuccess}
             title={
-              !isVendor
-                ? "Send email with resume PDF attached"
-                : "Send mail template"
+              isVendor
+                ? "Send mail template"
+                : "Send email with resume PDF attached"
             }
           >
-            {generatingPdf
-              ? "⏳ Generating PDF..."
-              : isBusy
-              ? "⏳ Sending..."
-              : sentSuccess
-              ? "✓ Sent"
-              : "📤 Send Mail Template"}
+            {(() => {
+              if (generatingPdf) return "⏳ Generating PDF...";
+              if (isBusy) return "⏳ Sending...";
+              if (sentSuccess) return "✓ Sent";
+              return "📤 Send Mail Template";
+            })()}
           </button>
           <button
             type="button"
@@ -358,7 +351,7 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 };
 

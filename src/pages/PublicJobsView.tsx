@@ -93,8 +93,8 @@ const WS_RECONNECT_MS = 5000;
 
 /** Build a ws:// or wss:// URL relative to the current page origin. */
 function wsUrl(path: string): string {
-  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${window.location.host}${path}`;
+  const proto = globalThis.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${globalThis.location.host}${path}`;
 }
 
 /**
@@ -175,9 +175,11 @@ const MatchBar: React.FC<{ score: number }> = ({ score }) => (
   <span className="pub-fit-track">
     <span className="pub-fit-bar">
       <span
-        className={`pub-fit-fill${
-          score >= 90 ? " pub-fit-high" : score >= 75 ? " pub-fit-good" : ""
-        }`}
+        className={`pub-fit-fill${(() => {
+          if (score >= 90) return " pub-fit-high";
+          if (score >= 75) return " pub-fit-good";
+          return "";
+        })()}`}
         style={{ width: `${score}%` }}
       />
     </span>
@@ -196,12 +198,13 @@ const LoginWarningBar: React.FC<{
       {message ||
         "Without login you cannot contact recruiters or connect with candidates or view important columns such as salary, skills, and match scores."}
     </span>
-    <span
+    <button
+      type="button"
       className="pub-login-warning-cta"
       onClick={
         openPricing ||
         (() =>
-          window.dispatchEvent(
+          globalThis.dispatchEvent(
             new CustomEvent("matchdb:openPricing", {
               detail: { tab: "vendor" },
             }),
@@ -209,12 +212,12 @@ const LoginWarningBar: React.FC<{
       }
       style={{ cursor: "pointer" }}
     >
-      {viewType === "vendor"
-        ? "View Vendor Plans & Pricing →"
-        : viewType === "candidate"
-        ? "View Candidate Plans & Pricing →"
-        : "See Prices and Plans →"}
-    </span>
+      {(() => {
+        if (viewType === "vendor") return "View Vendor Plans & Pricing →";
+        if (viewType === "candidate") return "View Candidate Plans & Pricing →";
+        return "See Prices and Plans →";
+      })()}
+    </button>
   </div>
 );
 
@@ -243,7 +246,7 @@ const TypewriterCount: React.FC<{ value: number | null; fallback: number }> = ({
   value,
   fallback,
 }) => {
-  const target = value !== null ? value : fallback;
+  const target = value ?? fallback;
   const text = String(target);
   const [displayed, setDisplayed] = useState("");
   const prevRef = useRef(text);
@@ -305,7 +308,7 @@ const StatusBar: React.FC<{
       <>
         {cells.map((c, i) => (
           <span
-            key={i}
+            key={`cell-${c}`}
             className={`pub-sb-cell${
               i === cells.length - 1 ? " pub-sb-right" : ""
             }`}
@@ -584,7 +587,7 @@ const TwinView: React.FC<TwinProps> = ({
         <LoginWarningBar
           message="Without login you cannot contact recruiters or connect with candidates or view important columns such as salary, skills, and match scores."
           openPricing={() =>
-            window.dispatchEvent(
+            globalThis.dispatchEvent(
               new CustomEvent("matchdb:openPricing", {
                 detail: { tab: "vendor" },
               }),
@@ -822,7 +825,7 @@ const CandView: React.FC<CandViewProps> = ({
           message="Without login you cannot contact recruiters or view important columns such as salary, skills, and match scores."
           viewType="candidate"
           openPricing={() =>
-            window.dispatchEvent(
+            globalThis.dispatchEvent(
               new CustomEvent("matchdb:openPricing", {
                 detail: { tab: "candidate" },
               }),
@@ -1005,7 +1008,7 @@ const VendorView: React.FC<VendorViewProps> = ({
           message="Without login you cannot contact Candidates or view important columns such as salary, skills, and match scores."
           viewType="vendor"
           openPricing={() =>
-            window.dispatchEvent(
+            globalThis.dispatchEvent(
               new CustomEvent("matchdb:openPricing", {
                 detail: { tab: "vendor" },
               }),
@@ -1070,6 +1073,52 @@ const PublicJobsView: React.FC = () => {
   const deleteFlashJobTimer = useRef<ReturnType<typeof setTimeout>>();
   const deleteFlashProfileTimer = useRef<ReturnType<typeof setTimeout>>();
 
+  const scheduleFlashJobs = useCallback((ids: string[]) => {
+    clearTimeout(flashJobTimer.current);
+    setFlashJobIds(new Set(ids));
+    flashJobTimer.current = setTimeout(
+      () => setFlashJobIds(new Set()),
+      FLASH_DURATION_MS,
+    );
+  }, []);
+
+  const scheduleFlashProfiles = useCallback((ids: string[]) => {
+    clearTimeout(flashProfileTimer.current);
+    setFlashProfileIds(new Set(ids));
+    flashProfileTimer.current = setTimeout(
+      () => setFlashProfileIds(new Set()),
+      FLASH_DURATION_MS,
+    );
+  }, []);
+
+  const removeDeletedJobs = useCallback((ids: Set<string>) => {
+    setDeleteFlashJobIds(new Set());
+    setJobs((prev) => prev.filter((j) => !ids.has(j.id)));
+  }, []);
+
+  const removeDeletedProfiles = useCallback((ids: Set<string>) => {
+    setDeleteFlashProfileIds(new Set());
+    setProfiles((prev) => prev.filter((p) => !ids.has(p.id)));
+  }, []);
+
+  const scheduleDeleteFlashJobs = useCallback((ids: Set<string>) => {
+    clearTimeout(deleteFlashJobTimer.current);
+    setDeleteFlashJobIds(ids);
+    deleteFlashJobTimer.current = setTimeout(
+      () => removeDeletedJobs(ids),
+      FLASH_DURATION_MS,
+    );
+  }, [removeDeletedJobs]);
+
+  const scheduleDeleteFlashProfiles = useCallback((ids: Set<string>) => {
+    clearTimeout(deleteFlashProfileTimer.current);
+    setDeleteFlashProfileIds(ids);
+    deleteFlashProfileTimer.current = setTimeout(
+      () => removeDeletedProfiles(ids),
+      FLASH_DURATION_MS,
+    );
+  }, [removeDeletedProfiles]);
+
   const isVendorView =
     location.pathname === "/jobs/vendor" ||
     location.pathname.startsWith("/jobs/vendor/");
@@ -1101,13 +1150,13 @@ const PublicJobsView: React.FC = () => {
           if (Array.isArray(msg.jobs)) {
             const liveJobs = msg.jobs.slice(0, PAGE_SIZE);
             // Append deleted rows (from server's last-known cache) at the end
-            const deletedRows = (msg.deletedJobs ?? []) as PublicJob[];
+            const deletedRows = (msg.deletedJobs ?? []);
             const combined = [...liveJobs, ...deletedRows].slice(0, PAGE_SIZE);
             setJobs(combined);
           }
           if (Array.isArray(msg.profiles)) {
             const liveProfiles = msg.profiles.slice(0, PAGE_SIZE);
-            const deletedRows = (msg.deletedProfiles ?? []) as PublicProfile[];
+            const deletedRows = (msg.deletedProfiles ?? []);
             const combined = [...liveProfiles, ...deletedRows].slice(
               0,
               PAGE_SIZE,
@@ -1117,43 +1166,17 @@ const PublicJobsView: React.FC = () => {
 
           // Flash changed/deleted rows (skip on the very first message — initial load)
           if (!isFirst) {
-            // Update flash (warning yellow)
             if (msg.changedJobIds?.length) {
-              clearTimeout(flashJobTimer.current);
-              setFlashJobIds(new Set(msg.changedJobIds));
-              flashJobTimer.current = setTimeout(
-                () => setFlashJobIds(new Set()),
-                FLASH_DURATION_MS,
-              );
+              scheduleFlashJobs(msg.changedJobIds);
             }
             if (msg.changedProfileIds?.length) {
-              clearTimeout(flashProfileTimer.current);
-              setFlashProfileIds(new Set(msg.changedProfileIds));
-              flashProfileTimer.current = setTimeout(
-                () => setFlashProfileIds(new Set()),
-                FLASH_DURATION_MS,
-              );
+              scheduleFlashProfiles(msg.changedProfileIds);
             }
-
-            // Delete flash (light red) — show briefly then remove deleted rows
             if (deletedJobSet.size > 0) {
-              clearTimeout(deleteFlashJobTimer.current);
-              setDeleteFlashJobIds(deletedJobSet);
-              deleteFlashJobTimer.current = setTimeout(() => {
-                setDeleteFlashJobIds(new Set());
-                // Remove deleted rows from display after flash ends
-                setJobs((prev) => prev.filter((j) => !deletedJobSet.has(j.id)));
-              }, FLASH_DURATION_MS);
+              scheduleDeleteFlashJobs(deletedJobSet);
             }
             if (deletedProfileSet.size > 0) {
-              clearTimeout(deleteFlashProfileTimer.current);
-              setDeleteFlashProfileIds(deletedProfileSet);
-              deleteFlashProfileTimer.current = setTimeout(() => {
-                setDeleteFlashProfileIds(new Set());
-                setProfiles((prev) =>
-                  prev.filter((p) => !deletedProfileSet.has(p.id)),
-                );
-              }, FLASH_DURATION_MS);
+              scheduleDeleteFlashProfiles(deletedProfileSet);
             }
           }
 
@@ -1191,15 +1214,15 @@ const PublicJobsView: React.FC = () => {
     const handler = (e: Event) => {
       setJobTypeFilter((e as CustomEvent).detail?.jobType || "");
     };
-    window.addEventListener("matchdb:jobTypeFilter", handler);
-    return () => window.removeEventListener("matchdb:jobTypeFilter", handler);
+    globalThis.addEventListener("matchdb:jobTypeFilter", handler);
+    return () => globalThis.removeEventListener("matchdb:jobTypeFilter", handler);
   }, []);
 
   const openLogin = useCallback(
     (context: "candidate" | "vendor", mode: "login" | "register" = "login") => {
       /* locked = true when user is on /jobs/candidate or /jobs/vendor — type is pre-determined */
       const isSpecificView = isCandView || isVendorView;
-      window.dispatchEvent(
+      globalThis.dispatchEvent(
         new CustomEvent("matchdb:openLogin", {
           detail: { context, mode, locked: isSpecificView },
         }),

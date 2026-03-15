@@ -17,10 +17,27 @@ interface NavGroup {
 }
 
 interface DBLayoutProps {
-  userType: "vendor" | "candidate";
   navGroups: NavGroup[];
   breadcrumb: string[];
   children: React.ReactNode;
+  [key: string]: any;
+}
+
+function serializeNavGroups(groups: NavGroup[]): string {
+  return JSON.stringify(
+    groups.map((g) => ({
+      label: g.label,
+      icon: g.icon,
+      items: g.items.map((i) => ({
+        id: i.id,
+        label: i.label,
+        count: i.count,
+        active: i.active,
+        depth: i.depth,
+        tooltip: i.tooltip,
+      })),
+    })),
+  );
 }
 
 /**
@@ -50,23 +67,8 @@ const DBLayout: React.FC<DBLayoutProps> = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       mountedRef.current = true;
-      // Force-dispatch whatever navGroups we have right now
-      const json = JSON.stringify(
-        navGroupsRef.current.map((g) => ({
-          label: g.label,
-          icon: g.icon,
-          items: g.items.map((i) => ({
-            id: i.id,
-            label: i.label,
-            count: i.count,
-            active: i.active,
-            depth: i.depth,
-            tooltip: i.tooltip,
-          })),
-        })),
-      );
-      prevJson.current = json;
-      window.dispatchEvent(
+      prevJson.current = serializeNavGroups(navGroupsRef.current);
+      globalThis.dispatchEvent(
         new CustomEvent("matchdb:subnav", { detail: navGroupsRef.current }),
       );
     }, 0);
@@ -76,24 +78,10 @@ const DBLayout: React.FC<DBLayoutProps> = ({
   useEffect(() => {
     // Skip until the deferred mount dispatch has run
     if (!mountedRef.current) return;
-    // Only dispatch when navGroups actually change (avoid infinite loops)
-    const json = JSON.stringify(
-      navGroups.map((g) => ({
-        label: g.label,
-        icon: g.icon,
-        items: g.items.map((i) => ({
-          id: i.id,
-          label: i.label,
-          count: i.count,
-          active: i.active,
-          depth: i.depth,
-          tooltip: i.tooltip,
-        })),
-      })),
-    );
+    const json = serializeNavGroups(navGroups);
     if (json !== prevJson.current) {
       prevJson.current = json;
-      window.dispatchEvent(
+      globalThis.dispatchEvent(
         new CustomEvent("matchdb:subnav", {
           detail: navGroups,
         }),
@@ -106,7 +94,7 @@ const DBLayout: React.FC<DBLayoutProps> = ({
     const json = JSON.stringify(breadcrumb);
     if (json !== prevBc.current) {
       prevBc.current = json;
-      window.dispatchEvent(
+      globalThis.dispatchEvent(
         new CustomEvent("matchdb:breadcrumb", { detail: breadcrumb }),
       );
     }
@@ -115,8 +103,10 @@ const DBLayout: React.FC<DBLayoutProps> = ({
   useEffect(() => {
     return () => {
       // Clear sub-nav + breadcrumb when this component unmounts
-      window.dispatchEvent(new CustomEvent("matchdb:subnav", { detail: [] }));
-      window.dispatchEvent(
+      globalThis.dispatchEvent(
+        new CustomEvent("matchdb:subnav", { detail: [] }),
+      );
+      globalThis.dispatchEvent(
         new CustomEvent("matchdb:breadcrumb", { detail: [] }),
       );
     };

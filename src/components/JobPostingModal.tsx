@@ -12,7 +12,7 @@ interface Props {
 }
 
 const fmt = (v: number | null | undefined, prefix = '$') =>
-  v != null ? `${prefix}${Number(v).toLocaleString()}` : '—';
+  v == null ? '—' : `${prefix}${Number(v).toLocaleString()}`;
 
 const fmtDate = (iso: string) => {
   try {
@@ -71,8 +71,9 @@ const JobPostingModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="rm-overlay" onClick={onClose}>
-      <div className="rm-window jpm-window" onClick={(e) => e.stopPropagation()}>
+    <dialog open className="rm-overlay">
+      <div className="rm-backdrop" role="none" onClick={onClose} />
+      <div className="rm-window jpm-window">
 
         {/* Title bar */}
         <div className="rm-titlebar">
@@ -86,9 +87,9 @@ const JobPostingModal: React.FC<Props> = ({
         </div>
 
         {/* Status bar */}
-        <div className="rm-statusbar">
+          <div className="rm-statusbar">
           Posted {fmtDate(job.created_at)}
-          {job.application_count != null && ` · ${job.application_count} application${job.application_count !== 1 ? 's' : ''}`}
+          {job.application_count != null && ` · ${job.application_count} application${job.application_count === 1 ? '' : 's'}`}
           {job.vendor_email && ` · ${job.vendor_email}`}
         </div>
 
@@ -117,23 +118,25 @@ const JobPostingModal: React.FC<Props> = ({
             <legend>Job Details</legend>
             <div className="rm-grid-2">
               <div className="rm-field">
-                <label>Location</label>
+                <span>Location</span>
                 <div className="rm-readonly">{job.location || '—'}</div>
               </div>
               <div className="rm-field">
-                <label>Job Type</label>
+                <span>Job Type</span>
                 <div className="rm-readonly">{typeStr}{subStr}</div>
               </div>
               <div className="rm-field">
-                <label>Work Mode</label>
+                <span>Work Mode</span>
                 <div className="rm-readonly">{modeStr}</div>
               </div>
               <div className="rm-field">
-                <label>Experience Required</label>
+                <span>Experience Required</span>
                 <div className="rm-readonly">
-                  {job.experience_required != null
-                    ? `${job.experience_required} year${job.experience_required !== 1 ? 's' : ''}`
-                    : '—'}
+                  {(() => {
+                    if (job.experience_required == null) return '—';
+                    const suffix = job.experience_required === 1 ? '' : 's';
+                    return `${job.experience_required} year${suffix}`;
+                  })()}
                 </div>
               </div>
             </div>
@@ -144,15 +147,15 @@ const JobPostingModal: React.FC<Props> = ({
             <legend>Compensation</legend>
             <div className="rm-grid-2">
               <div className="rm-field">
-                <label>Pay Per Hour</label>
+                <span>Pay Per Hour</span>
                 <div className="rm-readonly">{fmt(job.pay_per_hour)}/hr</div>
               </div>
               <div className="rm-field">
-                <label>Salary Range</label>
-                <div className="rm-readonly">
-                  {job.salary_min != null || job.salary_max != null
-                    ? `${fmt(job.salary_min)} – ${fmt(job.salary_max)} /yr`
-                    : '—'}
+                <span>Salary Range</span>
+                <div className="rm-readonly jpm-description">
+                  {job.salary_min == null && job.salary_max == null
+                    ? '—'
+                    : `${fmt(job.salary_min)} – ${fmt(job.salary_max)} /yr`}
                 </div>
               </div>
             </div>
@@ -183,13 +186,13 @@ const JobPostingModal: React.FC<Props> = ({
               <div className="rm-grid-2">
                 {job.recruiter_name && (
                   <div className="rm-field">
-                    <label>Name</label>
+                    <span>Name</span>
                     <div className="rm-readonly">{job.recruiter_name}</div>
                   </div>
                 )}
                 {job.recruiter_phone && (
                   <div className="rm-field">
-                    <label>Phone</label>
+                    <span>Phone</span>
                     <div className="rm-readonly">{job.recruiter_phone}</div>
                   </div>
                 )}
@@ -231,7 +234,7 @@ const JobPostingModal: React.FC<Props> = ({
         </div>
 
       </div>
-    </div>
+    </dialog>
   );
 };
 

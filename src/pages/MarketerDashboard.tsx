@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+﻿import { useSearchParams } from "react-router-dom";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import DBLayout, { NavGroup } from "../components/DBLayout";
 import {
@@ -7,12 +7,10 @@ import {
   Input,
   Select,
   Tabs,
-  Panel,
   Toolbar,
 } from "matchdb-component-library";
-import type { DataTableColumn, Tab } from "matchdb-component-library";
+import type { DataTableColumn } from "matchdb-component-library";
 import DetailModal from "../components/DetailModal";
-import ProjectPayTable from "../components/ProjectPayTable";
 import "../components/ProjectFinancialForm.css";
 import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
@@ -31,10 +29,13 @@ import {
   useInviteCandidateMutation,
   useForwardOpeningWithEmailMutation,
   useUpdateForwardedStatusMutation,
+  useGetCompanySummaryQuery,
   type MarketerJob,
   type MarketerProfile,
   type MarketerCandidateItem,
   type ForwardedOpeningItem,
+  type CompanySummaryCandidate,
+  type CompanySummaryProject,
 } from "../api/jobsApi";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -50,7 +51,11 @@ type ActiveView =
   | "candidate-created"
   | "company-candidates"
   | "candidate-detail"
-  | "forwarded-openings";
+  | "forwarded-openings"
+  | "financial-summary"
+  | "project-summary"
+  | "job-positions-summary"
+  | "immigration";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -89,16 +94,34 @@ const SUB_LABELS: Record<string, string> = {
   salary: "Salary",
 };
 
-const countColor = (n: number) =>
-  n >= 50
-    ? "var(--w97-green)"
-    : n >= 25
-    ? "var(--w97-yellow)"
-    : n >= 10
-    ? "var(--w97-orange)"
-    : "var(--w97-red)";
-const countBg = (n: number) =>
-  n >= 50 ? "#e8f5e9" : n >= 25 ? "#fffde6" : n >= 10 ? "#fff3e0" : "#fff5f5";
+const fmtC = (v: number) =>
+  `$${Math.abs(v).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
+const fmtF = (v: number) =>
+  v < 0
+    ? `-$${Math.abs(v).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`
+    : `$${v.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+
+const countColor = (n: number) => {
+  if (n >= 50) return "var(--w97-green)";
+  if (n >= 25) return "var(--w97-yellow)";
+  if (n >= 10) return "var(--w97-orange)";
+  return "var(--w97-red)";
+};
+const countBg = (n: number) => {
+  if (n >= 50) return "#e8f5e9";
+  if (n >= 25) return "#fffde6";
+  if (n >= 10) return "#fff3e0";
+  return "#fff5f5";
+};
 
 // ─── CSV / Excel download helpers ─────────────────────────────────────────────
 
@@ -109,7 +132,7 @@ function downloadCSV(rows: Record<string, string>[], filename: string) {
     headers.join(","),
     ...rows.map((r) =>
       headers
-        .map((h) => `"${String(r[h] ?? "").replace(/"/g, '""')}"`)
+        .map((h) => `"${String(r[h] ?? "").replaceAll('"', '""')}"`)
         .join(","),
     ),
   ].join("\n");
@@ -128,7 +151,7 @@ function downloadExcel(rows: Record<string, string>[], filename: string) {
   const tableRows = rows.map(
     (r) =>
       `<tr>${headers
-        .map((h) => `<td>${String(r[h] ?? "").replace(/</g, "&lt;")}</td>`)
+        .map((h) => `<td>${String(r[h] ?? "").replaceAll("<", "&lt;")}</td>`)
         .join("")}</tr>`,
   );
   const html = `<html><head><meta charset="UTF-8"></head><body>
@@ -177,13 +200,159 @@ function downloadResumePDF(p: MarketerProfile) {
     )
     .join("");
 
-  win.document
-    .write(`<!DOCTYPE html><html><head><title>Resume — ${p.name}</title>
+  const html = `<!DOCTYPE html><html><head><title>Resume — ${p.name}</title>
 <style>body{font-family:Arial,sans-serif;font-size:12px;margin:20px;}h1{font-size:16px;color:#235a81;border-bottom:2px solid #235a81;padding-bottom:6px;}table{border-collapse:collapse;width:100%;}@media print{button{display:none;}}</style>
 </head><body><h1>Resume — ${p.name}</h1><table>${tableRows}</table><br/>
 <button onclick="window.print()" style="padding:6px 14px;background:#235a81;color:#fff;border:none;cursor:pointer;font-size:12px;">Print / Save as PDF</button>
-</body></html>`);
+</body></html>`;
+  win.document.open();
   win.document.close();
+  win.document.documentElement.innerHTML = html;
+}
+
+function footerRowClass(margin: number): string {
+  if (margin > 0.01) return "ov-foot-profit";
+  if (margin < -0.01) return "ov-foot-loss";
+  return "ov-foot-neutral";
+}
+
+function balanceClass(val: number): string {
+  if (val > 0.01) return "ov-val-orange";
+  if (val < -0.01) return "ov-val-red";
+  return "ov-val-green";
+}
+
+function balanceLabel(val: number, fmt: (v: number) => string): string {
+  if (Math.abs(val) < 0.01) return "\u2713";
+  if (val > 0) return fmt(val);
+  return `+${fmt(Math.abs(val))}`;
+}
+
+function settledOrAmount(val: number, fmt: (v: number) => string): string {
+  if (Math.abs(val) < 0.01) return "\u2713 Settled";
+  if (val > 0) return fmt(val);
+  return `Overpaid ${fmt(Math.abs(val))}`;
+}
+
+function subtabStyle(active: boolean, first = true): React.CSSProperties {
+  return {
+    padding: "5px 14px",
+    fontSize: 11.5,
+    fontWeight: active ? 700 : 500,
+    background: active ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
+    color: active ? "#fff" : "var(--w97-text)",
+    border: "1px solid var(--w97-btn-shadow)",
+    borderBottom: active ? "none" : "1px solid var(--w97-btn-shadow)",
+    borderRadius: "4px 4px 0 0",
+    cursor: "pointer",
+    ...(!first && { marginLeft: -1 }),
+  };
+}
+
+type MonthRow = {
+  label: string;
+  hours: number;
+  billed: number;
+  gross: number;
+  net: number;
+  paid: number;
+  balance: number;
+};
+
+const OV_MN = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+const OV_VAR = [1, 0.92, 1.08, 1.02, 0.94, 1.06, 1, 0.92, 1.08, 1, 0.94, 1.04];
+
+function buildMonthlyRows(
+  allFins: {
+    fin: {
+      projectStart: string | null;
+      hoursWorked: number;
+      amountPaid: number;
+      billRate: number;
+      payRate: number;
+      stateTaxPct: number;
+      cashPct: number;
+    };
+  }[],
+): MonthRow[] {
+  const monthMap: Record<string, MonthRow> = {};
+
+  allFins.forEach(({ fin }) => {
+    const now = new Date();
+    const start = fin.projectStart
+      ? new Date(fin.projectStart)
+      : new Date(now.getFullYear() - 1, now.getMonth(), 1);
+    const rawH = fin.hoursWorked > 0 ? fin.hoursWorked / 12 : 80;
+    const periods = Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+      return {
+        label: `${OV_MN[d.getMonth()]} ${d.getFullYear()}`,
+        hours: Math.round(rawH * OV_VAR[i] * 2) / 2,
+      };
+    });
+    if (fin.hoursWorked > 0) {
+      const sumH = periods.reduce((a, p) => a + p.hours, 0);
+      const scale = fin.hoursWorked / sumH;
+      periods.forEach((p) => {
+        p.hours = Math.round(p.hours * scale * 2) / 2;
+      });
+    }
+    const paidArr: number[] = new Array(12).fill(0);
+    if (fin.amountPaid > 0) {
+      const sumH = periods.reduce((a, p) => a + p.hours, 0);
+      let alloc = 0;
+      periods.forEach((p, i) => {
+        if (i < 11) {
+          const s = Math.round((p.hours / sumH) * fin.amountPaid * 100) / 100;
+          paidArr[i] = s;
+          alloc += s;
+        } else {
+          paidArr[i] = Math.round((fin.amountPaid - alloc) * 100) / 100;
+        }
+      });
+    }
+    periods.forEach((p, i) => {
+      const billed = fin.billRate * p.hours;
+      const gross = fin.payRate * p.hours;
+      const tax = (gross * fin.stateTaxPct) / 100;
+      const withhold = (gross * fin.cashPct) / 100;
+      const net = gross - tax - withhold;
+      const paid = paidArr[i];
+      if (!monthMap[p.label])
+        monthMap[p.label] = {
+          label: p.label,
+          hours: 0,
+          billed: 0,
+          gross: 0,
+          net: 0,
+          paid: 0,
+          balance: 0,
+        };
+      monthMap[p.label].hours += p.hours;
+      monthMap[p.label].billed += billed;
+      monthMap[p.label].gross += gross;
+      monthMap[p.label].net += net;
+      monthMap[p.label].paid += paid;
+      monthMap[p.label].balance += net - paid;
+    });
+  });
+
+  return Object.values(monthMap).sort(
+    (a, b) => new Date(a.label).getTime() - new Date(b.label).getTime(),
+  );
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -204,8 +373,11 @@ const MarketerDashboard: React.FC<Props> = () => {
 
   const [jobSearch, setJobSearch] = useState("");
   const [profileSearch, setProfileSearch] = useState("");
-  const [overviewSubTab, setOverviewSubTab] = useState<"financial" | "monthly">("financial");
-  const [vendorActivitySubTab, setVendorActivitySubTab] = useState<string>("summary");
+  const [overviewSubTab, setOverviewSubTab] = useState<"financial" | "monthly">(
+    "financial",
+  );
+  const [vendorActivitySubTab, setVendorActivitySubTab] =
+    useState<string>("summary");
 
   /** Update multiple URL params atomically in one navigate() call */
   const navParams = (updates: Record<string, string | null>) =>
@@ -225,7 +397,11 @@ const MarketerDashboard: React.FC<Props> = () => {
   useEffect(() => {
     if (!searchParams.get("view")) {
       setSearchParams(
-        (prev) => { const n = new URLSearchParams(prev); n.set("view", "company-candidates"); return n; },
+        (prev) => {
+          const n = new URLSearchParams(prev);
+          n.set("view", "company-candidates");
+          return n;
+        },
         { replace: true },
       );
     }
@@ -267,8 +443,52 @@ const MarketerDashboard: React.FC<Props> = () => {
     email: string;
     name: string;
   } | null>(null);
+  type ReportContext = "finance" | "project" | "positions";
+
   const [sendJobId, setSendJobId] = useState("");
   const [sendJobNote, setSendJobNote] = useState("");
+  const [finViewTab, setFinViewTab] = useState<"table" | "chart" | "graph">(
+    "table",
+  );
+  const [kebabOpen, setKebabOpen] = useState<string | null>(null);
+  const [prevView, setPrevView] = useState<ActiveView | null>(null);
+  const [finSearch, setFinSearch] = useState("");
+  const [finStatusFilter, setFinStatusFilter] = useState<
+    "all" | "billed" | "unbilled"
+  >("all");
+
+  // Email modal state
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailModalTarget, setEmailModalTarget] = useState<{
+    name: string;
+    email: string;
+    context: ReportContext;
+    data: Record<string, string>;
+  } | null>(null);
+  const [emailFormat, setEmailFormat] = useState<"pdf" | "excel">("pdf");
+
+  // Download modal state
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [downloadModalTarget, setDownloadModalTarget] = useState<{
+    name: string;
+    context: ReportContext;
+    data: Record<string, string>;
+  } | null>(null);
+
+  // Close kebab menu on outside click
+  useEffect(() => {
+    if (!kebabOpen) return;
+    const handler = () => setKebabOpen(null);
+    // Delay so the opening click doesn't immediately trigger close
+    const timer = setTimeout(
+      () => document.addEventListener("click", handler),
+      0,
+    );
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("click", handler);
+    };
+  }, [kebabOpen]);
 
   // ── RTK Query ───────────────────────────────────────────────────────────────
 
@@ -294,10 +514,15 @@ const MarketerDashboard: React.FC<Props> = () => {
   const { data: myCompany } = useGetMyCompanyQuery();
   const [registerCompany] = useRegisterCompanyMutation();
   const { data: companyCandidates = [] } = useGetMarketerCandidatesQuery();
-  const { data: candidateDetail, isFetching: detailLoading } =
-    useGetMarketerCandidateDetailQuery(selectedCandidateId!, {
-      skip: !selectedCandidateId,
-    });
+  const { data: companySummary, isFetching: summaryLoading } =
+    useGetCompanySummaryQuery();
+  const {
+    data: candidateDetail,
+    isFetching: detailLoading,
+    isError: detailError,
+  } = useGetMarketerCandidateDetailQuery(selectedCandidateId!, {
+    skip: !selectedCandidateId,
+  });
   const [addCandidate] = useAddMarketerCandidateMutation();
   const [removeCandidate] = useRemoveMarketerCandidateMutation();
   const [forwardOpening, { isLoading: forwardLoading }] =
@@ -475,7 +700,7 @@ const MarketerDashboard: React.FC<Props> = () => {
   };
 
   const handleRemoveCandidate = async (id: string) => {
-    if (!window.confirm("Remove this candidate from your company roster?"))
+    if (!globalThis.confirm("Remove this candidate from your company roster?"))
       return;
     try {
       await removeCandidate(id).unwrap();
@@ -592,12 +817,35 @@ const MarketerDashboard: React.FC<Props> = () => {
             depth: 1,
             onClick: () => setAddCandModalOpen(true),
           },
+        ],
+      },
+      {
+        label: "Dashboard",
+        icon: "📊",
+        items: [
           {
-            id: "forwarded-openings",
-            label: "Sent Openings",
-            count: forwardedOpenings.length,
-            active: activeView === "forwarded-openings",
-            onClick: () => navigateTo("forwarded-openings"),
+            id: "financial-summary",
+            label: "Finance",
+            active: activeView === "financial-summary",
+            onClick: () => navigateTo("financial-summary"),
+          },
+          {
+            id: "project-summary",
+            label: "Project",
+            active: activeView === "project-summary",
+            onClick: () => navigateTo("project-summary"),
+          },
+          {
+            id: "job-positions-summary",
+            label: "Positions",
+            active: activeView === "job-positions-summary",
+            onClick: () => navigateTo("job-positions-summary"),
+          },
+          {
+            id: "immigration",
+            label: "Immigration",
+            active: activeView === "immigration",
+            onClick: () => navigateTo("immigration"),
           },
         ],
       },
@@ -643,6 +891,14 @@ const MarketerDashboard: React.FC<Props> = () => {
             active: activeView === "vendor-posted" && subFilter === "full_time",
             onClick: () =>
               navParams({ view: "vendor-posted", filter: "full_time" }),
+          },
+          {
+            id: "forwarded-openings",
+            label: "Sent Openings",
+            count: forwardedOpenings.length,
+            depth: 1,
+            active: activeView === "forwarded-openings",
+            onClick: () => navigateTo("forwarded-openings"),
           },
         ],
       },
@@ -718,21 +974,23 @@ const MarketerDashboard: React.FC<Props> = () => {
     ],
   );
 
-  const breadcrumb =
-    activeView === "vendor-posted"
-      ? ["Jobs", "Marketer", "Job Openings"]
-      : activeView === "candidate-created"
-      ? ["Jobs", "Marketer", "Candidate Profiles"]
-      : activeView === "candidate-detail"
-      ? [
-          "Jobs",
-          "Marketer",
-          companyLabel,
-          candidateDetail?.roster?.candidate_name ?? "Candidate",
-        ]
-      : activeView === "company-candidates"
-      ? ["Jobs", "Marketer", companyLabel]
-      : ["Jobs", "Marketer", "Forwarded Openings"];
+  const BREADCRUMB_MAP: Record<string, string[]> = {
+    "vendor-posted": ["Jobs", "Marketer", "Job Openings"],
+    "candidate-created": ["Jobs", "Marketer", "Candidate Profiles"],
+    "candidate-detail": [
+      "Jobs",
+      "Marketer",
+      companyLabel,
+      candidateDetail?.roster?.candidate_name ?? "Candidate",
+    ],
+    "company-candidates": ["Jobs", "Marketer", companyLabel],
+    "forwarded-openings": ["Jobs", "Marketer", "Job Openings", "Sent Openings"],
+    "financial-summary": ["Jobs", "Marketer", "Dashboard", "Finance"],
+    "project-summary": ["Jobs", "Marketer", "Dashboard", "Project"],
+    "job-positions-summary": ["Jobs", "Marketer", "Dashboard", "Positions"],
+    immigration: ["Jobs", "Marketer", "Dashboard", "Immigration"],
+  };
+  const breadcrumb = BREADCRUMB_MAP[activeView] ?? ["Jobs", "Marketer"];
 
   // ── Jobs table columns ──────────────────────────────────────────────────────
 
@@ -744,17 +1002,22 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "13%",
         skeletonWidth: 110,
         render: (j) => (
-          <span
+          <button
+            type="button"
             style={{
               cursor: "pointer",
               color: "var(--w97-blue)",
               textDecoration: "underline",
+              background: "none",
+              border: "none",
+              padding: 0,
+              font: "inherit",
             }}
             onClick={() => openJobDetail(j)}
             title="Click to view details"
           >
             {j.title}
-          </span>
+          </button>
         ),
         tooltip: (j) => j.title,
       },
@@ -955,17 +1218,22 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "10%",
         skeletonWidth: 90,
         render: (p) => (
-          <span
+          <button
+            type="button"
             style={{
               cursor: "pointer",
               color: "var(--w97-blue)",
               textDecoration: "underline",
+              background: "none",
+              border: "none",
+              padding: 0,
+              font: "inherit",
             }}
             onClick={() => openProfileDetail(p)}
             title="Click to view profile"
           >
             {p.name || "—"}
-          </span>
+          </button>
         ),
         tooltip: (p) => p.name || "—",
       },
@@ -1143,9 +1411,14 @@ const MarketerDashboard: React.FC<Props> = () => {
               padding: 0,
               textDecoration: "underline",
             }}
-            onClick={() =>
-              navParams({ view: "candidate-detail", cid: c.id, tab: "overview" })
-            }
+            onClick={() => {
+              setPrevView("company-candidates");
+              navParams({
+                view: "candidate-detail",
+                cid: c.id,
+                tab: "overview",
+              });
+            }}
           >
             {c.candidate_name || "—"}
           </button>
@@ -1176,24 +1449,21 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 60,
         render: (c) => {
           const s = c.invite_status || "none";
-          const color =
-            s === "accepted"
-              ? "var(--w97-green)"
-              : s === "invited"
-              ? "var(--w97-yellow)"
-              : "var(--w97-text-secondary)";
-          const bg =
-            s === "accepted"
-              ? "#e8f5e9"
-              : s === "invited"
-              ? "#fffde6"
-              : "var(--w97-sky)";
-          const label =
-            s === "accepted"
-              ? "✓ Accepted"
-              : s === "invited"
-              ? "⏳ Invited"
-              : "—";
+          const STATUS_COLORS: Record<string, string> = {
+            accepted: "var(--w97-green)",
+            invited: "var(--w97-yellow)",
+          };
+          const STATUS_BGS: Record<string, string> = {
+            accepted: "#e8f5e9",
+            invited: "#fffde6",
+          };
+          const STATUS_LABELS: Record<string, string> = {
+            accepted: "✓ Accepted",
+            invited: "⏳ Invited",
+          };
+          const color = STATUS_COLORS[s] ?? "var(--w97-text-secondary)";
+          const bg = STATUS_BGS[s] ?? "var(--w97-sky)";
+          const label = STATUS_LABELS[s] ?? "—";
           return (
             <span
               style={{
@@ -1443,6 +1713,3790 @@ const MarketerDashboard: React.FC<Props> = () => {
     { label: "Candidates Placed", value: stats?.total_placed ?? 0, icon: "✅" },
   ];
 
+  function renderActiveView() {
+    if (activeView === "vendor-posted") return renderVendorPostedView();
+    if (activeView === "candidate-created") return renderCandidateCreatedView();
+    if (activeView === "candidate-detail" && selectedCandidateId)
+      return renderCandidateDetailView();
+    if (activeView === "company-candidates")
+      return renderCompanyCandidatesView();
+    if (activeView === "financial-summary") return renderFinancialSummaryView();
+    if (activeView === "project-summary") return renderProjectSummaryView();
+    if (activeView === "job-positions-summary")
+      return renderJobPositionsSummaryView();
+    if (activeView === "immigration") return renderImmigrationView();
+    return renderForwardedOpeningsView();
+  }
+
+  function renderVendorPostedView() {
+    const displayedJobs = subFilter ? filteredJobs : jobs;
+    const jobsCountDisplay = jobsLoading
+      ? "…"
+      : `${displayedJobs.length} / ${jobsTotal}`;
+    return (
+      <DataTable<MarketerJob>
+        columns={jobColumns}
+        data={filteredJobs}
+        keyExtractor={(j) => j.id}
+        loading={jobsLoading}
+        paginate
+        flashIds={jobsFlash.flashIds}
+        deleteFlashIds={jobsFlash.deleteFlashIds}
+        titleIcon="💼"
+        title={
+          subFilter
+            ? `Job Openings — ${
+                TYPE_LABELS[subFilter] ?? subFilter.toUpperCase()
+              }`
+            : "Job Openings"
+        }
+        paginationExtra={
+          <Button
+            variant="download"
+            size="xs"
+            onClick={handleDownloadJobsCSV}
+            title="Download all job openings as CSV"
+          >
+            ⬇ CSV
+          </Button>
+        }
+        titleExtra={
+          <div className="matchdb-title-toolbar">
+            <Input
+              className="matchdb-title-search"
+              value={jobSearch}
+              onChange={(e) => setJobSearch(e.target.value)}
+              placeholder="Search title, skills, location…"
+            />
+            <Button
+              size="xs"
+              className="matchdb-title-btn"
+              onClick={() => setJobSearch("")}
+            >
+              Reset
+            </Button>
+            <span className="matchdb-title-count">{jobsCountDisplay}</span>
+            <Button
+              size="xs"
+              className="matchdb-title-btn"
+              onClick={() => refetchJobs()}
+            >
+              ↻ Refresh
+            </Button>
+            {Boolean(jobsFlash.lastSync) && (
+              <span className="matchdb-title-sync">
+                synced {new Date(jobsFlash.lastSync!).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+        }
+      />
+    );
+  }
+
+  function renderCandidateCreatedView() {
+    const displayedProfiles = subFilter ? filteredProfiles : profiles;
+    const profilesCountDisplay = profilesLoading
+      ? "…"
+      : `${displayedProfiles.length} / ${profilesTotal}`;
+    return (
+      <DataTable<MarketerProfile>
+        columns={profileColumns}
+        data={filteredProfiles}
+        keyExtractor={(p) => p.id}
+        loading={profilesLoading}
+        paginate
+        flashIds={profilesFlash.flashIds}
+        deleteFlashIds={profilesFlash.deleteFlashIds}
+        titleIcon="👤"
+        title={
+          subFilter
+            ? `Candidate Profiles — ${
+                TYPE_LABELS[subFilter] ?? subFilter.toUpperCase()
+              }`
+            : "Candidate Profiles"
+        }
+        paginationExtra={
+          <Button
+            variant="download"
+            size="xs"
+            onClick={handleDownloadProfilesExcel}
+            title="Download all candidate profiles as Excel"
+          >
+            ⬇ Excel
+          </Button>
+        }
+        titleExtra={
+          <div className="matchdb-title-toolbar">
+            <Input
+              className="matchdb-title-search"
+              value={profileSearch}
+              onChange={(e) => setProfileSearch(e.target.value)}
+              placeholder="Search name, role, skills, location…"
+            />
+            <Button
+              size="xs"
+              className="matchdb-title-btn"
+              onClick={() => setProfileSearch("")}
+            >
+              Reset
+            </Button>
+            <span className="matchdb-title-count">{profilesCountDisplay}</span>
+            <Button
+              size="xs"
+              className="matchdb-title-btn"
+              onClick={() => refetchProfiles()}
+            >
+              ↻ Refresh
+            </Button>
+            {Boolean(profilesFlash.lastSync) && (
+              <span className="matchdb-title-sync">
+                synced {new Date(profilesFlash.lastSync!).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+        }
+      />
+    );
+  }
+
+  function renderCompanyCandidatesView() {
+    return (
+      <div>
+        {/* Company registration (one-time) */}
+        {!myCompany && (
+          <div
+            className="matchdb-card"
+            style={{ marginBottom: 12, padding: 12 }}
+          >
+            <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>
+              🏢 Register Your Company
+            </h3>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <Input
+                placeholder="Company name"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                style={{ flex: 1, maxWidth: 300 }}
+              />
+              <Button variant="primary" onClick={handleRegisterCompany}>
+                Register
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {myCompany && (
+          <div
+            style={{
+              marginBottom: 10,
+              fontSize: 12,
+              color: "var(--w97-text-secondary)",
+            }}
+          >
+            🏢 <strong>{myCompany.name}</strong> — {myCompany.marketer_email}
+          </div>
+        )}
+
+        {/* Candidates table */}
+        <DataTable<MarketerCandidateItem>
+          columns={candidateColumns}
+          data={companyCandidates}
+          keyExtractor={(c) => c.id}
+          loading={false}
+          paginate
+          pageSize={25}
+          titleIcon="🏢"
+          title={
+            myCompany?.name
+              ? `${myCompany.name} — Candidates`
+              : "Company Candidates"
+          }
+          titleExtra={
+            <Button
+              size="xs"
+              className="matchdb-title-btn"
+              onClick={() => setAddCandModalOpen(true)}
+            >
+              + Add Candidate
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  function renderForwardedOpeningsView() {
+    return (
+      /* activeView === "forwarded-openings" */
+      <DataTable<ForwardedOpeningItem>
+        columns={forwardedColumns}
+        data={forwardedOpenings}
+        keyExtractor={(f) => f.id}
+        loading={false}
+        paginate
+        titleIcon="📤"
+        title="Forwarded Openings"
+      />
+    );
+  }
+
+  // ── Shared Export Helpers ───────────────────────────────────────────────────
+
+  const fmtDollar = (v: number) =>
+    `$${v.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+
+  const buildFinCSVRows = (rows: CompanySummaryCandidate[]) => {
+    const header = [
+      "Candidate",
+      "Marketer %",
+      "Hours",
+      "Vendor Billed",
+      "Margin",
+      "Gross Pay",
+      "Net Pay",
+      "Paid",
+      "Balance",
+    ];
+    const body = rows.map((c) => {
+      const margin = c.totalBilled - c.totalPay;
+      const mPct =
+        c.totalBilled > 0 ? ((margin / c.totalBilled) * 100).toFixed(1) : "0";
+      return [
+        c.candidateName,
+        `${mPct}%`,
+        String(c.hoursWorked),
+        c.totalBilled.toFixed(2),
+        margin.toFixed(2),
+        c.totalPay.toFixed(2),
+        c.netPayable.toFixed(2),
+        c.amountPaid.toFixed(2),
+        Math.max(0, c.amountPending).toFixed(2),
+      ];
+    });
+    return [header, ...body];
+  };
+
+  const buildProjCSVRows = (rows: CompanySummaryProject[]) => {
+    const header = [
+      "Candidate",
+      "Project / Job",
+      "Client",
+      "Status",
+      "Bill Rate",
+      "Pay Rate",
+      "Hours",
+      "Billed",
+      "Net Pay",
+      "Paid",
+      "Balance",
+    ];
+    const body = rows.map((p) => [
+      p.candidateName,
+      p.jobTitle || "Untitled",
+      p.vendorEmail || "—",
+      p.isActive ? "Active" : "Closed",
+      p.financials ? `$${p.financials.billRate}` : "—",
+      p.financials ? `$${p.financials.payRate}` : "—",
+      p.financials ? String(p.financials.hoursWorked) : "0",
+      p.financials ? p.financials.totalBilled.toFixed(2) : "0",
+      p.financials ? p.financials.netPayable.toFixed(2) : "0",
+      p.financials ? p.financials.amountPaid.toFixed(2) : "0",
+      p.financials ? Math.max(0, p.financials.amountPending).toFixed(2) : "0",
+    ]);
+    return [header, ...body];
+  };
+
+  const downloadAsFile = (
+    rows: string[][],
+    filename: string,
+    format: "pdf" | "excel",
+  ) => {
+    if (format === "excel") {
+      const tsv = rows.map((r) => r.join("\t")).join("\n");
+      const blob = new Blob([tsv], { type: "application/vnd.ms-excel" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filename}.xls`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filename}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const contextLabel = (c: ReportContext) => {
+    const labels: Record<ReportContext, string> = {
+      finance: "Finance",
+      project: "Project",
+      positions: "Positions",
+    };
+    return labels[c];
+  };
+
+  const handleDownloadAll = (
+    context: ReportContext,
+    format: "pdf" | "excel",
+  ) => {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    if (context === "finance") {
+      downloadAsFile(
+        buildFinCSVRows(companySummary?.candidates ?? []),
+        `finance-${dateStr}`,
+        format,
+      );
+    } else if (context === "project") {
+      downloadAsFile(
+        buildProjCSVRows(companySummary?.projects ?? []),
+        `projects-${dateStr}`,
+        format,
+      );
+    } else {
+      const domains = companySummary?.domainCounts ?? [];
+      const header = ["Domain / Role", "Count", "% of Total"];
+      const total = domains.reduce((a, d) => a + d.count, 0);
+      const body = domains.map((d) => [
+        d.domain,
+        String(d.count),
+        `${total > 0 ? ((d.count / total) * 100).toFixed(1) : 0}%`,
+      ]);
+      downloadAsFile([header, ...body], `positions-${dateStr}`, format);
+    }
+  };
+
+  const openKebabEmail = (
+    name: string,
+    email: string,
+    context: ReportContext,
+    data: Record<string, string>,
+  ) => {
+    setKebabOpen(null);
+    setEmailModalTarget({ name, email, context, data });
+    setEmailFormat("pdf");
+    setEmailModalOpen(true);
+  };
+
+  const openKebabDownload = (
+    name: string,
+    context: ReportContext,
+    data: Record<string, string>,
+  ) => {
+    setKebabOpen(null);
+    setDownloadModalTarget({ name, context, data });
+    setDownloadModalOpen(true);
+  };
+
+  const handleEmailSend = () => {
+    if (!emailModalTarget) return;
+    const { name, data, context } = emailModalTarget;
+    const lines = Object.entries(data).map(([k, v]) => `${k}: ${v}`);
+    const body = [
+      `${contextLabel(context)} Report — ${name}`,
+      "",
+      ...lines,
+      "",
+      `Format: ${emailFormat.toUpperCase()}`,
+      `Generated: ${new Date().toLocaleDateString()}`,
+    ].join("%0D%0A");
+    const subject = encodeURIComponent(
+      `${contextLabel(context)} Report — ${name}`,
+    );
+    window.open(
+      `mailto:${encodeURIComponent(
+        emailModalTarget.email,
+      )}?subject=${subject}&body=${body}`,
+      "_self",
+    );
+    setEmailModalOpen(false);
+    setEmailModalTarget(null);
+  };
+
+  const handleDownloadSingle = (format: "pdf" | "excel") => {
+    if (!downloadModalTarget) return;
+    const { name, data, context } = downloadModalTarget;
+    const header = Object.keys(data);
+    const row = Object.values(data);
+    const safeName = name.replaceAll(/\s+/g, "-");
+    downloadAsFile([header, row], `${context}-${safeName}`, format);
+    setDownloadModalOpen(false);
+    setDownloadModalTarget(null);
+  };
+
+  // Build data record helpers
+  const buildFinData = (c: CompanySummaryCandidate): Record<string, string> => {
+    const margin = c.totalBilled - c.totalPay;
+    const mPct =
+      c.totalBilled > 0 ? ((margin / c.totalBilled) * 100).toFixed(1) : "0";
+    return {
+      Candidate: c.candidateName,
+      "Marketer %": `${mPct}%`,
+      "Total Hours": c.hoursWorked.toLocaleString(),
+      "Vendor Billed": fmtDollar(c.totalBilled),
+      Margin: fmtDollar(margin),
+      "Gross Pay": fmtDollar(c.totalPay),
+      "Net Pay": fmtDollar(c.netPayable),
+      Paid: fmtDollar(c.amountPaid),
+      Balance: fmtDollar(Math.max(0, c.amountPending)),
+    };
+  };
+
+  const buildProjData = (p: CompanySummaryProject): Record<string, string> => ({
+    Candidate: p.candidateName,
+    Project: p.jobTitle || "Untitled",
+    Client: p.vendorEmail || "—",
+    Status: p.isActive ? "Active" : "Closed",
+    Billed: p.financials ? fmtDollar(p.financials.totalBilled) : "—",
+    "Net Pay": p.financials ? fmtDollar(p.financials.netPayable) : "—",
+    Paid: p.financials ? fmtDollar(p.financials.amountPaid) : "—",
+    Balance: p.financials
+      ? fmtDollar(Math.max(0, p.financials.amountPending))
+      : "—",
+  });
+
+  // Reusable kebab component render
+  const renderKebabMenu = (
+    id: string,
+    name: string,
+    email: string,
+    context: ReportContext,
+    data: Record<string, string>,
+  ) => (
+    <div style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setKebabOpen(kebabOpen === id ? null : id);
+        }}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          fontSize: 16,
+          lineHeight: 1,
+          padding: "0 4px",
+          color: "var(--w97-text-secondary)",
+          opacity: kebabOpen === id ? 1 : 0.4,
+        }}
+        title="Actions"
+      >
+        ⋮
+      </button>
+      {kebabOpen === id && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            right: 0,
+            zIndex: 100,
+            background: "var(--w97-window)",
+            border: "1px solid var(--w97-border)",
+            borderRadius: 4,
+            boxShadow: "0 4px 12px rgba(0,0,0,.15)",
+            minWidth: 160,
+            fontSize: 11,
+            overflow: "hidden",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => openKebabEmail(name, email, context, data)}
+            style={{
+              display: "flex",
+              gap: 6,
+              alignItems: "center",
+              width: "100%",
+              textAlign: "left",
+              background: "none",
+              border: "none",
+              padding: "8px 14px",
+              cursor: "pointer",
+              fontSize: 11,
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f4ff")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+          >
+            📧 Email Report
+          </button>
+          <button
+            type="button"
+            onClick={() => openKebabDownload(name, context, data)}
+            style={{
+              display: "flex",
+              gap: 6,
+              alignItems: "center",
+              width: "100%",
+              textAlign: "left",
+              background: "none",
+              border: "none",
+              padding: "8px 14px",
+              cursor: "pointer",
+              fontSize: 11,
+              borderTop: "1px solid var(--w97-border-light)",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f4ff")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+          >
+            ⬇ Download
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Financial Summary View ──────────────────────────────────────────────────
+
+  function renderFinancialSummaryView() {
+    const cands = companySummary?.candidates ?? [];
+    const totals = companySummary?.totals ?? {
+      totalBilled: 0,
+      totalPay: 0,
+      netPayable: 0,
+      amountPaid: 0,
+      amountPending: 0,
+      hoursWorked: 0,
+      taxAmount: 0,
+      cashAmount: 0,
+    };
+    const fmtC = (v: number) =>
+      `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+
+    const grandMargin = totals.totalBilled - totals.totalPay;
+    const marginPct =
+      totals.totalBilled > 0
+        ? ((grandMargin / totals.totalBilled) * 100).toFixed(1)
+        : "0";
+    const paidPct =
+      totals.netPayable > 0
+        ? ((totals.amountPaid / totals.netPayable) * 100).toFixed(0)
+        : "0";
+    const paidBarW =
+      totals.netPayable > 0
+        ? Math.min(100, (totals.amountPaid / totals.netPayable) * 100)
+        : 0;
+
+    // bar chart: top candidates by billed
+    const topCands = [...cands]
+      .filter((c) => c.totalBilled > 0)
+      .sort((a, b) => b.totalBilled - a.totalBilled)
+      .slice(0, 10);
+    const maxBilled = topCands.length ? topCands[0].totalBilled : 1;
+
+    return (
+      <div>
+        {summaryLoading && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: 40,
+              fontSize: 13,
+              color: "var(--w97-text-secondary)",
+            }}
+          >
+            Loading financial summary…
+          </div>
+        )}
+
+        {!summaryLoading && (
+          <>
+            {/* KPI strip */}
+            <div className="ov-kpi-strip" style={{ margin: "0 0 14px" }}>
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Total Hours</span>
+                <span className="ov-kpi-value ov-kv-blue">
+                  {totals.hoursWorked.toLocaleString()}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Vendor Billed</span>
+                <span className="ov-kpi-value ov-kv-green">
+                  {fmtC(totals.totalBilled)}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Company Margin</span>
+                <span className="ov-kpi-value ov-kv-teal">
+                  {fmtC(grandMargin)}{" "}
+                  <span className="ov-kpi-pct">({marginPct}%)</span>
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Net Payable</span>
+                <span className="ov-kpi-value ov-kv-blue">
+                  {fmtC(totals.netPayable)}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Paid to Date</span>
+                <span className="ov-kpi-value ov-kv-green">
+                  {fmtC(totals.amountPaid)}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Outstanding</span>
+                <span
+                  className={`ov-kpi-value ${
+                    totals.amountPending > 0 ? "ov-kv-orange" : "ov-kv-green"
+                  }`}
+                >
+                  {fmtC(Math.max(0, totals.amountPending))}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi" style={{ flex: 1, minWidth: 120 }}>
+                <span className="ov-kpi-label">
+                  Payment Progress — {paidPct}%
+                </span>
+                <div
+                  style={{
+                    marginTop: 4,
+                    height: 8,
+                    background: "var(--w97-border-light)",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      borderRadius: 8,
+                      width: `${paidBarW}%`,
+                      background:
+                        "linear-gradient(90deg, var(--w97-green), #2dd55b)",
+                      transition: "width 0.4s ease",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* View tabs: Table / Chart / Graph */}
+            <div style={{ display: "flex", gap: 0, marginBottom: 0 }}>
+              {(
+                [
+                  { key: "table", label: "📊 Table View" },
+                  { key: "chart", label: "📈 Chart View" },
+                  { key: "graph", label: "📉 Graph View" },
+                ] as const
+              ).map((t, i) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setFinViewTab(t.key)}
+                  style={{
+                    padding: "6px 16px",
+                    fontSize: 12,
+                    fontWeight: finViewTab === t.key ? 700 : 400,
+                    background:
+                      finViewTab === t.key ? "var(--w97-window)" : "#e6e6e6",
+                    border: "1px solid var(--w97-border)",
+                    borderBottom:
+                      finViewTab === t.key
+                        ? "none"
+                        : "1px solid var(--w97-border)",
+                    borderRadius: (() => {
+                      if (i === 0) return "4px 0 0 0";
+                      if (i === 2) return "0 4px 0 0";
+                      return 0;
+                    })(),
+                    cursor: "pointer",
+                    position: "relative",
+                    top: finViewTab === t.key ? 1 : 0,
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Table View */}
+            {finViewTab === "table" && (
+              <DataTable<CompanySummaryCandidate>
+                title="Financial Summary — By Candidate"
+                titleIcon="💰"
+                className="matchdb-auto-height"
+                titleExtra={
+                  <div
+                    style={{ display: "flex", gap: 6, alignItems: "center" }}
+                  >
+                    <input
+                      type="text"
+                      placeholder="🔍 Search candidate…"
+                      value={finSearch}
+                      onChange={(e) => setFinSearch(e.target.value)}
+                      style={{
+                        padding: "3px 8px",
+                        fontSize: 11,
+                        border: "1px solid var(--w97-border)",
+                        borderRadius: 3,
+                        width: 150,
+                      }}
+                    />
+                    <select
+                      value={finStatusFilter}
+                      onChange={(e) =>
+                        setFinStatusFilter(
+                          e.target.value as "all" | "billed" | "unbilled",
+                        )
+                      }
+                      style={{
+                        padding: "3px 8px",
+                        fontSize: 11,
+                        border: "1px solid var(--w97-border)",
+                        borderRadius: 3,
+                      }}
+                    >
+                      <option value="all">All</option>
+                      <option value="billed">Billed</option>
+                      <option value="unbilled">Unbilled</option>
+                    </select>
+                  </div>
+                }
+                columns={
+                  [
+                    {
+                      key: "name",
+                      header: "Candidate",
+                      width: "16%",
+                      render: (c) => (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            style={{
+                              cursor: "pointer",
+                              flex: 1,
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              textAlign: "left",
+                            }}
+                            onClick={() => {
+                              setPrevView("financial-summary");
+                              navParams({
+                                view: "candidate-detail",
+                                cid: c.id,
+                                tab: "overview",
+                              });
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontWeight: 600,
+                                color: "var(--w97-blue)",
+                                textDecoration: "underline",
+                              }}
+                            >
+                              {c.candidateName}
+                            </div>
+                          </button>
+                          {renderKebabMenu(
+                            `fin-${c.id}`,
+                            c.candidateName,
+                            c.candidateEmail,
+                            "finance",
+                            buildFinData(c),
+                          )}
+                        </div>
+                      ),
+                    },
+                    {
+                      key: "mktPct",
+                      header: "Marketer %",
+                      align: "center" as const,
+                      render: (c) => {
+                        const pct =
+                          c.totalBilled > 0
+                            ? (
+                                ((c.totalBilled - c.totalPay) / c.totalBilled) *
+                                100
+                              ).toFixed(1)
+                            : "0.0";
+                        return (
+                          <span
+                            className="ov-mono"
+                            style={{
+                              color: "var(--w97-teal)",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {pct}%
+                          </span>
+                        );
+                      },
+                    },
+                    {
+                      key: "hours",
+                      header: "Hours",
+                      align: "right" as const,
+                      render: (c) => (
+                        <span style={{ fontFamily: "monospace" }}>
+                          {c.hoursWorked.toLocaleString()}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "billed",
+                      header: "Vendor Billed",
+                      align: "right" as const,
+                      render: (c) => (
+                        <span className="ov-mono ov-val-green">
+                          {fmtC(c.totalBilled)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "margin",
+                      header: "Margin",
+                      align: "right" as const,
+                      render: (c) => {
+                        const m = c.totalBilled - c.totalPay;
+                        return (
+                          <span className="ov-mono ov-val-teal">{fmtC(m)}</span>
+                        );
+                      },
+                    },
+                    {
+                      key: "gross",
+                      header: "Gross Pay",
+                      align: "right" as const,
+                      render: (c) => (
+                        <span
+                          className="ov-mono"
+                          style={{ color: "var(--w97-text)" }}
+                        >
+                          {fmtC(c.totalPay)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "net",
+                      header: "Net Pay",
+                      align: "right" as const,
+                      render: (c) => (
+                        <span className="ov-mono ov-val-blue">
+                          {fmtC(c.netPayable)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "paid",
+                      header: "Paid",
+                      align: "right" as const,
+                      render: (c) => (
+                        <span className="ov-mono ov-val-green">
+                          {fmtC(c.amountPaid)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "balance",
+                      header: "Balance",
+                      align: "right" as const,
+                      render: (c) => {
+                        const bal = Math.max(0, c.amountPending);
+                        return (
+                          <span
+                            className={`ov-mono ${
+                              bal > 0 ? "ov-val-orange" : "ov-val-green"
+                            }`}
+                          >
+                            {fmtC(bal)}
+                          </span>
+                        );
+                      },
+                    },
+                  ] as DataTableColumn<CompanySummaryCandidate>[]
+                }
+                data={cands.filter((c) => {
+                  const q = finSearch.toLowerCase();
+                  const matchesSearch =
+                    !q ||
+                    c.candidateName.toLowerCase().includes(q) ||
+                    c.candidateEmail.toLowerCase().includes(q);
+                  const matchesStatus =
+                    finStatusFilter === "all" ||
+                    (finStatusFilter === "billed"
+                      ? c.totalBilled > 0
+                      : c.totalBilled === 0);
+                  return matchesSearch && matchesStatus;
+                })}
+                keyExtractor={(c) => c.id}
+                showRowNumbers
+                paginate
+                pageSize={50}
+                emptyMessage="No financial data yet. Add financials in candidate detail → Projects tab."
+              />
+            )}
+
+            {/* Chart View — horizontal bar chart */}
+            {finViewTab === "chart" && (
+              <div
+                style={{
+                  background: "var(--w97-window)",
+                  border: "1px solid var(--w97-border)",
+                  padding: 16,
+                }}
+              >
+                <h3 style={{ margin: "0 0 12px", fontSize: 13 }}>
+                  💰 Revenue by Candidate (Top 10)
+                </h3>
+                {topCands.length === 0 && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--w97-text-secondary)",
+                      padding: 20,
+                    }}
+                  >
+                    No financial data available.
+                  </div>
+                )}
+                {topCands.map((c) => {
+                  const pct = (c.totalBilled / maxBilled) * 100;
+                  const margin = c.totalBilled - c.totalPay;
+                  return (
+                    <div key={c.id} style={{ marginBottom: 8 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: 11,
+                          marginBottom: 2,
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>
+                          {c.candidateName}
+                        </span>
+                        <span style={{ fontFamily: "monospace" }}>
+                          {fmtC(c.totalBilled)}{" "}
+                          <span
+                            style={{ color: "var(--w97-teal)", fontSize: 10 }}
+                          >
+                            (margin {fmtC(margin)})
+                          </span>
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          height: 16,
+                          background: "var(--w97-border-light)",
+                          borderRadius: 3,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${pct}%`,
+                            background:
+                              "linear-gradient(90deg, var(--w97-blue), var(--w97-teal))",
+                            borderRadius: 3,
+                            transition: "width 0.4s ease",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Graph View — margin vs billed donut */}
+            {finViewTab === "graph" && (
+              <div
+                style={{
+                  background: "var(--w97-window)",
+                  border: "1px solid var(--w97-border)",
+                  padding: 20,
+                  display: "flex",
+                  gap: 30,
+                  flexWrap: "wrap",
+                }}
+              >
+                {/* Donut: Paid vs Outstanding */}
+                <div style={{ textAlign: "center" }}>
+                  <h3 style={{ margin: "0 0 12px", fontSize: 13 }}>
+                    Payment Status
+                  </h3>
+                  <svg width={160} height={160} viewBox="0 0 160 160">
+                    <circle
+                      cx={80}
+                      cy={80}
+                      r={60}
+                      fill="none"
+                      stroke="var(--w97-border-light)"
+                      strokeWidth={20}
+                    />
+                    <circle
+                      cx={80}
+                      cy={80}
+                      r={60}
+                      fill="none"
+                      stroke="var(--w97-green)"
+                      strokeWidth={20}
+                      strokeDasharray={`${paidBarW * 3.77} ${
+                        377 - paidBarW * 3.77
+                      }`}
+                      strokeDashoffset={94}
+                      strokeLinecap="round"
+                    />
+                    <text
+                      x={80}
+                      y={78}
+                      textAnchor="middle"
+                      fontSize={18}
+                      fontWeight={700}
+                      fill="var(--w97-text)"
+                    >
+                      {paidPct}%
+                    </text>
+                    <text
+                      x={80}
+                      y={95}
+                      textAnchor="middle"
+                      fontSize={10}
+                      fill="var(--w97-text-secondary)"
+                    >
+                      paid
+                    </text>
+                  </svg>
+                  <div style={{ fontSize: 11, marginTop: 6 }}>
+                    <span style={{ color: "var(--w97-green)" }}>■</span> Paid:{" "}
+                    {fmtC(totals.amountPaid)} &nbsp;
+                    <span style={{ color: "var(--w97-border-light)" }}>
+                      ■
+                    </span>{" "}
+                    Outstanding: {fmtC(Math.max(0, totals.amountPending))}
+                  </div>
+                </div>
+
+                {/* Donut: Margin vs Pay */}
+                <div style={{ textAlign: "center" }}>
+                  <h3 style={{ margin: "0 0 12px", fontSize: 13 }}>
+                    Margin vs Pay
+                  </h3>
+                  {(() => {
+                    const marginPctVal =
+                      totals.totalBilled > 0
+                        ? (grandMargin / totals.totalBilled) * 100
+                        : 0;
+                    return (
+                      <>
+                        <svg width={160} height={160} viewBox="0 0 160 160">
+                          <circle
+                            cx={80}
+                            cy={80}
+                            r={60}
+                            fill="none"
+                            stroke="#e0f2f1"
+                            strokeWidth={20}
+                          />
+                          <circle
+                            cx={80}
+                            cy={80}
+                            r={60}
+                            fill="none"
+                            stroke="var(--w97-teal)"
+                            strokeWidth={20}
+                            strokeDasharray={`${marginPctVal * 3.77} ${
+                              377 - marginPctVal * 3.77
+                            }`}
+                            strokeDashoffset={94}
+                            strokeLinecap="round"
+                          />
+                          <text
+                            x={80}
+                            y={78}
+                            textAnchor="middle"
+                            fontSize={18}
+                            fontWeight={700}
+                            fill="var(--w97-text)"
+                          >
+                            {marginPctVal.toFixed(1)}%
+                          </text>
+                          <text
+                            x={80}
+                            y={95}
+                            textAnchor="middle"
+                            fontSize={10}
+                            fill="var(--w97-text-secondary)"
+                          >
+                            margin
+                          </text>
+                        </svg>
+                        <div style={{ fontSize: 11, marginTop: 6 }}>
+                          <span style={{ color: "var(--w97-teal)" }}>■</span>{" "}
+                          Margin: {fmtC(grandMargin)} &nbsp;
+                          <span style={{ color: "#e0f2f1" }}>■</span> Pay:{" "}
+                          {fmtC(totals.totalPay)}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Summary box */}
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 200,
+                    fontSize: 12,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>Summary</h3>
+                  {[
+                    {
+                      label: "Total Billed",
+                      value: fmtC(totals.totalBilled),
+                      color: "var(--w97-green)",
+                    },
+                    {
+                      label: "Total Pay",
+                      value: fmtC(totals.totalPay),
+                      color: "var(--w97-blue)",
+                    },
+                    {
+                      label: "Company Margin",
+                      value: `${fmtC(grandMargin)} (${marginPct}%)`,
+                      color: "var(--w97-teal)",
+                    },
+                    {
+                      label: "Tax Amount",
+                      value: fmtC(totals.taxAmount),
+                      color: "var(--w97-text-secondary)",
+                    },
+                    {
+                      label: "Cash Portion",
+                      value: fmtC(totals.cashAmount),
+                      color: "var(--w97-text-secondary)",
+                    },
+                    {
+                      label: "Net Payable",
+                      value: fmtC(totals.netPayable),
+                      color: "var(--w97-blue)",
+                    },
+                    {
+                      label: "Paid",
+                      value: fmtC(totals.amountPaid),
+                      color: "var(--w97-green)",
+                    },
+                    {
+                      label: "Outstanding",
+                      value: fmtC(Math.max(0, totals.amountPending)),
+                      color:
+                        totals.amountPending > 0
+                          ? "var(--w97-orange)"
+                          : "var(--w97-green)",
+                    },
+                  ].map((row) => (
+                    <div
+                      key={row.label}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "3px 0",
+                        borderBottom: "1px dotted var(--w97-border-light)",
+                      }}
+                    >
+                      <span>{row.label}</span>
+                      <span
+                        style={{
+                          fontFamily: "monospace",
+                          fontWeight: 600,
+                          color: row.color,
+                        }}
+                      >
+                        {row.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ── Project Summary View ────────────────────────────────────────────────────
+
+  function renderProjectSummaryView() {
+    const projects = companySummary?.projects ?? [];
+    const fmtC = (v: number) =>
+      `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+    const fmtD = (iso: string | null) =>
+      iso
+        ? new Date(iso).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "—";
+
+    return (
+      <div>
+        {summaryLoading && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: 40,
+              fontSize: 13,
+              color: "var(--w97-text-secondary)",
+            }}
+          >
+            Loading project summary…
+          </div>
+        )}
+
+        {!summaryLoading && (
+          <DataTable<CompanySummaryProject>
+            title="Project Summary — All Candidates"
+            titleIcon="📋"
+            className="matchdb-auto-height"
+            titleExtra={
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <span style={{ fontSize: 10, opacity: 0.7 }}>
+                  {projects.length} total ·{" "}
+                  {projects.filter((p) => p.isActive).length} active
+                </span>
+                <Button
+                  variant="download"
+                  size="xs"
+                  onClick={() => handleDownloadAll("project", "pdf")}
+                  title="Download as CSV"
+                >
+                  ⬇ CSV
+                </Button>
+                <Button
+                  variant="download"
+                  size="xs"
+                  onClick={() => handleDownloadAll("project", "excel")}
+                  title="Download as Excel"
+                >
+                  ⬇ Excel
+                </Button>
+              </div>
+            }
+            showRowNumbers
+            paginate
+            pageSize={25}
+            columns={
+              [
+                {
+                  key: "candidate",
+                  header: "Candidate",
+                  width: "14%",
+                  render: (p) => (
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      <button
+                        type="button"
+                        style={{
+                          cursor: "pointer",
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          textAlign: "left",
+                          flex: 1,
+                        }}
+                        onClick={() => {
+                          setPrevView("project-summary");
+                          navParams({
+                            view: "candidate-detail",
+                            cid: p.candidateId,
+                            tab: "overview",
+                          });
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            color: "var(--w97-blue)",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          {p.candidateName}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "var(--w97-text-secondary)",
+                          }}
+                        >
+                          {p.candidateEmail}
+                        </div>
+                      </button>
+                      {renderKebabMenu(
+                        `proj-${p.applicationId}`,
+                        p.candidateName,
+                        p.candidateEmail,
+                        "project",
+                        buildProjData(p),
+                      )}
+                    </div>
+                  ),
+                },
+                {
+                  key: "job",
+                  header: "Project / Job",
+                  width: "16%",
+                  render: (p) => (
+                    <>
+                      <div style={{ fontWeight: 600 }}>
+                        {p.jobTitle || "Untitled"}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "var(--w97-text-secondary)",
+                        }}
+                      >
+                        {p.jobType}
+                        {p.jobSubType ? ` · ${p.jobSubType.toUpperCase()}` : ""}
+                        {p.financials?.stateCode
+                          ? ` · ${p.financials.stateCode}`
+                          : ""}
+                      </div>
+                    </>
+                  ),
+                },
+                {
+                  key: "client",
+                  header: "Client (Vendor)",
+                  width: "14%",
+                  render: (p) => (
+                    <span style={{ fontSize: 11 }}>{p.vendorEmail || "—"}</span>
+                  ),
+                },
+                {
+                  key: "location",
+                  header: "Location",
+                  width: "10%",
+                  render: (p) => (
+                    <span style={{ fontSize: 11 }}>{p.location || "—"}</span>
+                  ),
+                },
+                {
+                  key: "status",
+                  header: "Status",
+                  align: "center" as const,
+                  render: (p) => (
+                    <span
+                      className={`ov-proj-badge ${
+                        p.isActive ? "ov-proj-active" : "ov-proj-closed"
+                      }`}
+                    >
+                      {p.isActive ? "● Active" : "✓ Closed"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "dates",
+                  header: "Start — End",
+                  width: "12%",
+                  render: (p) => (
+                    <span style={{ fontSize: 10, fontFamily: "monospace" }}>
+                      {fmtD(p.financials?.projectStart ?? null)}
+                      {" — "}
+                      {fmtD(p.financials?.projectEnd ?? null)}
+                    </span>
+                  ),
+                },
+                {
+                  key: "rates",
+                  header: "Bill / Pay",
+                  align: "right" as const,
+                  render: (p) =>
+                    p.financials ? (
+                      <span style={{ fontFamily: "monospace", fontSize: 11 }}>
+                        <span style={{ color: "var(--pf-green)" }}>
+                          ${p.financials.billRate}
+                        </span>
+                        {" / "}
+                        <span style={{ color: "var(--pf-blue)" }}>
+                          ${p.financials.payRate}
+                        </span>
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--w97-border-dark)" }}>—</span>
+                    ),
+                },
+                {
+                  key: "billed",
+                  header: "Billed",
+                  align: "right" as const,
+                  render: (p) => (
+                    <span className="ov-mono ov-val-green">
+                      {p.financials ? fmtC(p.financials.totalBilled) : "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "net",
+                  header: "Net Pay",
+                  align: "right" as const,
+                  render: (p) => (
+                    <span className="ov-mono ov-val-blue">
+                      {p.financials ? fmtC(p.financials.netPayable) : "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "paid",
+                  header: "Paid",
+                  align: "right" as const,
+                  render: (p) => (
+                    <span className="ov-mono ov-val-green">
+                      {p.financials ? fmtC(p.financials.amountPaid) : "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "balance",
+                  header: "Balance",
+                  align: "right" as const,
+                  render: (p) => {
+                    if (!p.financials)
+                      return <span className="ov-mono">—</span>;
+                    const bal = Math.max(0, p.financials.amountPending);
+                    return (
+                      <span
+                        className={`ov-mono ${
+                          bal > 0 ? "ov-val-orange" : "ov-val-green"
+                        }`}
+                      >
+                        {fmtC(bal)}
+                      </span>
+                    );
+                  },
+                },
+              ] as DataTableColumn<CompanySummaryProject>[]
+            }
+            data={projects}
+            keyExtractor={(p) => p.applicationId}
+            emptyMessage="No projects found."
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ── Job Positions Summary View ──────────────────────────────────────────────
+
+  function renderJobPositionsSummaryView() {
+    const domains = companySummary?.domainCounts ?? [];
+    const cands = companySummary?.candidates ?? [];
+    const totalResources = domains.reduce((a, d) => a + d.count, 0);
+    const maxCount = domains.length ? domains[0].count : 1;
+
+    // Group by job type from projects
+    const projects = companySummary?.projects ?? [];
+    const typeMap: Record<string, number> = {};
+    for (const p of projects) {
+      const t = p.jobType || "Unknown";
+      typeMap[t] = (typeMap[t] || 0) + 1;
+    }
+    const typeCounts = Object.entries(typeMap)
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Skills distribution from candidates
+    const skillMap: Record<string, number> = {};
+    for (const c of cands) {
+      for (const s of c.skills) {
+        skillMap[s] = (skillMap[s] || 0) + 1;
+      }
+    }
+    const topSkills = Object.entries(skillMap)
+      .map(([skill, count]) => ({ skill, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+
+    return (
+      <div>
+        {summaryLoading && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: 40,
+              fontSize: 13,
+              color: "var(--w97-text-secondary)",
+            }}
+          >
+            Loading job positions summary…
+          </div>
+        )}
+
+        {!summaryLoading && (
+          <>
+            {/* Toolbar */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 6,
+                marginBottom: 10,
+              }}
+            >
+              <Button
+                variant="download"
+                size="xs"
+                onClick={() => handleDownloadAll("positions", "pdf")}
+                title="Download as CSV"
+              >
+                ⬇ CSV
+              </Button>
+              <Button
+                variant="download"
+                size="xs"
+                onClick={() => handleDownloadAll("positions", "excel")}
+                title="Download as Excel"
+              >
+                ⬇ Excel
+              </Button>
+            </div>
+
+            {/* KPI row */}
+            <div className="ov-kpi-strip" style={{ margin: "0 0 14px" }}>
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Total Positions</span>
+                <span className="ov-kpi-value ov-kv-blue">
+                  {totalResources}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Unique Domains</span>
+                <span className="ov-kpi-value ov-kv-teal">
+                  {domains.length}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Active Projects</span>
+                <span className="ov-kpi-value ov-kv-green">
+                  {projects.filter((p) => p.isActive).length}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Job Types</span>
+                <span className="ov-kpi-value ov-kv-blue">
+                  {typeCounts.length}
+                </span>
+              </div>
+            </div>
+
+            {/* Two columns: Domain list + Skills */}
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+              {/* Resources by Domain / Role */}
+              <div
+                style={{
+                  flex: 2,
+                  minWidth: 300,
+                  background: "var(--w97-window)",
+                  border: "1px solid var(--w97-border)",
+                  padding: 14,
+                }}
+              >
+                <h3 style={{ margin: "0 0 12px", fontSize: 13 }}>
+                  👥 Resources by Domain / Role
+                </h3>
+                {domains.length === 0 && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--w97-text-secondary)",
+                      padding: 12,
+                    }}
+                  >
+                    No data available.
+                  </div>
+                )}
+                {domains.map((d) => {
+                  const pct = (d.count / maxCount) * 100;
+                  const domainData: Record<string, string> = {
+                    Domain: d.domain,
+                    Count: String(d.count),
+                    "% of Total": `${((d.count / totalResources) * 100).toFixed(
+                      1,
+                    )}%`,
+                  };
+                  return (
+                    <div key={d.domain} style={{ marginBottom: 6 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          fontSize: 11,
+                          marginBottom: 2,
+                        }}
+                      >
+                        <span style={{ fontWeight: 500 }}>{d.domain}</span>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <span
+                            style={{ fontFamily: "monospace", fontWeight: 600 }}
+                          >
+                            {d.count}{" "}
+                            <span
+                              style={{
+                                fontSize: 10,
+                                color: "var(--w97-text-secondary)",
+                                fontWeight: 400,
+                              }}
+                            >
+                              ({((d.count / totalResources) * 100).toFixed(0)}%)
+                            </span>
+                          </span>
+                          {renderKebabMenu(
+                            `pos-${d.domain}`,
+                            d.domain,
+                            "",
+                            "positions",
+                            domainData,
+                          )}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          height: 14,
+                          background: "var(--w97-border-light)",
+                          borderRadius: 3,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${pct}%`,
+                            background:
+                              "linear-gradient(90deg, #1976d2, #42a5f5)",
+                            borderRadius: 3,
+                            transition: "width 0.4s ease",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Right column: Job Type breakdown + Top Skills */}
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: 220,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 14,
+                }}
+              >
+                {/* Job Type breakdown */}
+                <div
+                  style={{
+                    background: "var(--w97-window)",
+                    border: "1px solid var(--w97-border)",
+                    padding: 14,
+                  }}
+                >
+                  <h3 style={{ margin: "0 0 10px", fontSize: 13 }}>
+                    📊 By Job Type
+                  </h3>
+                  {typeCounts.map((t) => (
+                    <div
+                      key={t.type}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "4px 0",
+                        fontSize: 11,
+                        borderBottom: "1px dotted var(--w97-border-light)",
+                      }}
+                    >
+                      <span
+                        style={{ textTransform: "uppercase", fontWeight: 500 }}
+                      >
+                        {t.type}
+                      </span>
+                      <span
+                        style={{ fontFamily: "monospace", fontWeight: 600 }}
+                      >
+                        {t.count}
+                      </span>
+                    </div>
+                  ))}
+                  {typeCounts.length === 0 && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--w97-text-secondary)",
+                      }}
+                    >
+                      No data.
+                    </div>
+                  )}
+                </div>
+
+                {/* Top Skills */}
+                <div
+                  style={{
+                    background: "var(--w97-window)",
+                    border: "1px solid var(--w97-border)",
+                    padding: 14,
+                  }}
+                >
+                  <h3 style={{ margin: "0 0 10px", fontSize: 13 }}>
+                    🎯 Top Skills in Roster
+                  </h3>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {topSkills.map((s) => (
+                      <span
+                        key={s.skill}
+                        style={{
+                          background: "#e8f0fe",
+                          color: "var(--w97-blue)",
+                          padding: "2px 8px",
+                          borderRadius: 12,
+                          fontSize: 10,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {s.skill}{" "}
+                        <span style={{ opacity: 0.7 }}>({s.count})</span>
+                      </span>
+                    ))}
+                    {topSkills.length === 0 && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: "var(--w97-text-secondary)",
+                        }}
+                      >
+                        No skills data.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ── Immigration View ───────────────────────────────────────────────────────
+
+  function renderImmigrationView() {
+    return (
+      <div>
+        <div
+          style={{
+            background: "var(--w97-window)",
+            border: "1px solid var(--w97-border)",
+            padding: 40,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🛂</div>
+          <h3
+            style={{
+              margin: "0 0 8px",
+              fontSize: 15,
+              color: "var(--w97-titlebar-from)",
+            }}
+          >
+            Immigration Tracking
+          </h3>
+          <p
+            style={{
+              fontSize: 12,
+              color: "var(--w97-text-secondary)",
+              maxWidth: 400,
+              margin: "0 auto",
+            }}
+          >
+            Visa status, sponsorship details, and immigration documents for your
+            candidates will appear here. This section is under development.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  function renderCandidateDetailView() {
+    return (
+      /* ── Candidate Detail — Tabbed Center Content ── */
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        {/* ── Top Bar: Back + Name + Print ── */}
+        <Toolbar
+          left={
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Button
+                size="sm"
+                onClick={() =>
+                  navParams({
+                    view: prevView ?? "company-candidates",
+                    cid: null,
+                    tab: null,
+                  })
+                }
+              >
+                ← Back
+              </Button>
+              {candidateDetail?.roster && (
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: 17,
+                    fontWeight: 700,
+                    color: "var(--w97-titlebar-from)",
+                  }}
+                >
+                  {candidateDetail.roster.candidate_name}
+                </h2>
+              )}
+            </div>
+          }
+          right={
+            <div style={{ display: "flex", gap: 6 }}>
+              {candidateDetail?.roster &&
+                (candidateDetail.roster.invite_status || "none") !==
+                  "accepted" && (
+                  <Button
+                    variant="email"
+                    size="xs"
+                    onClick={() =>
+                      openInviteModal({
+                        id: candidateDetail.roster.id,
+                        candidate_email: candidateDetail.roster.candidate_email,
+                        candidate_name: candidateDetail.roster.candidate_name,
+                        invite_status:
+                          candidateDetail.roster.invite_status || "none",
+                        created_at: candidateDetail.roster.created_at,
+                      } as MarketerCandidateItem)
+                    }
+                  >
+                    ✉ Invite
+                  </Button>
+                )}
+              {candidateDetail?.roster && (
+                <Button
+                  variant="email"
+                  size="xs"
+                  style={{ color: "var(--w97-teal)" }}
+                  onClick={() =>
+                    openSendJobModal(
+                      candidateDetail.roster.candidate_email,
+                      candidateDetail.roster.candidate_name,
+                    )
+                  }
+                >
+                  📧 Send Job
+                </Button>
+              )}
+              {candidateDetail?.profile && (
+                <Button
+                  variant="download"
+                  size="xs"
+                  onClick={() =>
+                    downloadResumePDF({
+                      name: candidateDetail.profile!.name,
+                      email: candidateDetail.profile!.email,
+                      phone: candidateDetail.profile!.phone,
+                      skills: candidateDetail.profile!.skills,
+                      experience_years:
+                        candidateDetail.profile!.experience_years,
+                      current_role: candidateDetail.profile!.current_role,
+                      current_company:
+                        candidateDetail.profile!.current_company ?? "",
+                      location: candidateDetail.profile!.location,
+                      resume_summary: candidateDetail.profile!.resume_summary,
+                      resume_experience:
+                        candidateDetail.profile!.resume_experience,
+                      resume_education:
+                        candidateDetail.profile!.resume_education,
+                      resume_achievements:
+                        candidateDetail.profile!.resume_achievements,
+                    } as MarketerProfile)
+                  }
+                >
+                  📥 Resume
+                </Button>
+              )}
+            </div>
+          }
+          style={{ marginBottom: 12 }}
+        />
+
+        {detailLoading && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: 60,
+              color: "var(--w97-text-secondary)",
+              fontSize: 13,
+            }}
+          >
+            Loading candidate details…
+          </div>
+        )}
+
+        {!detailLoading && candidateDetail && (
+          <>
+            {/* ── Horizontal Tab Bar ── */}
+            <Tabs
+              activeKey={detailTab}
+              onSelect={(key) => {
+                navParams({ tab: key });
+                if (key !== "projects") setSelectedProjectId(null);
+              }}
+              tabs={[
+                { key: "overview", label: "👤 Overview" },
+                {
+                  key: "projects",
+                  label: (
+                    <>
+                      📋 Projects{" "}
+                      <span className="matchdb-tab-badge">
+                        {candidateDetail.projects.length}
+                      </span>
+                    </>
+                  ),
+                },
+                {
+                  key: "vendor-activity",
+                  label: (
+                    <>
+                      📊 Vendor Activity{" "}
+                      <span className="matchdb-tab-badge">
+                        {candidateDetail.vendor_activity.length}
+                      </span>
+                    </>
+                  ),
+                },
+                {
+                  key: "forwarded",
+                  label: (
+                    <>
+                      📤 Forwarded Openings{" "}
+                      <span className="matchdb-tab-badge">
+                        {candidateDetail.forwarded_openings.length}
+                      </span>
+                    </>
+                  ),
+                },
+              ]}
+            />
+
+            {/* ════════════ TAB: Overview ════════════ */}
+            {detailTab === "overview" && renderOverviewTab()}
+
+            {/* ════════════ TAB: Projects ════════════ */}
+            {detailTab === "projects" && renderProjectsTab()}
+
+            {/* ════════════ TAB: Vendor Activity ════════════ */}
+            {detailTab === "vendor-activity" && renderVendorActivityTab()}
+
+            {/* ════════════ TAB: Forwarded Openings ════════════ */}
+            {detailTab === "forwarded" && renderForwardedTab()}
+          </>
+        )}
+
+        {!detailLoading && !candidateDetail && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: 60,
+              color: "var(--w97-text-secondary)",
+              fontSize: 13,
+            }}
+          >
+            {detailError
+              ? "Error loading candidate details. Please try again."
+              : "Candidate not found."}
+            <div style={{ marginTop: 12 }}>
+              <Button
+                size="sm"
+                onClick={() =>
+                  navParams({
+                    view: prevView ?? "company-candidates",
+                    cid: null,
+                    tab: null,
+                  })
+                }
+              >
+                ← Go Back
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderOverviewTab() {
+    if (!candidateDetail) return null;
+    const allFins = candidateDetail.projects
+      .filter((p) => p.financials != null)
+      .map((p) => ({ project: p, fin: p.financials! }));
+
+    const totalBilled = allFins.reduce((a, x) => a + x.fin.totalBilled, 0);
+    const totalMargin = allFins.reduce(
+      (a, x) => a + (x.fin.totalBilled - x.fin.totalPay),
+      0,
+    );
+    const totalNet = allFins.reduce((a, x) => a + x.fin.netPayable, 0);
+    const totalPaid = allFins.reduce((a, x) => a + x.fin.amountPaid, 0);
+    const totalPending = allFins.reduce(
+      (a, x) => a + Math.max(0, x.fin.amountPending),
+      0,
+    );
+    const totalHours = allFins.reduce((a, x) => a + x.fin.hoursWorked, 0);
+
+    const monthRows = buildMonthlyRows(allFins);
+
+
+    const inviteAccepted = candidateDetail.roster.invite_status === "accepted";
+    const inviteBadgeBg = inviteAccepted ? "#e8f5e9" : "#fff3e0";
+    const inviteBadgeColor = inviteAccepted ? "#2e7d32" : "#b8860b";
+    const inviteBadgeText = inviteAccepted ? "✓ Accepted" : "⏳ Pending";
+    const pendingClass = totalPending > 0 ? "ov-kv-orange" : "ov-kv-green";
+    const payPct =
+      totalNet > 0 ? ((totalPaid / totalNet) * 100).toFixed(0) : "0";
+    const payBarWidth =
+      totalNet > 0 ? Math.min(100, (totalPaid / totalNet) * 100) : 0;
+
+    function renderProfileStrip() {
+      if (!candidateDetail) return null;
+      return (
+        <div
+          style={{
+            borderBottom: "1px solid var(--w97-border)",
+            background: "var(--w97-panel-bg, #f4f4f4)",
+          }}
+        >
+          {/* Main info row */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "3px 0",
+              padding: "8px 14px",
+              fontSize: 12,
+            }}
+          >
+            {(
+              [
+                { v: candidateDetail.profile?.current_role, bold: true },
+                { v: candidateDetail.profile?.current_company },
+                { v: candidateDetail.profile?.location },
+                {
+                  v: candidateDetail.profile?.expected_hourly_rate
+                    ? `$${candidateDetail.profile.expected_hourly_rate}/hr`
+                    : null,
+                },
+                {
+                  v:
+                    candidateDetail.profile?.experience_years == null
+                      ? null
+                      : `${candidateDetail.profile.experience_years} yrs`,
+                },
+                { v: candidateDetail.profile?.phone },
+                { v: candidateDetail.roster.candidate_email },
+              ] as { v: string | null | undefined; bold?: boolean }[]
+            )
+              .filter((x) => x.v)
+              .map((x, i, arr) => (
+                <React.Fragment key={String(x.v)}>
+                  <span
+                    style={{
+                      fontWeight: x.bold ? 700 : 400,
+                      color: x.bold ? "var(--w97-titlebar-from)" : "inherit",
+                    }}
+                  >
+                    {x.v}
+                  </span>
+                  {i < arr.length - 1 && (
+                    <span
+                      style={{
+                        margin: "0 7px",
+                        color: "var(--w97-text-secondary)",
+                        fontWeight: 300,
+                      }}
+                    >
+                      ·
+                    </span>
+                  )}
+                </React.Fragment>
+              ))}
+            {/* Stats badges — right side */}
+            <div
+              style={{
+                marginLeft: "auto",
+                display: "flex",
+                gap: 5,
+                flexWrap: "nowrap",
+                alignItems: "center",
+                paddingLeft: 12,
+              }}
+            >
+              <span
+                style={{
+                  padding: "2px 7px",
+                  borderRadius: 10,
+                  fontSize: 10,
+                  fontWeight: 600,
+                  background: inviteBadgeBg,
+                  color: inviteBadgeColor,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {inviteBadgeText}
+              </span>
+              <span
+                className="matchdb-type-pill"
+                style={{ whiteSpace: "nowrap" }}
+              >
+                {candidateDetail.projects.filter((p) => p.is_active).length}{" "}
+                active
+              </span>
+              <span
+                className="matchdb-type-pill"
+                style={{ whiteSpace: "nowrap" }}
+              >
+                {candidateDetail.vendor_activity.length} interactions
+              </span>
+              <span
+                className="matchdb-type-pill"
+                style={{ whiteSpace: "nowrap" }}
+              >
+                {candidateDetail.forwarded_openings.length} forwarded
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  color: "var(--w97-text-secondary)",
+                  whiteSpace: "nowrap",
+                  paddingLeft: 4,
+                }}
+              >
+                Rostered {fmtDate(candidateDetail.roster.created_at)}
+              </span>
+            </div>
+          </div>
+          {/* Skills row */}
+          {(candidateDetail.profile?.skills || []).length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 4,
+                padding: "0 14px 7px",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10,
+                  color: "var(--w97-text-secondary)",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  marginRight: 4,
+                }}
+              >
+                Skills
+              </span>
+              {candidateDetail.profile!.skills.map((s) => (
+                <span
+                  key={s}
+                  style={{
+                    background: "#e8f0fe",
+                    color: "var(--w97-blue)",
+                    padding: "2px 8px",
+                    borderRadius: 12,
+                    fontSize: 10,
+                    fontWeight: 500,
+                  }}
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="ov-root">
+        {renderProfileStrip()}
+
+        {/* ══ ROW 2 — Modern financial KPI strip (only when financials exist) ══ */}
+        {allFins.length > 0 && (
+          <div className="ov-kpi-strip" style={{ margin: "14px 16px 0" }}>
+            <div className="ov-kpi">
+              <span className="ov-kpi-label">Total Hours</span>
+              <span className="ov-kpi-value ov-kv-blue">
+                {totalHours.toLocaleString()}
+              </span>
+            </div>
+            <div className="ov-kpi-div" />
+            <div className="ov-kpi">
+              <span className="ov-kpi-label">Vendor Billed</span>
+              <span className="ov-kpi-value ov-kv-green">
+                {fmtC(totalBilled)}
+              </span>
+            </div>
+            <div className="ov-kpi-div" />
+            <div className="ov-kpi">
+              <span className="ov-kpi-label">Your Margin</span>
+              <span className="ov-kpi-value ov-kv-teal">
+                {fmtC(totalMargin)}
+                {totalBilled > 0 && (
+                  <span className="ov-kpi-pct">
+                    {" "}
+                    ({((totalMargin / totalBilled) * 100).toFixed(1)}
+                    %)
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="ov-kpi-div" />
+            <div className="ov-kpi">
+              <span className="ov-kpi-label">Net Payable</span>
+              <span className="ov-kpi-value ov-kv-blue">{fmtC(totalNet)}</span>
+            </div>
+            <div className="ov-kpi-div" />
+            <div className="ov-kpi">
+              <span className="ov-kpi-label">Paid to Date</span>
+              <span className="ov-kpi-value ov-kv-green">
+                {fmtC(totalPaid)}
+              </span>
+            </div>
+            <div className="ov-kpi-div" />
+            <div className="ov-kpi">
+              <span className="ov-kpi-label">Outstanding</span>
+              <span className={`ov-kpi-value ${pendingClass}`}>
+                {fmtC(totalPending)}
+              </span>
+            </div>
+            <div className="ov-kpi-div" />
+            {/* Inline progress bar in the KPI strip */}
+            <div className="ov-kpi" style={{ flex: 1, minWidth: 120 }}>
+              <span className="ov-kpi-label">
+                Payment Progress — {payPct}% paid
+              </span>
+              <div
+                style={{
+                  marginTop: 4,
+                  height: 8,
+                  background: "var(--w97-border-light)",
+                  borderRadius: 8,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    borderRadius: 8,
+                    width: `${payBarWidth}%`,
+                    background:
+                      "linear-gradient(90deg, var(--w97-green), #2dd55b)",
+                    transition: "width 0.4s ease",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ ROW 3 — Subtabs: Financial Summary / Monthly Pay ══ */}
+        {(candidateDetail.projects.length > 0 || monthRows.length > 0) && (
+          <div style={{ margin: "14px 16px 16px" }}>
+            {/* Subtab bar */}
+            <div style={{ display: "flex", gap: 0, marginBottom: 0 }}>
+              <button
+                type="button"
+                onClick={() => setOverviewSubTab("financial")}
+                style={subtabStyle(overviewSubTab === "financial")}
+              >
+                💼 Financial Summary
+              </button>
+              <button
+                type="button"
+                onClick={() => setOverviewSubTab("monthly")}
+                style={subtabStyle(overviewSubTab === "monthly", false)}
+              >
+                📅 Monthly Pay Summary
+              </button>
+            </div>
+
+            {/* Financial Summary subtab */}
+            {overviewSubTab === "financial" &&
+              candidateDetail.projects.length > 0 && (
+                <DataTable
+                  title="Projects — Financial Summary"
+                  titleIcon="💼"
+                  className="matchdb-auto-height"
+                  titleExtra={
+                    <span style={{ fontSize: 10, opacity: 0.7 }}>
+                      {candidateDetail.projects.length} total ·{" "}
+                      {
+                        candidateDetail.projects.filter((p) => p.is_active)
+                          .length
+                      }{" "}
+                      active
+                    </span>
+                  }
+                  showRowNumbers={false}
+                  columns={
+                    [
+                      {
+                        key: "project",
+                        header: "Project / Role",
+                        width: "22%",
+                        render: (p) => (
+                          <>
+                            <div style={{ fontWeight: 600 }}>
+                              {p.job_title || "Untitled"}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 10,
+                                color: "var(--w97-text-secondary)",
+                                marginTop: 1,
+                              }}
+                            >
+                              {p.job_type}
+                              {p.job_sub_type
+                                ? ` · ${p.job_sub_type.toUpperCase()}`
+                                : ""}
+                              {p.financials?.stateCode
+                                ? ` · ${p.financials.stateCode}`
+                                : ""}
+                            </div>
+                          </>
+                        ),
+                      },
+                      {
+                        key: "status",
+                        header: "Status",
+                        align: "right",
+                        render: (p) => (
+                          <span
+                            className={`ov-proj-badge ${
+                              p.is_active ? "ov-proj-active" : "ov-proj-closed"
+                            }`}
+                          >
+                            {p.is_active ? "● Active" : "✓ Closed"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "rates",
+                        header: "Bill / Pay Rate",
+                        align: "right",
+                        render: (p) => {
+                          const f = p.financials;
+                          return f ? (
+                            <span
+                              style={{ fontFamily: "monospace", fontSize: 11 }}
+                            >
+                              <span style={{ color: "var(--pf-green)" }}>
+                                ${f.billRate}
+                              </span>
+                              {" / "}
+                              <span style={{ color: "var(--pf-blue)" }}>
+                                ${f.payRate}
+                              </span>
+                            </span>
+                          ) : (
+                            <span style={{ color: "var(--w97-border-dark)" }}>
+                              Not set
+                            </span>
+                          );
+                        },
+                      },
+                      {
+                        key: "hours",
+                        header: "Hours",
+                        align: "right",
+                        render: (p) => (
+                          <span style={{ fontFamily: "monospace" }}>
+                            {p.financials
+                              ? p.financials.hoursWorked.toLocaleString()
+                              : "—"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "billed",
+                        header: "Vendor Billed",
+                        align: "right",
+                        render: (p) => (
+                          <span className="ov-mono ov-val-green">
+                            {p.financials
+                              ? fmtC(p.financials.totalBilled)
+                              : "—"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "margin",
+                        header: "Your Margin",
+                        align: "right",
+                        render: (p) => {
+                          const f = p.financials;
+                          if (!f) return "—";
+                          const m = f.totalBilled - f.totalPay;
+                          return (
+                            <span className="ov-mono ov-val-teal">
+                              {fmtC(m)}{" "}
+                              <span style={{ fontSize: 10, opacity: 0.7 }}>
+                                {f.totalBilled > 0
+                                  ? `(${((m / f.totalBilled) * 100).toFixed(
+                                      1,
+                                    )}%)`
+                                  : ""}
+                              </span>
+                            </span>
+                          );
+                        },
+                      },
+                      {
+                        key: "net",
+                        header: "Net Pay",
+                        align: "right",
+                        render: (p) => (
+                          <span className="ov-mono ov-val-blue">
+                            {p.financials ? fmtC(p.financials.netPayable) : "—"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "paid",
+                        header: "Paid",
+                        align: "right",
+                        render: (p) => (
+                          <span className="ov-mono ov-val-green">
+                            {p.financials ? fmtC(p.financials.amountPaid) : "—"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "balance",
+                        header: "Balance",
+                        align: "right",
+                        render: (p) => {
+                          if (!p.financials)
+                            return <span className="ov-mono">—</span>;
+                          const bal = Math.max(0, p.financials.amountPending);
+                          return (
+                            <span
+                              className={`ov-mono ${
+                                bal > 0 ? "ov-val-orange" : "ov-val-green"
+                              }`}
+                            >
+                              {bal <= 0 ? "✓ Settled" : fmtC(bal)}
+                            </span>
+                          );
+                        },
+                      },
+                    ] as DataTableColumn<
+                      (typeof candidateDetail.projects)[number]
+                    >[]
+                  }
+                  data={[
+                    ...candidateDetail.projects.filter((p) => p.is_active),
+                    ...candidateDetail.projects.filter((p) => !p.is_active),
+                  ]}
+                  keyExtractor={(p) => String(p.id)}
+                  emptyMessage="No projects found."
+                  footerRow={
+                    allFins.length > 1 ? (
+                      <tr
+                        className={`ov-pt-foot ${footerRowClass(totalMargin)}`}
+                      >
+                        <td className="ov-pt-tf" colSpan={2}>
+                          TOTAL — {allFins.length} projects with financials
+                        </td>
+                        <td
+                          className="ov-pt-tf"
+                          style={{ textAlign: "right" }}
+                        />
+                        <td
+                          className="ov-pt-tf ov-mono"
+                          style={{ textAlign: "right" }}
+                        >
+                          {totalHours.toLocaleString()}
+                        </td>
+                        <td
+                          className="ov-pt-tf ov-mono ov-val-green"
+                          style={{ textAlign: "right" }}
+                        >
+                          {fmtC(totalBilled)}
+                        </td>
+                        <td
+                          className="ov-pt-tf ov-mono ov-val-teal"
+                          style={{ textAlign: "right" }}
+                        >
+                          {fmtC(totalMargin)}
+                        </td>
+                        <td
+                          className="ov-pt-tf ov-mono ov-val-blue"
+                          style={{ textAlign: "right" }}
+                        >
+                          {fmtC(totalNet)}
+                        </td>
+                        <td
+                          className="ov-pt-tf ov-mono ov-val-green"
+                          style={{ textAlign: "right" }}
+                        >
+                          {fmtC(totalPaid)}
+                        </td>
+                        <td
+                          className={`ov-pt-tf ov-mono ${
+                            totalPending > 0 ? "ov-val-orange" : "ov-val-green"
+                          }`}
+                          style={{ textAlign: "right" }}
+                        >
+                          {totalPending > 0 ? fmtC(totalPending) : "✓ Settled"}
+                        </td>
+                      </tr>
+                    ) : undefined
+                  }
+                />
+              )}
+
+            {/* Monthly Pay Summary subtab */}
+            {overviewSubTab === "monthly" && monthRows.length > 0 && (
+              <DataTable
+                title="Monthly Pay Summary — All Projects Combined"
+                titleIcon="📅"
+                className="matchdb-auto-height"
+                titleExtra={
+                  <span style={{ fontSize: 10, opacity: 0.7 }}>
+                    {monthRows.length} months
+                  </span>
+                }
+                showRowNumbers={false}
+                columns={
+                  [
+                    {
+                      key: "month",
+                      header: "Month",
+                      width: "14%",
+                      render: (row) => (
+                        <span style={{ fontWeight: 600 }}>{row.label}</span>
+                      ),
+                    },
+                    {
+                      key: "hours",
+                      header: "Hours",
+                      align: "right",
+                      render: (row) => (
+                        <span style={{ fontFamily: "monospace" }}>
+                          {row.hours.toLocaleString(undefined, {
+                            maximumFractionDigits: 1,
+                          })}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "billed",
+                      header: "Vendor Billed",
+                      align: "right",
+                      render: (row) => (
+                        <span className="ov-mono ov-val-green">
+                          {fmtF(row.billed)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "gross",
+                      header: "Gross Pay",
+                      align: "right",
+                      render: (row) => (
+                        <span style={{ fontFamily: "monospace" }}>
+                          {fmtF(row.gross)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "net",
+                      header: "Net Pay",
+                      align: "right",
+                      render: (row) => (
+                        <span className="ov-mono ov-val-blue">
+                          {fmtF(row.net)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "paid",
+                      header: "Paid",
+                      align: "right",
+                      render: (row) => (
+                        <span className="ov-mono ov-val-green">
+                          {row.paid > 0 ? fmtF(row.paid) : "—"}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "balance",
+                      header: "Balance",
+                      align: "right",
+                      render: (row) => (
+                        <span
+                          className={`ov-mono ${balanceClass(row.balance)}`}
+                        >
+                          {balanceLabel(row.balance, fmtF)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "progress",
+                      header: "Pay Progress",
+                      align: "right",
+                      width: 130,
+                      render: (row) => {
+                        const pct =
+                          row.net > 0
+                            ? Math.min(100, (row.paid / row.net) * 100)
+                            : 0;
+                        return (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 5,
+                              justifyContent: "flex-end",
+                            }}
+                          >
+                            <div className="ov-mt-bar-wrap">
+                              <div
+                                className="ov-mt-bar-fill"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="ov-mt-bar-pct">
+                              {pct.toFixed(0)}%
+                            </span>
+                          </div>
+                        );
+                      },
+                    },
+                  ] as DataTableColumn<MonthRow>[]
+                }
+                data={monthRows}
+                keyExtractor={(row) => row.label}
+                emptyMessage="No monthly data."
+                footerRow={
+                  <tr className={`ov-mt-foot ${footerRowClass(totalMargin)}`}>
+                    <td className="ov-mt-tf">TOTAL</td>
+                    <td
+                      className="ov-mt-tf ov-mono"
+                      style={{ textAlign: "right" }}
+                    >
+                      {monthRows
+                        .reduce((a, r) => a + r.hours, 0)
+                        .toLocaleString(undefined, {
+                          maximumFractionDigits: 1,
+                        })}
+                    </td>
+                    <td
+                      className="ov-mt-tf ov-mono ov-val-green"
+                      style={{ textAlign: "right" }}
+                    >
+                      {fmtF(monthRows.reduce((a, r) => a + r.billed, 0))}
+                    </td>
+                    <td
+                      className="ov-mt-tf ov-mono"
+                      style={{ textAlign: "right" }}
+                    >
+                      {fmtF(monthRows.reduce((a, r) => a + r.gross, 0))}
+                    </td>
+                    <td
+                      className="ov-mt-tf ov-mono ov-val-blue"
+                      style={{ textAlign: "right" }}
+                    >
+                      {fmtF(monthRows.reduce((a, r) => a + r.net, 0))}
+                    </td>
+                    <td
+                      className="ov-mt-tf ov-mono ov-val-green"
+                      style={{ textAlign: "right" }}
+                    >
+                      {fmtF(monthRows.reduce((a, r) => a + r.paid, 0))}
+                    </td>
+                    <td
+                      className={`ov-mt-tf ov-mono ${
+                        totalPending > 0 ? "ov-val-orange" : "ov-val-green"
+                      }`}
+                      style={{ textAlign: "right" }}
+                    >
+                      {totalPending > 0.01 ? fmtF(totalPending) : "✓"}
+                    </td>
+                    <td className="ov-mt-tf" />
+                  </tr>
+                }
+              />
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderProjectsTab() {
+    if (!candidateDetail) return null;
+    const allProjects = candidateDetail.projects;
+    if (allProjects.length === 0) {
+      return (
+        <div className="pf-empty">
+          <div className="pf-empty-icon">📋</div>
+          <div className="pf-empty-text">
+            No projects on record for this candidate
+          </div>
+        </div>
+      );
+    }
+
+    // Active first, then closed
+    const sorted = [
+      ...allProjects.filter((p) => p.is_active),
+      ...allProjects.filter((p) => !p.is_active),
+    ];
+
+    // Auto-select first project if none selected
+    const hasSelected =
+      selectedProjectId && sorted.some((p) => p.id === selectedProjectId);
+    const activeProjectId = hasSelected
+      ? selectedProjectId
+      : sorted[0]?.id ?? null;
+
+    const activeProject = sorted.find((p) => p.id === activeProjectId);
+
+    // Month names & variation factors for period generation
+    const MN = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const VAR = [1, 0.92, 1.08, 1.02, 0.94, 1.06, 1, 0.92, 1.08, 1, 0.94, 1.04];
+
+    // Build pay rows for the selected project
+    interface CombinedRow {
+      key: string;
+      payPeriod: string;
+      sortKey: number;
+      projectName: string;
+      projectId: string;
+      isActive: boolean;
+      hours: number;
+      billRate: number;
+      payRate: number;
+      billed: number;
+      grossPay: number;
+      stateTax: number;
+      stateTaxPct: number;
+      withholding: number;
+      cashPct: number;
+      netPay: number;
+      paid: number;
+      balance: number;
+    }
+
+    const buildRows = (proj: (typeof sorted)[number]): CombinedRow[] => {
+      const fin = proj.financials;
+      const bRate = fin?.billRate ?? 0;
+      const pRate = fin?.payRate ?? 0;
+      const sTaxPct = fin?.stateTaxPct ?? 0;
+      const cPct = fin?.cashPct ?? 0;
+
+      const now = new Date();
+      const start = fin?.projectStart
+        ? new Date(fin.projectStart)
+        : new Date(now.getFullYear() - 1, now.getMonth(), 1);
+      const rawH =
+        fin?.hoursWorked && fin.hoursWorked > 0 ? fin.hoursWorked / 12 : 80;
+
+      const periods = Array.from({ length: 12 }, (_, i) => {
+        const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+        return {
+          label: `${MN[d.getMonth()]} ${d.getFullYear()}`,
+          sortKey: d.getTime(),
+          hours: Math.round(rawH * VAR[i] * 2) / 2,
+          amountPaid: 0,
+        };
+      });
+
+      if (fin?.hoursWorked && fin.hoursWorked > 0) {
+        const sumH = periods.reduce((a, p) => a + p.hours, 0);
+        const scale = fin.hoursWorked / sumH;
+        periods.forEach((p) => {
+          p.hours = Math.round(p.hours * scale * 2) / 2;
+        });
+        const diff = fin.hoursWorked - periods.reduce((a, p) => a + p.hours, 0);
+        if (Math.abs(diff) > 0)
+          periods[11].hours = Math.round((periods[11].hours + diff) * 2) / 2;
+      }
+
+      if (fin?.amountPaid && fin.amountPaid > 0) {
+        const sumH = periods.reduce((a, p) => a + p.hours, 0);
+        let allocated = 0;
+        periods.forEach((p, i) => {
+          if (i < 11) {
+            const share =
+              Math.round((p.hours / sumH) * fin.amountPaid * 100) / 100;
+            p.amountPaid = share;
+            allocated += share;
+          } else {
+            p.amountPaid = Math.round((fin.amountPaid - allocated) * 100) / 100;
+          }
+        });
+      }
+
+      const rows: CombinedRow[] = [];
+      periods.forEach((period) => {
+        const billed = bRate * period.hours;
+        const gross = pRate * period.hours;
+        const tax = (gross * sTaxPct) / 100;
+        const withhold = (gross * cPct) / 100;
+        const net = gross - tax - withhold;
+        const bal = net - period.amountPaid;
+        rows.push({
+          key: `${proj.id}-${period.label}`,
+          payPeriod: period.label,
+          sortKey: period.sortKey,
+          projectName: proj.job_title || "Untitled",
+          projectId: proj.id,
+          isActive: proj.is_active,
+          hours: period.hours,
+          billRate: bRate,
+          payRate: pRate,
+          billed,
+          grossPay: gross,
+          stateTax: tax,
+          stateTaxPct: sTaxPct,
+          withholding: withhold,
+          cashPct: cPct,
+          netPay: net,
+          paid: period.amountPaid,
+          balance: bal,
+        });
+      });
+      rows.sort((a, b) => a.sortKey - b.sortKey);
+      return rows;
+    };
+
+    const combinedRows = activeProject ? buildRows(activeProject) : [];
+
+
+
+    const totals = combinedRows.reduce(
+      (acc, r) => ({
+        hours: acc.hours + r.hours,
+        billed: acc.billed + r.billed,
+        grossPay: acc.grossPay + r.grossPay,
+        stateTax: acc.stateTax + r.stateTax,
+        withholding: acc.withholding + r.withholding,
+        netPay: acc.netPay + r.netPay,
+        paid: acc.paid + r.paid,
+        balance: acc.balance + r.balance,
+      }),
+      {
+        hours: 0,
+        billed: 0,
+        grossPay: 0,
+        stateTax: 0,
+        withholding: 0,
+        netPay: 0,
+        paid: 0,
+        balance: 0,
+      },
+    );
+
+    const taxDisplay = totals.stateTax > 0 ? `−${fmtF(totals.stateTax)}` : "—";
+    const withholdDisplay =
+      totals.withholding > 0 ? `−${fmtF(totals.withholding)}` : "—";
+    const balanceDisplayCls =
+      totals.balance > 0.01 ? "ov-val-orange" : "ov-val-green";
+
+    return (
+      <div>
+        {/* ── Candidate + Project Info Line ── */}
+        {activeProject && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 16,
+              padding: "8px 14px",
+              margin: "0 0 4px",
+              fontSize: 11.5,
+              color: "var(--w97-text-secondary)",
+              background: "var(--w97-window-alt)",
+              borderBottom: "1px solid var(--w97-btn-shadow)",
+            }}
+          >
+            <span>
+              👤{" "}
+              <strong style={{ color: "var(--w97-text)" }}>
+                {candidateDetail.roster.candidate_name}
+              </strong>
+              {" · "}
+              {candidateDetail.roster.candidate_email}
+            </span>
+            <span style={{ opacity: 0.4 }}>|</span>
+            <span>
+              💼{" "}
+              <strong style={{ color: "var(--w97-titlebar-from)" }}>
+                {activeProject.job_title || "Untitled"}
+              </strong>
+              {" · "}
+              {activeProject.job_type}
+              {activeProject.job_sub_type
+                ? ` · ${activeProject.job_sub_type.toUpperCase()}`
+                : ""}
+              {activeProject.financials?.stateCode
+                ? ` · ${activeProject.financials.stateCode}`
+                : ""}
+            </span>
+            <span style={{ opacity: 0.4 }}>|</span>
+            <span
+              className={
+                activeProject.is_active ? "ov-proj-active" : "ov-proj-closed"
+              }
+              style={{
+                padding: "1px 8px",
+                borderRadius: 10,
+                fontSize: 10,
+                fontWeight: 600,
+              }}
+            >
+              {activeProject.is_active ? "● Active" : "✓ Closed"}
+            </span>
+            {activeProject.financials && (
+              <>
+                <span style={{ opacity: 0.4 }}>|</span>
+                <span style={{ fontFamily: "monospace", fontSize: 11 }}>
+                  Bill{" "}
+                  <span style={{ color: "var(--pf-green)" }}>
+                    ${activeProject.financials.billRate}
+                  </span>
+                  {" / "}Pay{" "}
+                  <span style={{ color: "var(--pf-blue)" }}>
+                    ${activeProject.financials.payRate}
+                  </span>
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Project Tabs ── */}
+        <div style={{ display: "flex", gap: 0, margin: "0 14px" }}>
+          {sorted.map((proj) => (
+            <button
+              key={proj.id}
+              type="button"
+              onClick={() => setSelectedProjectId(proj.id)}
+              style={{
+                ...subtabStyle(proj.id === activeProjectId, proj === sorted[0]),
+                fontSize: 11,
+                maxWidth: 180,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {proj.is_active ? "● " : ""}
+              {proj.job_title || "Untitled"}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Pay Periods DataTable for selected project ── */}
+        <DataTable
+          title={`${activeProject?.job_title || "Project"} — Pay Periods`}
+          titleIcon="💼"
+          className="matchdb-auto-height"
+          titleExtra={
+            <span style={{ fontSize: 10, opacity: 0.7 }}>
+              {combinedRows.length} periods
+            </span>
+          }
+          showRowNumbers={false}
+          columns={
+            [
+              {
+                key: "payPeriod",
+                header: "Pay Period",
+                width: "14%",
+                render: (r) => (
+                  <span style={{ fontWeight: 600 }}>{r.payPeriod}</span>
+                ),
+              },
+              {
+                key: "hours",
+                header: "Hours",
+                align: "right" as const,
+                render: (r) => (
+                  <span style={{ fontFamily: "monospace" }}>{r.hours}</span>
+                ),
+              },
+              {
+                key: "billed",
+                header: "Billed",
+                align: "right" as const,
+                render: (r) => (
+                  <span className="ov-mono ov-val-green">{fmtF(r.billed)}</span>
+                ),
+              },
+              {
+                key: "grossPay",
+                header: "Gross Pay",
+                align: "right" as const,
+                render: (r) => (
+                  <span style={{ fontFamily: "monospace" }}>
+                    {fmtF(r.grossPay)}
+                  </span>
+                ),
+              },
+              {
+                key: "stateTax",
+                header: "State Tax",
+                align: "right" as const,
+                render: (r) => (
+                  <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
+                    {r.stateTax > 0 ? `−${fmtF(r.stateTax)}` : "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "withholding",
+                header: "Withholding",
+                align: "right" as const,
+                render: (r) => (
+                  <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
+                    {r.withholding > 0 ? `−${fmtF(r.withholding)}` : "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "netPay",
+                header: "Net Pay",
+                align: "right" as const,
+                render: (r) => (
+                  <span className="ov-mono ov-val-blue">{fmtF(r.netPay)}</span>
+                ),
+              },
+              {
+                key: "paid",
+                header: "Paid",
+                align: "right" as const,
+                render: (r) => (
+                  <span
+                    className={`ov-mono ${r.paid > 0 ? "ov-val-green" : ""}`}
+                  >
+                    {r.paid > 0 ? fmtF(r.paid) : "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "balance",
+                header: "Balance",
+                align: "right" as const,
+                render: (r) => (
+                  <span className={`ov-mono ${balanceClass(r.balance)}`}>
+                    {balanceLabel(r.balance, fmtF)}
+                  </span>
+                ),
+              },
+            ] as DataTableColumn<CombinedRow>[]
+          }
+          data={combinedRows}
+          keyExtractor={(r) => r.key}
+          emptyMessage="No pay period data."
+          footerRow={
+            combinedRows.length > 0 ? (
+              <tr
+                className={`ov-pt-foot ${footerRowClass(
+                  totals.billed - totals.grossPay,
+                )}`}
+              >
+                <td className="ov-pt-tf" style={{ fontWeight: 700 }}>
+                  TOTAL
+                </td>
+                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>
+                  {totals.hours.toLocaleString()}
+                </td>
+                <td
+                  className="ov-pt-tf ov-mono ov-val-green"
+                  style={{ textAlign: "right" }}
+                >
+                  {fmtF(totals.billed)}
+                </td>
+                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>
+                  {fmtF(totals.grossPay)}
+                </td>
+                <td
+                  className="ov-pt-tf ov-mono"
+                  style={{ textAlign: "right", color: "var(--w97-red)" }}
+                >
+                  {taxDisplay}
+                </td>
+                <td
+                  className="ov-pt-tf ov-mono"
+                  style={{ textAlign: "right", color: "var(--w97-red)" }}
+                >
+                  {withholdDisplay}
+                </td>
+                <td
+                  className="ov-pt-tf ov-mono ov-val-blue"
+                  style={{ textAlign: "right" }}
+                >
+                  {fmtF(totals.netPay)}
+                </td>
+                <td
+                  className="ov-pt-tf ov-mono ov-val-green"
+                  style={{ textAlign: "right" }}
+                >
+                  {fmtF(totals.paid)}
+                </td>
+                <td
+                  className={`ov-pt-tf ov-mono ${balanceDisplayCls}`}
+                  style={{ textAlign: "right" }}
+                >
+                  {settledOrAmount(totals.balance, fmtF)}
+                </td>
+              </tr>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  }
+
+  function renderVendorActivityTab() {
+    if (!candidateDetail) return null;
+    const activities = candidateDetail.vendor_activity;
+    const pokeCount = activities.filter((v) => !v.is_email).length;
+    const emailCount = activities.filter((v) => v.is_email).length;
+    const total = activities.length;
+
+    // Aggregate by vendor for bar chart
+    const vendorMap: Record<string, { pokes: number; emails: number }> = {};
+    activities.forEach((v) => {
+      const key = v.sender_email;
+      if (!vendorMap[key]) vendorMap[key] = { pokes: 0, emails: 0 };
+      if (v.is_email) vendorMap[key].emails++;
+      else vendorMap[key].pokes++;
+    });
+    const vendorEntries = Object.entries(vendorMap).sort(
+      (a, b) => b[1].pokes + b[1].emails - (a[1].pokes + a[1].emails),
+    );
+    const maxBar = Math.max(
+      ...vendorEntries.map(([, v]) => v.pokes + v.emails),
+      1,
+    );
+
+    // Pie chart math
+    const pieR = 50;
+    const pieC = 2 * Math.PI * pieR;
+    const pokeArc = total > 0 ? (pokeCount / total) * pieC : 0;
+    const emailArc = total > 0 ? (emailCount / total) * pieC : 0;
+
+    // Year-based subtabs
+    const joinDate = candidateDetail.roster.created_at
+      ? new Date(candidateDetail.roster.created_at)
+      : null;
+    const startYear = joinDate
+      ? joinDate.getFullYear()
+      : new Date().getFullYear();
+    const currentYear = new Date().getFullYear();
+    const yearTabs: string[] = [];
+    for (let y = startYear; y <= currentYear; y++) yearTabs.push(String(y));
+
+    // Filter activities by selected year
+    const filteredActivities =
+      vendorActivitySubTab === "summary"
+        ? activities
+        : activities.filter((v) => {
+            const d = new Date(v.created_at);
+            return String(d.getFullYear()) === vendorActivitySubTab;
+          });
+
+    return (
+      <div>
+        <Toolbar
+          left={
+            <h3
+              style={{
+                margin: 0,
+                fontSize: 14,
+                fontWeight: 700,
+                color: "var(--w97-titlebar-from)",
+              }}
+            >
+              📊 Vendor Activity
+            </h3>
+          }
+          right={
+            <span
+              style={{
+                fontSize: 11,
+                color: "var(--w97-text-secondary)",
+              }}
+            >
+              {total} interactions
+            </span>
+          }
+          style={{ marginBottom: 8 }}
+        />
+
+        {total === 0 && (
+          <div
+            className="matchdb-card"
+            style={{
+              padding: 40,
+              textAlign: "center",
+              color: "var(--w97-border-dark)",
+              fontSize: 13,
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
+            No vendor interactions recorded yet
+          </div>
+        )}
+        {total > 0 && (
+          <>
+            {/* ── Subtab Bar ── */}
+            <div style={{ display: "flex", gap: 0, margin: "0 0 0 14px" }}>
+              <button
+                type="button"
+                onClick={() => setVendorActivitySubTab("summary")}
+                style={subtabStyle(vendorActivitySubTab === "summary")}
+              >
+                📊 Summary
+              </button>
+              {yearTabs.map((yr, idx) => (
+                <button
+                  key={yr}
+                  type="button"
+                  onClick={() => setVendorActivitySubTab(yr)}
+                  style={subtabStyle(vendorActivitySubTab === yr, false)}
+                >
+                  📅 {yr}
+                </button>
+              ))}
+            </div>
+
+            {/* ── Summary subtab: Charts ── */}
+            {vendorActivitySubTab === "summary" && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  marginBottom: 16,
+                  marginTop: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                {/* Pie Chart */}
+                <div
+                  className="matchdb-card"
+                  style={{
+                    flex: "0 0 220px",
+                    padding: 20,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "var(--w97-text-secondary)",
+                      marginBottom: 12,
+                    }}
+                  >
+                    Pokes vs Emails
+                  </div>
+                  <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r={pieR}
+                      fill="none"
+                      stroke="var(--w97-border-light)"
+                      strokeWidth="18"
+                    />
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r={pieR}
+                      fill="none"
+                      stroke="var(--w97-yellow)"
+                      strokeWidth="18"
+                      strokeDasharray={`${pokeArc} ${pieC - pokeArc}`}
+                      strokeDashoffset={pieC / 4}
+                      strokeLinecap="round"
+                    />
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r={pieR}
+                      fill="none"
+                      stroke="var(--w97-blue)"
+                      strokeWidth="18"
+                      strokeDasharray={`${emailArc} ${pieC - emailArc}`}
+                      strokeDashoffset={pieC / 4 - pokeArc}
+                      strokeLinecap="round"
+                    />
+                    <text
+                      x="60"
+                      y="58"
+                      textAnchor="middle"
+                      fontSize="18"
+                      fontWeight="700"
+                      fill="var(--w97-text)"
+                    >
+                      {total}
+                    </text>
+                    <text
+                      x="60"
+                      y="72"
+                      textAnchor="middle"
+                      fontSize="9"
+                      fill="var(--w97-text-secondary)"
+                    >
+                      total
+                    </text>
+                  </svg>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      marginTop: 12,
+                      fontSize: 10,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "var(--w97-yellow)",
+                          display: "inline-block",
+                        }}
+                      />
+                      Pokes ({pokeCount})
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "var(--w97-blue)",
+                          display: "inline-block",
+                        }}
+                      />
+                      Emails ({emailCount})
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bar Chart: By Vendor */}
+                <div
+                  className="matchdb-card"
+                  style={{ flex: 1, padding: 20, minWidth: 280 }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "var(--w97-text-secondary)",
+                      marginBottom: 12,
+                    }}
+                  >
+                    Interactions by Vendor
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    {vendorEntries.slice(0, 8).map(([vendor, counts]) => (
+                      <div key={vendor}>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "var(--w97-text-secondary)",
+                            marginBottom: 3,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {vendor}
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            height: 16,
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: 14,
+                              borderRadius: 3,
+                              background:
+                                "linear-gradient(90deg, var(--w97-yellow), #d4a017)",
+                              width: `${(counts.pokes / maxBar) * 100}%`,
+                              minWidth: counts.pokes > 0 ? 4 : 0,
+                              transition: "width 0.3s ease",
+                            }}
+                          />
+                          <div
+                            style={{
+                              height: 14,
+                              borderRadius: 3,
+                              background:
+                                "linear-gradient(90deg, var(--w97-blue), #4ba3ff)",
+                              width: `${(counts.emails / maxBar) * 100}%`,
+                              minWidth: counts.emails > 0 ? 4 : 0,
+                              transition: "width 0.3s ease",
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: 10,
+                              color: "var(--w97-text-secondary)",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {counts.pokes + counts.emails}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Activity List (shown for both summary and year tabs) ── */}
+            <DataTable
+              title={
+                vendorActivitySubTab === "summary"
+                  ? "All Vendor Activity"
+                  : `Vendor Activity — ${vendorActivitySubTab}`
+              }
+              titleIcon="📋"
+              showRowNumbers={false}
+              titleExtra={
+                <span style={{ fontSize: 10, opacity: 0.7 }}>
+                  {filteredActivities.length} interaction
+                  {filteredActivities.length === 1 ? "" : "s"}
+                </span>
+              }
+              columns={
+                [
+                  {
+                    key: "vendor",
+                    header: "Vendor",
+                    width: "30%",
+                    render: (v) => <>{v.sender_email}</>,
+                  },
+                  {
+                    key: "type",
+                    header: "Type",
+                    width: "8%",
+                    render: (v) => (
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "1px 8px",
+                          borderRadius: 10,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          background: v.is_email ? "#e8f0fe" : "#fff8e1",
+                          color: v.is_email
+                            ? "var(--w97-blue)"
+                            : "var(--w97-yellow)",
+                        }}
+                      >
+                        {v.is_email ? "Email" : "Poke"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "subject",
+                    header: "Subject / Job",
+                    render: (v) => (
+                      <span style={{ color: "var(--w97-text-secondary)" }}>
+                        {v.subject || v.job_title || "—"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "date",
+                    header: "Date",
+                    render: (v) => (
+                      <span style={{ color: "var(--w97-text-secondary)" }}>
+                        {fmtDate(v.created_at)}
+                      </span>
+                    ),
+                  },
+                ] as DataTableColumn<(typeof activities)[number]>[]
+              }
+              data={filteredActivities}
+              keyExtractor={(v) => String(v.id)}
+              emptyMessage={
+                vendorActivitySubTab === "summary"
+                  ? "No vendor activity."
+                  : `No vendor activity in ${vendorActivitySubTab}.`
+              }
+              paginate
+              pageSize={25}
+            />
+          </>
+        )}
+      </div>
+    );
+  }
+
+  function renderForwardedTab() {
+    if (!candidateDetail) return null;
+    const fwd = candidateDetail.forwarded_openings;
+    return (
+      <div>
+        <Toolbar
+          left={
+            <h3
+              style={{
+                margin: 0,
+                fontSize: 14,
+                fontWeight: 700,
+                color: "var(--w97-titlebar-from)",
+              }}
+            >
+              📤 Forwarded Openings
+            </h3>
+          }
+          right={
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "var(--w97-text-secondary)",
+                }}
+              >
+                {fwd.length} sent
+              </span>
+              <Button
+                size="xs"
+                onClick={() =>
+                  openSendJobModal(
+                    candidateDetail.roster.candidate_email,
+                    candidateDetail.roster.candidate_name,
+                  )
+                }
+              >
+                + Send New
+              </Button>
+            </div>
+          }
+          style={{ marginBottom: 12 }}
+        />
+        {fwd.length === 0 ? (
+          <div
+            className="matchdb-card"
+            style={{
+              padding: 40,
+              textAlign: "center",
+              color: "var(--w97-border-dark)",
+              fontSize: 13,
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 8 }}>📤</div>
+            No openings forwarded to this candidate yet
+          </div>
+        ) : (
+          <DataTable
+            title="Forwarded Openings"
+            titleIcon="📤"
+            showRowNumbers={false}
+            columns={
+              [
+                {
+                  key: "title",
+                  header: "Job Title",
+                  width: "20%",
+                  render: (f) => (
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        color: "var(--w97-titlebar-from)",
+                      }}
+                    >
+                      {f.job_title}
+                    </span>
+                  ),
+                },
+                {
+                  key: "location",
+                  header: "Location",
+                  width: "14%",
+                  render: (f) => (
+                    <span style={{ color: "var(--w97-text-secondary)" }}>
+                      {f.job_location || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "type",
+                  header: "Type",
+                  render: (f) => (
+                    <span style={{ color: "var(--w97-text-secondary)" }}>
+                      {f.job_type || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "subType",
+                  header: "Sub Type",
+                  render: (f) => (
+                    <span style={{ color: "var(--w97-text-secondary)" }}>
+                      {f.job_sub_type || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "vendor",
+                  header: "Vendor",
+                  render: (f) => (
+                    <span style={{ color: "var(--w97-text-secondary)" }}>
+                      {f.vendor_email || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "status",
+                  header: "Status",
+                  render: (f) => (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "1px 8px",
+                        borderRadius: 10,
+                        fontSize: 10,
+                        fontWeight: 600,
+                        background:
+                          { accepted: "#e8f5e9", rejected: "#ffebee" }[
+                            f.status
+                          ] ?? "#fff3e0",
+                        color:
+                          {
+                            accepted: "var(--w97-green)",
+                            rejected: "var(--w97-red)",
+                          }[f.status] ?? "var(--w97-orange)",
+                      }}
+                    >
+                      {f.status || "pending"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "sent",
+                  header: "Sent",
+                  render: (f) => (
+                    <span style={{ color: "var(--w97-text-secondary)" }}>
+                      {fmtDate(f.created_at)}
+                    </span>
+                  ),
+                },
+              ] as DataTableColumn<(typeof fwd)[number]>[]
+            }
+            data={fwd}
+            keyExtractor={(f) => String(f.id)}
+            emptyMessage="No forwarded openings."
+            paginate
+            pageSize={25}
+          />
+        )}
+      </div>
+    );
+  }
   return (
     <DBLayout userType="vendor" navGroups={navGroups} breadcrumb={breadcrumb}>
       <div className="matchdb-page">
@@ -1477,1953 +5531,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           ))}
         </div>
 
-        {activeView === "vendor-posted" ? (
-          <DataTable<MarketerJob>
-            columns={jobColumns}
-            data={filteredJobs}
-            keyExtractor={(j) => j.id}
-            loading={jobsLoading}
-            paginate
-            flashIds={jobsFlash.flashIds}
-            deleteFlashIds={jobsFlash.deleteFlashIds}
-            titleIcon="💼"
-            title={
-              subFilter
-                ? `Job Openings — ${
-                    subFilter === "full_time"
-                      ? "Full Time"
-                      : subFilter.toUpperCase()
-                  }`
-                : "Job Openings"
-            }
-            paginationExtra={
-              <Button
-                variant="download"
-                size="xs"
-                onClick={handleDownloadJobsCSV}
-                title="Download all job openings as CSV"
-              >
-                ⬇ CSV
-              </Button>
-            }
-            titleExtra={
-              <div className="matchdb-title-toolbar">
-                <Input
-                  className="matchdb-title-search"
-                  value={jobSearch}
-                  onChange={(e) => setJobSearch(e.target.value)}
-                  placeholder="Search title, skills, location…"
-                />
-                <Button
-                  size="xs"
-                  className="matchdb-title-btn"
-                  onClick={() => setJobSearch("")}
-                >
-                  Reset
-                </Button>
-                <span className="matchdb-title-count">
-                  {jobsLoading
-                    ? "…"
-                    : subFilter
-                    ? `${filteredJobs.length} / ${jobsTotal}`
-                    : `${jobs.length} / ${jobsTotal}`}
-                </span>
-                <Button
-                  size="xs"
-                  className="matchdb-title-btn"
-                  onClick={() => refetchJobs()}
-                >
-                  ↻ Refresh
-                </Button>
-                {Boolean(jobsFlash.lastSync) && (
-                  <span className="matchdb-title-sync">
-                    synced {new Date(jobsFlash.lastSync!).toLocaleTimeString()}
-                  </span>
-                )}
-              </div>
-            }
-          />
-        ) : activeView === "candidate-created" ? (
-          <DataTable<MarketerProfile>
-            columns={profileColumns}
-            data={filteredProfiles}
-            keyExtractor={(p) => p.id}
-            loading={profilesLoading}
-            paginate
-            flashIds={profilesFlash.flashIds}
-            deleteFlashIds={profilesFlash.deleteFlashIds}
-            titleIcon="👤"
-            title={
-              subFilter
-                ? `Candidate Profiles — ${
-                    subFilter === "full_time"
-                      ? "Full Time"
-                      : subFilter.toUpperCase()
-                  }`
-                : "Candidate Profiles"
-            }
-            paginationExtra={
-              <Button
-                variant="download"
-                size="xs"
-                onClick={handleDownloadProfilesExcel}
-                title="Download all candidate profiles as Excel"
-              >
-                ⬇ Excel
-              </Button>
-            }
-            titleExtra={
-              <div className="matchdb-title-toolbar">
-                <Input
-                  className="matchdb-title-search"
-                  value={profileSearch}
-                  onChange={(e) => setProfileSearch(e.target.value)}
-                  placeholder="Search name, role, skills, location…"
-                />
-                <Button
-                  size="xs"
-                  className="matchdb-title-btn"
-                  onClick={() => setProfileSearch("")}
-                >
-                  Reset
-                </Button>
-                <span className="matchdb-title-count">
-                  {profilesLoading
-                    ? "…"
-                    : subFilter
-                    ? `${filteredProfiles.length} / ${profilesTotal}`
-                    : `${profiles.length} / ${profilesTotal}`}
-                </span>
-                <Button
-                  size="xs"
-                  className="matchdb-title-btn"
-                  onClick={() => refetchProfiles()}
-                >
-                  ↻ Refresh
-                </Button>
-                {Boolean(profilesFlash.lastSync) && (
-                  <span className="matchdb-title-sync">
-                    synced{" "}
-                    {new Date(profilesFlash.lastSync!).toLocaleTimeString()}
-                  </span>
-                )}
-              </div>
-            }
-          />
-        ) : activeView === "candidate-detail" && selectedCandidateId ? (
-          /* ── Candidate Detail — Tabbed Center Content ── */
-          <div
-            style={{ display: "flex", flexDirection: "column", height: "100%" }}
-          >
-            {/* ── Top Bar: Back + Name + Print ── */}
-            <Toolbar
-              left={
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      navParams({ view: "company-candidates", cid: null, tab: null })
-                    }
-                  >
-                    ← Back
-                  </Button>
-                  {candidateDetail?.roster && (
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: 17,
-                        fontWeight: 700,
-                        color: "var(--w97-titlebar-from)",
-                      }}
-                    >
-                      {candidateDetail.roster.candidate_name}
-                    </h2>
-                  )}
-                </div>
-              }
-              right={
-                <div style={{ display: "flex", gap: 6 }}>
-                  {candidateDetail?.roster &&
-                    (candidateDetail.roster.invite_status || "none") !==
-                      "accepted" && (
-                      <Button
-                        variant="email"
-                        size="xs"
-                        onClick={() =>
-                          openInviteModal({
-                            id: candidateDetail.roster.id,
-                            candidate_email:
-                              candidateDetail.roster.candidate_email,
-                            candidate_name:
-                              candidateDetail.roster.candidate_name,
-                            invite_status:
-                              candidateDetail.roster.invite_status || "none",
-                            created_at: candidateDetail.roster.created_at,
-                          } as MarketerCandidateItem)
-                        }
-                      >
-                        ✉ Invite
-                      </Button>
-                    )}
-                  {candidateDetail?.roster && (
-                    <Button
-                      variant="email"
-                      size="xs"
-                      style={{ color: "var(--w97-teal)" }}
-                      onClick={() =>
-                        openSendJobModal(
-                          candidateDetail.roster.candidate_email,
-                          candidateDetail.roster.candidate_name,
-                        )
-                      }
-                    >
-                      📧 Send Job
-                    </Button>
-                  )}
-                  {candidateDetail?.profile && (
-                    <Button
-                      variant="download"
-                      size="xs"
-                      onClick={() =>
-                        downloadResumePDF({
-                          name: candidateDetail.profile!.name,
-                          email: candidateDetail.profile!.email,
-                          phone: candidateDetail.profile!.phone,
-                          skills: candidateDetail.profile!.skills,
-                          experience_years:
-                            candidateDetail.profile!.experience_years,
-                          current_role: candidateDetail.profile!.current_role,
-                          current_company:
-                            candidateDetail.profile!.current_company ?? "",
-                          location: candidateDetail.profile!.location,
-                          resume_summary:
-                            candidateDetail.profile!.resume_summary,
-                          resume_experience:
-                            candidateDetail.profile!.resume_experience,
-                          resume_education:
-                            candidateDetail.profile!.resume_education,
-                          resume_achievements:
-                            candidateDetail.profile!.resume_achievements,
-                        } as MarketerProfile)
-                      }
-                    >
-                      📥 Resume
-                    </Button>
-                  )}
-                </div>
-              }
-              style={{ marginBottom: 12 }}
-            />
-
-            {detailLoading ? (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: 60,
-                  color: "var(--w97-text-secondary)",
-                  fontSize: 13,
-                }}
-              >
-                Loading candidate details…
-              </div>
-            ) : !candidateDetail ? (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: 60,
-                  color: "var(--w97-text-secondary)",
-                  fontSize: 13,
-                }}
-              >
-                Candidate not found.
-              </div>
-            ) : (
-              <>
-                {/* ── Horizontal Tab Bar ── */}
-                <Tabs
-                  activeKey={detailTab}
-                  onSelect={(key) => {
-                    navParams({ tab: key });
-                    if (key !== "projects") setSelectedProjectId(null);
-                  }}
-                  tabs={[
-                    { key: "overview", label: "👤 Overview" },
-                    {
-                      key: "projects",
-                      label: (
-                        <>
-                          📋 Projects{" "}
-                          <span className="matchdb-tab-badge">
-                            {candidateDetail.projects.length}
-                          </span>
-                        </>
-                      ),
-                    },
-                    {
-                      key: "vendor-activity",
-                      label: (
-                        <>
-                          📊 Vendor Activity{" "}
-                          <span className="matchdb-tab-badge">
-                            {candidateDetail.vendor_activity.length}
-                          </span>
-                        </>
-                      ),
-                    },
-                    {
-                      key: "forwarded",
-                      label: (
-                        <>
-                          📤 Forwarded Openings{" "}
-                          <span className="matchdb-tab-badge">
-                            {candidateDetail.forwarded_openings.length}
-                          </span>
-                        </>
-                      ),
-                    },
-                  ]}
-                />
-
-                {/* ════════════ TAB: Overview ════════════ */}
-                {detailTab === "overview" &&
-                  (() => {
-                    const allFins = candidateDetail.projects
-                      .filter((p) => p.financials != null)
-                      .map((p) => ({ project: p, fin: p.financials! }));
-
-                    const totalBilled = allFins.reduce(
-                      (a, x) => a + x.fin.totalBilled,
-                      0,
-                    );
-                    const totalMargin = allFins.reduce(
-                      (a, x) => a + (x.fin.totalBilled - x.fin.totalPay),
-                      0,
-                    );
-                    const totalNet = allFins.reduce(
-                      (a, x) => a + x.fin.netPayable,
-                      0,
-                    );
-                    const totalPaid = allFins.reduce(
-                      (a, x) => a + x.fin.amountPaid,
-                      0,
-                    );
-                    const totalPending = allFins.reduce(
-                      (a, x) => a + Math.max(0, x.fin.amountPending),
-                      0,
-                    );
-                    const totalHours = allFins.reduce(
-                      (a, x) => a + x.fin.hoursWorked,
-                      0,
-                    );
-
-                    // Generate aggregated monthly pay rows across all projects
-                    const OV_MN = [
-                      "Jan",
-                      "Feb",
-                      "Mar",
-                      "Apr",
-                      "May",
-                      "Jun",
-                      "Jul",
-                      "Aug",
-                      "Sep",
-                      "Oct",
-                      "Nov",
-                      "Dec",
-                    ] as const;
-                    const OV_VAR = [
-                      1.0, 0.92, 1.08, 1.02, 0.94, 1.06, 1.0, 0.92, 1.08, 1.0,
-                      0.94, 1.04,
-                    ];
-                    type MonthRow = {
-                      label: string;
-                      hours: number;
-                      billed: number;
-                      gross: number;
-                      net: number;
-                      paid: number;
-                      balance: number;
-                    };
-                    const monthMap: Record<string, MonthRow> = {};
-
-                    allFins.forEach(({ fin }) => {
-                      const now = new Date();
-                      const start = fin.projectStart
-                        ? new Date(fin.projectStart)
-                        : new Date(now.getFullYear() - 1, now.getMonth(), 1);
-                      const rawH =
-                        fin.hoursWorked > 0 ? fin.hoursWorked / 12 : 80;
-                      const periods = Array.from({ length: 12 }, (_, i) => {
-                        const d = new Date(
-                          start.getFullYear(),
-                          start.getMonth() + i,
-                          1,
-                        );
-                        return {
-                          label: `${OV_MN[d.getMonth()]} ${d.getFullYear()}`,
-                          hours: Math.round(rawH * OV_VAR[i] * 2) / 2,
-                        };
-                      });
-                      if (fin.hoursWorked > 0) {
-                        const sumH = periods.reduce((a, p) => a + p.hours, 0);
-                        const scale = fin.hoursWorked / sumH;
-                        periods.forEach((p) => {
-                          p.hours = Math.round(p.hours * scale * 2) / 2;
-                        });
-                      }
-                      const paidArr: number[] = new Array(12).fill(0);
-                      if (fin.amountPaid > 0) {
-                        const sumH = periods.reduce((a, p) => a + p.hours, 0);
-                        let alloc = 0;
-                        periods.forEach((p, i) => {
-                          if (i < 11) {
-                            const s =
-                              Math.round(
-                                (p.hours / sumH) * fin.amountPaid * 100,
-                              ) / 100;
-                            paidArr[i] = s;
-                            alloc += s;
-                          } else {
-                            paidArr[i] =
-                              Math.round((fin.amountPaid - alloc) * 100) / 100;
-                          }
-                        });
-                      }
-                      periods.forEach((p, i) => {
-                        const billed = fin.billRate * p.hours;
-                        const gross = fin.payRate * p.hours;
-                        const tax = (gross * fin.stateTaxPct) / 100;
-                        const withhold = (gross * fin.cashPct) / 100;
-                        const net = gross - tax - withhold;
-                        const paid = paidArr[i];
-                        if (!monthMap[p.label])
-                          monthMap[p.label] = {
-                            label: p.label,
-                            hours: 0,
-                            billed: 0,
-                            gross: 0,
-                            net: 0,
-                            paid: 0,
-                            balance: 0,
-                          };
-                        monthMap[p.label].hours += p.hours;
-                        monthMap[p.label].billed += billed;
-                        monthMap[p.label].gross += gross;
-                        monthMap[p.label].net += net;
-                        monthMap[p.label].paid += paid;
-                        monthMap[p.label].balance += net - paid;
-                      });
-                    });
-
-                    const monthRows = Object.values(monthMap).sort(
-                      (a, b) =>
-                        new Date(a.label).getTime() -
-                        new Date(b.label).getTime(),
-                    );
-                    const fmtC = (v: number) =>
-                      `$${Math.abs(v).toLocaleString("en-US", {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      })}`;
-                    const fmtF = (v: number) =>
-                      v < 0
-                        ? `-$${Math.abs(v).toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}`
-                        : `$${v.toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}`;
-
-                    return (
-                      <div className="ov-root">
-                        {/* ══ ROW 1 — Compact single-line profile strip ══ */}
-                        <div style={{ borderBottom: "1px solid var(--w97-border)", background: "var(--w97-panel-bg, #f4f4f4)" }}>
-                          {/* Main info row */}
-                          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "3px 0", padding: "8px 14px", fontSize: 12 }}>
-                            {(
-                              [
-                                { v: candidateDetail.profile?.current_role, bold: true },
-                                { v: candidateDetail.profile?.current_company },
-                                { v: candidateDetail.profile?.location },
-                                { v: candidateDetail.profile?.expected_hourly_rate ? `$${candidateDetail.profile.expected_hourly_rate}/hr` : null },
-                                { v: candidateDetail.profile?.experience_years != null ? `${candidateDetail.profile.experience_years} yrs` : null },
-                                { v: candidateDetail.profile?.phone },
-                                { v: candidateDetail.roster.candidate_email },
-                              ] as { v: string | null | undefined; bold?: boolean }[]
-                            ).filter((x) => x.v).map((x, i, arr) => (
-                              <React.Fragment key={i}>
-                                <span style={{ fontWeight: x.bold ? 700 : 400, color: x.bold ? "var(--w97-titlebar-from)" : "inherit" }}>{x.v}</span>
-                                {i < arr.length - 1 && <span style={{ margin: "0 7px", color: "var(--w97-text-secondary)", fontWeight: 300 }}>·</span>}
-                              </React.Fragment>
-                            ))}
-                            {/* Stats badges — right side */}
-                            <div style={{ marginLeft: "auto", display: "flex", gap: 5, flexWrap: "nowrap", alignItems: "center", paddingLeft: 12 }}>
-                              {(() => {
-                                const status = candidateDetail.roster.invite_status || "none";
-                                const accepted = status === "accepted";
-                                return (
-                                  <span style={{ padding: "2px 7px", borderRadius: 10, fontSize: 10, fontWeight: 600, background: accepted ? "#e8f5e9" : "#fff3e0", color: accepted ? "#2e7d32" : "#b8860b", whiteSpace: "nowrap" }}>
-                                    {accepted ? "✓ Accepted" : "⏳ Pending"}
-                                  </span>
-                                );
-                              })()}
-                              <span className="matchdb-type-pill" style={{ whiteSpace: "nowrap" }}>{candidateDetail.projects.filter((p) => p.is_active).length} active</span>
-                              <span className="matchdb-type-pill" style={{ whiteSpace: "nowrap" }}>{candidateDetail.vendor_activity.length} interactions</span>
-                              <span className="matchdb-type-pill" style={{ whiteSpace: "nowrap" }}>{candidateDetail.forwarded_openings.length} forwarded</span>
-                              <span style={{ fontSize: 10, color: "var(--w97-text-secondary)", whiteSpace: "nowrap", paddingLeft: 4 }}>
-                                Rostered {fmtDate(candidateDetail.roster.created_at)}
-                              </span>
-                            </div>
-                          </div>
-                          {/* Skills row */}
-                          {(candidateDetail.profile?.skills || []).length > 0 && (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "0 14px 7px", alignItems: "center" }}>
-                              <span style={{ fontSize: 10, color: "var(--w97-text-secondary)", textTransform: "uppercase", letterSpacing: 0.5, marginRight: 4 }}>Skills</span>
-                              {candidateDetail.profile!.skills.map((s) => (
-                                <span key={s} style={{ background: "#e8f0fe", color: "var(--w97-blue)", padding: "2px 8px", borderRadius: 12, fontSize: 10, fontWeight: 500 }}>{s}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* ══ ROW 2 — Modern financial KPI strip (only when financials exist) ══ */}
-                        {allFins.length > 0 && (
-                          <div
-                            className="ov-kpi-strip"
-                            style={{ margin: "14px 16px 0" }}
-                          >
-                            <div className="ov-kpi">
-                              <span className="ov-kpi-label">Total Hours</span>
-                              <span className="ov-kpi-value ov-kv-blue">
-                                {totalHours.toLocaleString()}
-                              </span>
-                            </div>
-                            <div className="ov-kpi-div" />
-                            <div className="ov-kpi">
-                              <span className="ov-kpi-label">
-                                Vendor Billed
-                              </span>
-                              <span className="ov-kpi-value ov-kv-green">
-                                {fmtC(totalBilled)}
-                              </span>
-                            </div>
-                            <div className="ov-kpi-div" />
-                            <div className="ov-kpi">
-                              <span className="ov-kpi-label">Your Margin</span>
-                              <span className="ov-kpi-value ov-kv-teal">
-                                {fmtC(totalMargin)}
-                                {totalBilled > 0 && (
-                                  <span className="ov-kpi-pct">
-                                    {" "}
-                                    (
-                                    {(
-                                      (totalMargin / totalBilled) *
-                                      100
-                                    ).toFixed(1)}
-                                    %)
-                                  </span>
-                                )}
-                              </span>
-                            </div>
-                            <div className="ov-kpi-div" />
-                            <div className="ov-kpi">
-                              <span className="ov-kpi-label">Net Payable</span>
-                              <span className="ov-kpi-value ov-kv-blue">
-                                {fmtC(totalNet)}
-                              </span>
-                            </div>
-                            <div className="ov-kpi-div" />
-                            <div className="ov-kpi">
-                              <span className="ov-kpi-label">Paid to Date</span>
-                              <span className="ov-kpi-value ov-kv-green">
-                                {fmtC(totalPaid)}
-                              </span>
-                            </div>
-                            <div className="ov-kpi-div" />
-                            <div className="ov-kpi">
-                              <span className="ov-kpi-label">Outstanding</span>
-                              <span
-                                className={`ov-kpi-value ${
-                                  totalPending > 0
-                                    ? "ov-kv-orange"
-                                    : "ov-kv-green"
-                                }`}
-                              >
-                                {fmtC(totalPending)}
-                              </span>
-                            </div>
-                            <div className="ov-kpi-div" />
-                            {/* Inline progress bar in the KPI strip */}
-                            <div
-                              className="ov-kpi"
-                              style={{ flex: 1, minWidth: 120 }}
-                            >
-                              <span className="ov-kpi-label">
-                                Payment Progress —{" "}
-                                {totalNet > 0
-                                  ? ((totalPaid / totalNet) * 100).toFixed(0)
-                                  : 0}
-                                % paid
-                              </span>
-                              <div
-                                style={{
-                                  marginTop: 4,
-                                  height: 8,
-                                  background: "var(--w97-border-light)",
-                                  borderRadius: 8,
-                                  overflow: "hidden",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    height: "100%",
-                                    borderRadius: 8,
-                                    width: `${
-                                      totalNet > 0
-                                        ? Math.min(
-                                            100,
-                                            (totalPaid / totalNet) * 100,
-                                          )
-                                        : 0
-                                    }%`,
-                                    background:
-                                      "linear-gradient(90deg, var(--w97-green), #2dd55b)",
-                                    transition: "width 0.4s ease",
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* ══ ROW 3 — Subtabs: Financial Summary / Monthly Pay ══ */}
-                        {(candidateDetail.projects.length > 0 || monthRows.length > 0) && (
-                          <div style={{ margin: "14px 16px 16px" }}>
-                            {/* Subtab bar */}
-                            <div style={{ display: "flex", gap: 0, marginBottom: 0 }}>
-                              <button
-                                type="button"
-                                onClick={() => setOverviewSubTab("financial")}
-                                style={{
-                                  padding: "5px 14px",
-                                  fontSize: 11.5,
-                                  fontWeight: overviewSubTab === "financial" ? 700 : 500,
-                                  background: overviewSubTab === "financial" ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
-                                  color: overviewSubTab === "financial" ? "#fff" : "var(--w97-text)",
-                                  border: "1px solid var(--w97-btn-shadow)",
-                                  borderBottom: overviewSubTab === "financial" ? "none" : "1px solid var(--w97-btn-shadow)",
-                                  borderRadius: "4px 4px 0 0",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                💼 Financial Summary
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setOverviewSubTab("monthly")}
-                                style={{
-                                  padding: "5px 14px",
-                                  fontSize: 11.5,
-                                  fontWeight: overviewSubTab === "monthly" ? 700 : 500,
-                                  background: overviewSubTab === "monthly" ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
-                                  color: overviewSubTab === "monthly" ? "#fff" : "var(--w97-text)",
-                                  border: "1px solid var(--w97-btn-shadow)",
-                                  borderBottom: overviewSubTab === "monthly" ? "none" : "1px solid var(--w97-btn-shadow)",
-                                  borderRadius: "4px 4px 0 0",
-                                  cursor: "pointer",
-                                  marginLeft: -1,
-                                }}
-                              >
-                                📅 Monthly Pay Summary
-                              </button>
-                            </div>
-
-                            {/* Financial Summary subtab */}
-                            {overviewSubTab === "financial" && candidateDetail.projects.length > 0 && (
-                              <DataTable
-                                title="Projects — Financial Summary"
-                                titleIcon="💼"
-                                className="matchdb-auto-height"
-                                titleExtra={
-                                  <span style={{ fontSize: 10, opacity: 0.7 }}>
-                                    {candidateDetail.projects.length} total ·{" "}
-                                    {candidateDetail.projects.filter((p) => p.is_active).length} active
-                                  </span>
-                                }
-                                showRowNumbers={false}
-                                columns={[
-                                  {
-                                    key: "project",
-                                    header: "Project / Role",
-                                    width: "22%",
-                                    render: (p) => (
-                                      <>
-                                        <div style={{ fontWeight: 600 }}>{p.job_title || "Untitled"}</div>
-                                        <div style={{ fontSize: 10, color: "var(--w97-text-secondary)", marginTop: 1 }}>
-                                          {p.job_type}
-                                          {p.job_sub_type ? ` · ${p.job_sub_type.toUpperCase()}` : ""}
-                                          {p.financials?.stateCode ? ` · ${p.financials.stateCode}` : ""}
-                                        </div>
-                                      </>
-                                    ),
-                                  },
-                                  {
-                                    key: "status",
-                                    header: "Status",
-                                    align: "right",
-                                    render: (p) => (
-                                      <span className={`ov-proj-badge ${p.is_active ? "ov-proj-active" : "ov-proj-closed"}`}>
-                                        {p.is_active ? "● Active" : "✓ Closed"}
-                                      </span>
-                                    ),
-                                  },
-                                  {
-                                    key: "rates",
-                                    header: "Bill / Pay Rate",
-                                    align: "right",
-                                    render: (p) => {
-                                      const f = p.financials;
-                                      return f ? (
-                                        <span style={{ fontFamily: "monospace", fontSize: 11 }}>
-                                          <span style={{ color: "var(--pf-green)" }}>${f.billRate}</span>
-                                          {" / "}
-                                          <span style={{ color: "var(--pf-blue)" }}>${f.payRate}</span>
-                                        </span>
-                                      ) : (
-                                        <span style={{ color: "var(--w97-border-dark)" }}>Not set</span>
-                                      );
-                                    },
-                                  },
-                                  {
-                                    key: "hours",
-                                    header: "Hours",
-                                    align: "right",
-                                    render: (p) => (
-                                      <span style={{ fontFamily: "monospace" }}>
-                                        {p.financials ? p.financials.hoursWorked.toLocaleString() : "—"}
-                                      </span>
-                                    ),
-                                  },
-                                  {
-                                    key: "billed",
-                                    header: "Vendor Billed",
-                                    align: "right",
-                                    render: (p) => (
-                                      <span className="ov-mono ov-val-green">
-                                        {p.financials ? fmtC(p.financials.totalBilled) : "—"}
-                                      </span>
-                                    ),
-                                  },
-                                  {
-                                    key: "margin",
-                                    header: "Your Margin",
-                                    align: "right",
-                                    render: (p) => {
-                                      const f = p.financials;
-                                      if (!f) return "—";
-                                      const m = f.totalBilled - f.totalPay;
-                                      return (
-                                        <span className="ov-mono ov-val-teal">
-                                          {fmtC(m)}{" "}
-                                          <span style={{ fontSize: 10, opacity: 0.7 }}>
-                                            {f.totalBilled > 0 ? `(${((m / f.totalBilled) * 100).toFixed(1)}%)` : ""}
-                                          </span>
-                                        </span>
-                                      );
-                                    },
-                                  },
-                                  {
-                                    key: "net",
-                                    header: "Net Pay",
-                                    align: "right",
-                                    render: (p) => (
-                                      <span className="ov-mono ov-val-blue">
-                                        {p.financials ? fmtC(p.financials.netPayable) : "—"}
-                                      </span>
-                                    ),
-                                  },
-                                  {
-                                    key: "paid",
-                                    header: "Paid",
-                                    align: "right",
-                                    render: (p) => (
-                                      <span className="ov-mono ov-val-green">
-                                        {p.financials ? fmtC(p.financials.amountPaid) : "—"}
-                                      </span>
-                                    ),
-                                  },
-                                  {
-                                    key: "balance",
-                                    header: "Balance",
-                                    align: "right",
-                                    render: (p) => {
-                                      const bal = p.financials ? Math.max(0, p.financials.amountPending) : 0;
-                                      return (
-                                        <span className={`ov-mono ${bal > 0 ? "ov-val-orange" : "ov-val-green"}`}>
-                                          {p.financials ? (bal <= 0 ? "✓ Settled" : fmtC(bal)) : "—"}
-                                        </span>
-                                      );
-                                    },
-                                  },
-                                ] as DataTableColumn<(typeof candidateDetail.projects)[number]>[]}
-                                data={[
-                                  ...candidateDetail.projects.filter((p) => p.is_active),
-                                  ...candidateDetail.projects.filter((p) => !p.is_active),
-                                ]}
-                                keyExtractor={(p) => String(p.id)}
-                                emptyMessage="No projects found."
-                                footerRow={
-                                  allFins.length > 1 ? (
-                                    <tr className={`ov-pt-foot ${totalMargin > 0.01 ? "ov-foot-profit" : totalMargin < -0.01 ? "ov-foot-loss" : "ov-foot-neutral"}`}>
-                                      <td className="ov-pt-tf" colSpan={2}>TOTAL — {allFins.length} projects with financials</td>
-                                      <td className="ov-pt-tf" style={{ textAlign: "right" }} />
-                                      <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>{totalHours.toLocaleString()}</td>
-                                      <td className="ov-pt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmtC(totalBilled)}</td>
-                                      <td className="ov-pt-tf ov-mono ov-val-teal" style={{ textAlign: "right" }}>{fmtC(totalMargin)}</td>
-                                      <td className="ov-pt-tf ov-mono ov-val-blue" style={{ textAlign: "right" }}>{fmtC(totalNet)}</td>
-                                      <td className="ov-pt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmtC(totalPaid)}</td>
-                                      <td className={`ov-pt-tf ov-mono ${totalPending > 0 ? "ov-val-orange" : "ov-val-green"}`} style={{ textAlign: "right" }}>
-                                        {totalPending > 0 ? fmtC(totalPending) : "✓ Settled"}
-                                      </td>
-                                    </tr>
-                                  ) : undefined
-                                }
-                              />
-                            )}
-
-                            {/* Monthly Pay Summary subtab */}
-                            {overviewSubTab === "monthly" && monthRows.length > 0 && (
-                              <DataTable
-                                title="Monthly Pay Summary — All Projects Combined"
-                                titleIcon="📅"
-                                className="matchdb-auto-height"
-                                titleExtra={
-                                  <span style={{ fontSize: 10, opacity: 0.7 }}>
-                                    {monthRows.length} months
-                                  </span>
-                                }
-                                showRowNumbers={false}
-                                columns={[
-                                  {
-                                    key: "month",
-                                    header: "Month",
-                                    width: "14%",
-                                    render: (row) => <span style={{ fontWeight: 600 }}>{row.label}</span>,
-                                  },
-                                  {
-                                    key: "hours",
-                                    header: "Hours",
-                                    align: "right",
-                                    render: (row) => (
-                                      <span style={{ fontFamily: "monospace" }}>
-                                        {row.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                                      </span>
-                                    ),
-                                  },
-                                  {
-                                    key: "billed",
-                                    header: "Vendor Billed",
-                                    align: "right",
-                                    render: (row) => <span className="ov-mono ov-val-green">{fmtF(row.billed)}</span>,
-                                  },
-                                  {
-                                    key: "gross",
-                                    header: "Gross Pay",
-                                    align: "right",
-                                    render: (row) => <span style={{ fontFamily: "monospace" }}>{fmtF(row.gross)}</span>,
-                                  },
-                                  {
-                                    key: "net",
-                                    header: "Net Pay",
-                                    align: "right",
-                                    render: (row) => <span className="ov-mono ov-val-blue">{fmtF(row.net)}</span>,
-                                  },
-                                  {
-                                    key: "paid",
-                                    header: "Paid",
-                                    align: "right",
-                                    render: (row) => (
-                                      <span className="ov-mono ov-val-green">{row.paid > 0 ? fmtF(row.paid) : "—"}</span>
-                                    ),
-                                  },
-                                  {
-                                    key: "balance",
-                                    header: "Balance",
-                                    align: "right",
-                                    render: (row) => (
-                                      <span className={`ov-mono ${row.balance > 0.01 ? "ov-val-orange" : row.balance < -0.01 ? "ov-val-red" : "ov-val-green"}`}>
-                                        {Math.abs(row.balance) < 0.01 ? "✓" : row.balance > 0 ? fmtF(row.balance) : `+${fmtF(Math.abs(row.balance))}`}
-                                      </span>
-                                    ),
-                                  },
-                                  {
-                                    key: "progress",
-                                    header: "Pay Progress",
-                                    align: "right",
-                                    width: 130,
-                                    render: (row) => {
-                                      const pct = row.net > 0 ? Math.min(100, (row.paid / row.net) * 100) : 0;
-                                      return (
-                                        <div style={{ display: "flex", alignItems: "center", gap: 5, justifyContent: "flex-end" }}>
-                                          <div className="ov-mt-bar-wrap">
-                                            <div className="ov-mt-bar-fill" style={{ width: `${pct}%` }} />
-                                          </div>
-                                          <span className="ov-mt-bar-pct">{pct.toFixed(0)}%</span>
-                                        </div>
-                                      );
-                                    },
-                                  },
-                                ] as DataTableColumn<MonthRow>[]}
-                                data={monthRows}
-                                keyExtractor={(row) => row.label}
-                                emptyMessage="No monthly data."
-                                footerRow={
-                                  <tr className={`ov-mt-foot ${totalMargin > 0.01 ? "ov-foot-profit" : totalMargin < -0.01 ? "ov-foot-loss" : "ov-foot-neutral"}`}>
-                                    <td className="ov-mt-tf">TOTAL</td>
-                                    <td className="ov-mt-tf ov-mono" style={{ textAlign: "right" }}>
-                                      {monthRows.reduce((a, r) => a + r.hours, 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                                    </td>
-                                    <td className="ov-mt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmtF(monthRows.reduce((a, r) => a + r.billed, 0))}</td>
-                                    <td className="ov-mt-tf ov-mono" style={{ textAlign: "right" }}>{fmtF(monthRows.reduce((a, r) => a + r.gross, 0))}</td>
-                                    <td className="ov-mt-tf ov-mono ov-val-blue" style={{ textAlign: "right" }}>{fmtF(monthRows.reduce((a, r) => a + r.net, 0))}</td>
-                                    <td className="ov-mt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmtF(monthRows.reduce((a, r) => a + r.paid, 0))}</td>
-                                    <td className={`ov-mt-tf ov-mono ${totalPending > 0 ? "ov-val-orange" : "ov-val-green"}`} style={{ textAlign: "right" }}>
-                                      {totalPending > 0.01 ? fmtF(totalPending) : "✓"}
-                                    </td>
-                                    <td className="ov-mt-tf" />
-                                  </tr>
-                                }
-                              />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                {/* ════════════ TAB: Projects ════════════ */}
-                {detailTab === "projects" &&
-                  (() => {
-                    const allProjects = candidateDetail.projects;
-                    if (allProjects.length === 0) {
-                      return (
-                        <div className="pf-empty">
-                          <div className="pf-empty-icon">📋</div>
-                          <div className="pf-empty-text">
-                            No projects on record for this candidate
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    // Active first, then closed
-                    const sorted = [
-                      ...allProjects.filter((p) => p.is_active),
-                      ...allProjects.filter((p) => !p.is_active),
-                    ];
-
-                    // Auto-select first project if none selected
-                    const activeProjectId = selectedProjectId && sorted.some((p) => p.id === selectedProjectId)
-                      ? selectedProjectId
-                      : sorted[0]?.id ?? null;
-
-                    const activeProject = sorted.find((p) => p.id === activeProjectId) ?? null;
-
-                    // Month names & variation factors for period generation
-                    const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-                    const VAR = [1.0, 0.92, 1.08, 1.02, 0.94, 1.06, 1.0, 0.92, 1.08, 1.0, 0.94, 1.04];
-
-                    // Build pay rows for the selected project
-                    interface CombinedRow {
-                      key: string;
-                      payPeriod: string;
-                      sortKey: number;
-                      projectName: string;
-                      projectId: string;
-                      isActive: boolean;
-                      hours: number;
-                      billRate: number;
-                      payRate: number;
-                      billed: number;
-                      grossPay: number;
-                      stateTax: number;
-                      stateTaxPct: number;
-                      withholding: number;
-                      cashPct: number;
-                      netPay: number;
-                      paid: number;
-                      balance: number;
-                    }
-
-                    const buildRows = (proj: (typeof sorted)[number]): CombinedRow[] => {
-                      const fin = proj.financials;
-                      const bRate = fin?.billRate ?? 0;
-                      const pRate = fin?.payRate ?? 0;
-                      const sTaxPct = fin?.stateTaxPct ?? 0;
-                      const cPct = fin?.cashPct ?? 0;
-
-                      const now = new Date();
-                      const start = fin?.projectStart
-                        ? new Date(fin.projectStart)
-                        : new Date(now.getFullYear() - 1, now.getMonth(), 1);
-                      const rawH = fin?.hoursWorked && fin.hoursWorked > 0 ? fin.hoursWorked / 12 : 80;
-
-                      const periods = Array.from({ length: 12 }, (_, i) => {
-                        const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
-                        return {
-                          label: `${MN[d.getMonth()]} ${d.getFullYear()}`,
-                          sortKey: d.getTime(),
-                          hours: Math.round(rawH * VAR[i] * 2) / 2,
-                          amountPaid: 0,
-                        };
-                      });
-
-                      if (fin?.hoursWorked && fin.hoursWorked > 0) {
-                        const sumH = periods.reduce((a, p) => a + p.hours, 0);
-                        const scale = fin.hoursWorked / sumH;
-                        periods.forEach((p) => { p.hours = Math.round(p.hours * scale * 2) / 2; });
-                        const diff = fin.hoursWorked - periods.reduce((a, p) => a + p.hours, 0);
-                        if (Math.abs(diff) > 0) periods[11].hours = Math.round((periods[11].hours + diff) * 2) / 2;
-                      }
-
-                      if (fin?.amountPaid && fin.amountPaid > 0) {
-                        const sumH = periods.reduce((a, p) => a + p.hours, 0);
-                        let allocated = 0;
-                        periods.forEach((p, i) => {
-                          if (i < 11) {
-                            const share = Math.round((p.hours / sumH) * fin.amountPaid * 100) / 100;
-                            p.amountPaid = share;
-                            allocated += share;
-                          } else {
-                            p.amountPaid = Math.round((fin.amountPaid - allocated) * 100) / 100;
-                          }
-                        });
-                      }
-
-                      const rows: CombinedRow[] = [];
-                      periods.forEach((period) => {
-                        const billed = bRate * period.hours;
-                        const gross = pRate * period.hours;
-                        const tax = (gross * sTaxPct) / 100;
-                        const withhold = (gross * cPct) / 100;
-                        const net = gross - tax - withhold;
-                        const bal = net - period.amountPaid;
-                        rows.push({
-                          key: `${proj.id}-${period.label}`,
-                          payPeriod: period.label,
-                          sortKey: period.sortKey,
-                          projectName: proj.job_title || "Untitled",
-                          projectId: proj.id,
-                          isActive: proj.is_active,
-                          hours: period.hours,
-                          billRate: bRate,
-                          payRate: pRate,
-                          billed,
-                          grossPay: gross,
-                          stateTax: tax,
-                          stateTaxPct: sTaxPct,
-                          withholding: withhold,
-                          cashPct: cPct,
-                          netPay: net,
-                          paid: period.amountPaid,
-                          balance: bal,
-                        });
-                      });
-                      rows.sort((a, b) => a.sortKey - b.sortKey);
-                      return rows;
-                    };
-
-                    const combinedRows = activeProject ? buildRows(activeProject) : [];
-
-                    const fmt$ = (v: number) =>
-                      v < 0
-                        ? `-$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        : `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-                    const totals = combinedRows.reduce(
-                      (acc, r) => ({
-                        hours: acc.hours + r.hours,
-                        billed: acc.billed + r.billed,
-                        grossPay: acc.grossPay + r.grossPay,
-                        stateTax: acc.stateTax + r.stateTax,
-                        withholding: acc.withholding + r.withholding,
-                        netPay: acc.netPay + r.netPay,
-                        paid: acc.paid + r.paid,
-                        balance: acc.balance + r.balance,
-                      }),
-                      { hours: 0, billed: 0, grossPay: 0, stateTax: 0, withholding: 0, netPay: 0, paid: 0, balance: 0 },
-                    );
-
-                    return (
-                      <div>
-                        {/* ── Candidate + Project Info Line ── */}
-                        {activeProject && (
-                          <div style={{
-                            display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16,
-                            padding: "8px 14px", margin: "0 0 4px",
-                            fontSize: 11.5, color: "var(--w97-text-secondary)",
-                            background: "var(--w97-window-alt)",
-                            borderBottom: "1px solid var(--w97-btn-shadow)",
-                          }}>
-                            <span>
-                              👤 <strong style={{ color: "var(--w97-text)" }}>{candidateDetail.roster.candidate_name}</strong>
-                              {" · "}{candidateDetail.roster.candidate_email}
-                            </span>
-                            <span style={{ opacity: 0.4 }}>|</span>
-                            <span>
-                              💼 <strong style={{ color: "var(--w97-titlebar-from)" }}>{activeProject.job_title || "Untitled"}</strong>
-                              {" · "}{activeProject.job_type}{activeProject.job_sub_type ? ` · ${activeProject.job_sub_type.toUpperCase()}` : ""}
-                              {activeProject.financials?.stateCode ? ` · ${activeProject.financials.stateCode}` : ""}
-                            </span>
-                            <span style={{ opacity: 0.4 }}>|</span>
-                            <span className={activeProject.is_active ? "ov-proj-active" : "ov-proj-closed"} style={{
-                              padding: "1px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600,
-                            }}>
-                              {activeProject.is_active ? "● Active" : "✓ Closed"}
-                            </span>
-                            {activeProject.financials && (
-                              <>
-                                <span style={{ opacity: 0.4 }}>|</span>
-                                <span style={{ fontFamily: "monospace", fontSize: 11 }}>
-                                  Bill <span style={{ color: "var(--pf-green)" }}>${activeProject.financials.billRate}</span>
-                                  {" / "}Pay <span style={{ color: "var(--pf-blue)" }}>${activeProject.financials.payRate}</span>
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        )}
-
-                        {/* ── Project Tabs ── */}
-                        <div style={{ display: "flex", gap: 0, margin: "0 14px" }}>
-                          {sorted.map((proj) => (
-                            <button
-                              key={proj.id}
-                              type="button"
-                              onClick={() => setSelectedProjectId(proj.id)}
-                              style={{
-                                padding: "5px 14px",
-                                fontSize: 11,
-                                fontWeight: proj.id === activeProjectId ? 700 : 500,
-                                background: proj.id === activeProjectId ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
-                                color: proj.id === activeProjectId ? "#fff" : "var(--w97-text)",
-                                border: "1px solid var(--w97-btn-shadow)",
-                                borderBottom: proj.id === activeProjectId ? "none" : "1px solid var(--w97-btn-shadow)",
-                                borderRadius: "4px 4px 0 0",
-                                cursor: "pointer",
-                                marginLeft: proj === sorted[0] ? 0 : -1,
-                                maxWidth: 180,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {proj.is_active ? "● " : ""}{proj.job_title || "Untitled"}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* ── Pay Periods DataTable for selected project ── */}
-                        <DataTable
-                          title={`${activeProject?.job_title || "Project"} — Pay Periods`}
-                          titleIcon="💼"
-                          className="matchdb-auto-height"
-                          titleExtra={
-                            <span style={{ fontSize: 10, opacity: 0.7 }}>
-                              {combinedRows.length} periods
-                            </span>
-                          }
-                          showRowNumbers={false}
-                          columns={[
-                            {
-                              key: "payPeriod",
-                              header: "Pay Period",
-                              width: "14%",
-                              render: (r) => <span style={{ fontWeight: 600 }}>{r.payPeriod}</span>,
-                            },
-                            {
-                              key: "hours",
-                              header: "Hours",
-                              align: "right" as const,
-                              render: (r) => <span style={{ fontFamily: "monospace" }}>{r.hours}</span>,
-                            },
-                            {
-                              key: "billed",
-                              header: "Billed",
-                              align: "right" as const,
-                              render: (r) => <span className="ov-mono ov-val-green">{fmt$(r.billed)}</span>,
-                            },
-                            {
-                              key: "grossPay",
-                              header: "Gross Pay",
-                              align: "right" as const,
-                              render: (r) => <span style={{ fontFamily: "monospace" }}>{fmt$(r.grossPay)}</span>,
-                            },
-                            {
-                              key: "stateTax",
-                              header: "State Tax",
-                              align: "right" as const,
-                              render: (r) => (
-                                <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
-                                  {r.stateTax > 0 ? `−${fmt$(r.stateTax)}` : "—"}
-                                </span>
-                              ),
-                            },
-                            {
-                              key: "withholding",
-                              header: "Withholding",
-                              align: "right" as const,
-                              render: (r) => (
-                                <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
-                                  {r.withholding > 0 ? `−${fmt$(r.withholding)}` : "—"}
-                                </span>
-                              ),
-                            },
-                            {
-                              key: "netPay",
-                              header: "Net Pay",
-                              align: "right" as const,
-                              render: (r) => <span className="ov-mono ov-val-blue">{fmt$(r.netPay)}</span>,
-                            },
-                            {
-                              key: "paid",
-                              header: "Paid",
-                              align: "right" as const,
-                              render: (r) => (
-                                <span className={`ov-mono ${r.paid > 0 ? "ov-val-green" : ""}`}>
-                                  {r.paid > 0 ? fmt$(r.paid) : "—"}
-                                </span>
-                              ),
-                            },
-                            {
-                              key: "balance",
-                              header: "Balance",
-                              align: "right" as const,
-                              render: (r) => (
-                                <span
-                                  className={`ov-mono ${
-                                    r.balance > 0.01 ? "ov-val-orange" : r.balance < -0.01 ? "ov-val-red" : "ov-val-green"
-                                  }`}
-                                >
-                                  {Math.abs(r.balance) < 0.01
-                                    ? "✓"
-                                    : r.balance > 0
-                                    ? fmt$(r.balance)
-                                    : `+${fmt$(Math.abs(r.balance))}`}
-                                </span>
-                              ),
-                            },
-                          ] as DataTableColumn<CombinedRow>[]}
-                          data={combinedRows}
-                          keyExtractor={(r) => r.key}
-                          emptyMessage="No pay period data."
-                          footerRow={
-                            combinedRows.length > 0 ? (
-                              <tr className={`ov-pt-foot ${(totals.billed - totals.grossPay) > 0.01 ? "ov-foot-profit" : (totals.billed - totals.grossPay) < -0.01 ? "ov-foot-loss" : "ov-foot-neutral"}`}>
-                                <td className="ov-pt-tf" style={{ fontWeight: 700 }}>TOTAL</td>
-                                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>{totals.hours.toLocaleString()}</td>
-                                <td className="ov-pt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmt$(totals.billed)}</td>
-                                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>{fmt$(totals.grossPay)}</td>
-                                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right", color: "var(--w97-red)" }}>
-                                  {totals.stateTax > 0 ? `−${fmt$(totals.stateTax)}` : "—"}
-                                </td>
-                                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right", color: "var(--w97-red)" }}>
-                                  {totals.withholding > 0 ? `−${fmt$(totals.withholding)}` : "—"}
-                                </td>
-                                <td className="ov-pt-tf ov-mono ov-val-blue" style={{ textAlign: "right" }}>{fmt$(totals.netPay)}</td>
-                                <td className="ov-pt-tf ov-mono ov-val-green" style={{ textAlign: "right" }}>{fmt$(totals.paid)}</td>
-                                <td
-                                  className={`ov-pt-tf ov-mono ${totals.balance > 0.01 ? "ov-val-orange" : "ov-val-green"}`}
-                                  style={{ textAlign: "right" }}
-                                >
-                                  {Math.abs(totals.balance) < 0.01 ? "✓ Settled" : totals.balance > 0 ? fmt$(totals.balance) : `Overpaid ${fmt$(Math.abs(totals.balance))}`}
-                                </td>
-                              </tr>
-                            ) : undefined
-                          }
-                        />
-                      </div>
-                    );
-                  })()}
-
-                {/* ════════════ TAB: Vendor Activity ════════════ */}
-                {detailTab === "vendor-activity" &&
-                  (() => {
-                    const activities = candidateDetail.vendor_activity;
-                    const pokeCount = activities.filter(
-                      (v) => !v.is_email,
-                    ).length;
-                    const emailCount = activities.filter(
-                      (v) => v.is_email,
-                    ).length;
-                    const total = activities.length;
-
-                    // Aggregate by vendor for bar chart
-                    const vendorMap: Record<
-                      string,
-                      { pokes: number; emails: number }
-                    > = {};
-                    activities.forEach((v) => {
-                      const key = v.sender_email;
-                      if (!vendorMap[key])
-                        vendorMap[key] = { pokes: 0, emails: 0 };
-                      if (v.is_email) vendorMap[key].emails++;
-                      else vendorMap[key].pokes++;
-                    });
-                    const vendorEntries = Object.entries(vendorMap).sort(
-                      (a, b) =>
-                        b[1].pokes + b[1].emails - (a[1].pokes + a[1].emails),
-                    );
-                    const maxBar = Math.max(
-                      ...vendorEntries.map(([, v]) => v.pokes + v.emails),
-                      1,
-                    );
-
-                    // Pie chart math
-                    const pieR = 50;
-                    const pieC = 2 * Math.PI * pieR;
-                    const pokeArc = total > 0 ? (pokeCount / total) * pieC : 0;
-                    const emailArc =
-                      total > 0 ? (emailCount / total) * pieC : 0;
-
-                    // Year-based subtabs
-                    const joinDate = candidateDetail.roster.created_at
-                      ? new Date(candidateDetail.roster.created_at)
-                      : null;
-                    const startYear = joinDate ? joinDate.getFullYear() : new Date().getFullYear();
-                    const currentYear = new Date().getFullYear();
-                    const yearTabs: string[] = [];
-                    for (let y = startYear; y <= currentYear; y++) yearTabs.push(String(y));
-
-                    // Filter activities by selected year
-                    const filteredActivities = vendorActivitySubTab === "summary"
-                      ? activities
-                      : activities.filter((v) => {
-                          const d = new Date(v.created_at);
-                          return String(d.getFullYear()) === vendorActivitySubTab;
-                        });
-
-                    return (
-                      <div>
-                        <Toolbar
-                          left={
-                            <h3
-                              style={{
-                                margin: 0,
-                                fontSize: 14,
-                                fontWeight: 700,
-                                color: "var(--w97-titlebar-from)",
-                              }}
-                            >
-                              📊 Vendor Activity
-                            </h3>
-                          }
-                          right={
-                            <span
-                              style={{
-                                fontSize: 11,
-                                color: "var(--w97-text-secondary)",
-                              }}
-                            >
-                              {total} interactions
-                            </span>
-                          }
-                          style={{ marginBottom: 8 }}
-                        />
-
-                        {total === 0 ? (
-                          <div
-                            className="matchdb-card"
-                            style={{
-                              padding: 40,
-                              textAlign: "center",
-                              color: "var(--w97-border-dark)",
-                              fontSize: 13,
-                            }}
-                          >
-                            <div style={{ fontSize: 32, marginBottom: 8 }}>
-                              📊
-                            </div>
-                            No vendor interactions recorded yet
-                          </div>
-                        ) : (
-                          <>
-                            {/* ── Subtab Bar ── */}
-                            <div style={{ display: "flex", gap: 0, margin: "0 0 0 14px" }}>
-                              <button
-                                type="button"
-                                onClick={() => setVendorActivitySubTab("summary")}
-                                style={{
-                                  padding: "5px 14px",
-                                  fontSize: 11.5,
-                                  fontWeight: vendorActivitySubTab === "summary" ? 700 : 500,
-                                  background: vendorActivitySubTab === "summary" ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
-                                  color: vendorActivitySubTab === "summary" ? "#fff" : "var(--w97-text)",
-                                  border: "1px solid var(--w97-btn-shadow)",
-                                  borderBottom: vendorActivitySubTab === "summary" ? "none" : "1px solid var(--w97-btn-shadow)",
-                                  borderRadius: "4px 4px 0 0",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                📊 Summary
-                              </button>
-                              {yearTabs.map((yr, idx) => (
-                                <button
-                                  key={yr}
-                                  type="button"
-                                  onClick={() => setVendorActivitySubTab(yr)}
-                                  style={{
-                                    padding: "5px 14px",
-                                    fontSize: 11.5,
-                                    fontWeight: vendorActivitySubTab === yr ? 700 : 500,
-                                    background: vendorActivitySubTab === yr ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
-                                    color: vendorActivitySubTab === yr ? "#fff" : "var(--w97-text)",
-                                    border: "1px solid var(--w97-btn-shadow)",
-                                    borderBottom: vendorActivitySubTab === yr ? "none" : "1px solid var(--w97-btn-shadow)",
-                                    borderRadius: "4px 4px 0 0",
-                                    cursor: "pointer",
-                                    marginLeft: -1,
-                                  }}
-                                >
-                                  📅 {yr}
-                                </button>
-                              ))}
-                            </div>
-
-                            {/* ── Summary subtab: Charts ── */}
-                            {vendorActivitySubTab === "summary" && (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  gap: 16,
-                                  marginBottom: 16,
-                                  marginTop: 12,
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                {/* Pie Chart */}
-                                <div
-                                  className="matchdb-card"
-                                  style={{
-                                    flex: "0 0 220px",
-                                    padding: 20,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      fontSize: 11,
-                                      fontWeight: 600,
-                                      color: "var(--w97-text-secondary)",
-                                      marginBottom: 12,
-                                    }}
-                                  >
-                                    Pokes vs Emails
-                                  </div>
-                                  <svg
-                                    width="120"
-                                    height="120"
-                                    viewBox="0 0 120 120"
-                                  >
-                                    <circle
-                                      cx="60"
-                                      cy="60"
-                                      r={pieR}
-                                      fill="none"
-                                      stroke="var(--w97-border-light)"
-                                      strokeWidth="18"
-                                    />
-                                    <circle
-                                      cx="60"
-                                      cy="60"
-                                      r={pieR}
-                                      fill="none"
-                                      stroke="var(--w97-yellow)"
-                                      strokeWidth="18"
-                                      strokeDasharray={`${pokeArc} ${
-                                        pieC - pokeArc
-                                      }`}
-                                      strokeDashoffset={pieC / 4}
-                                      strokeLinecap="round"
-                                    />
-                                    <circle
-                                      cx="60"
-                                      cy="60"
-                                      r={pieR}
-                                      fill="none"
-                                      stroke="var(--w97-blue)"
-                                      strokeWidth="18"
-                                      strokeDasharray={`${emailArc} ${
-                                        pieC - emailArc
-                                      }`}
-                                      strokeDashoffset={pieC / 4 - pokeArc}
-                                      strokeLinecap="round"
-                                    />
-                                    <text
-                                      x="60"
-                                      y="58"
-                                      textAnchor="middle"
-                                      fontSize="18"
-                                      fontWeight="700"
-                                      fill="var(--w97-text)"
-                                    >
-                                      {total}
-                                    </text>
-                                    <text
-                                      x="60"
-                                      y="72"
-                                      textAnchor="middle"
-                                      fontSize="9"
-                                      fill="var(--w97-text-secondary)"
-                                    >
-                                      total
-                                    </text>
-                                  </svg>
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      gap: 16,
-                                      marginTop: 12,
-                                      fontSize: 10,
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 4,
-                                      }}
-                                    >
-                                      <span
-                                        style={{
-                                          width: 8,
-                                          height: 8,
-                                          borderRadius: "50%",
-                                          background: "var(--w97-yellow)",
-                                          display: "inline-block",
-                                        }}
-                                      />
-                                      Pokes ({pokeCount})
-                                    </div>
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 4,
-                                      }}
-                                    >
-                                      <span
-                                        style={{
-                                          width: 8,
-                                          height: 8,
-                                          borderRadius: "50%",
-                                          background: "var(--w97-blue)",
-                                          display: "inline-block",
-                                        }}
-                                      />
-                                      Emails ({emailCount})
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Bar Chart: By Vendor */}
-                                <div
-                                  className="matchdb-card"
-                                  style={{ flex: 1, padding: 20, minWidth: 280 }}
-                                >
-                                  <div
-                                    style={{
-                                      fontSize: 11,
-                                      fontWeight: 600,
-                                      color: "var(--w97-text-secondary)",
-                                      marginBottom: 12,
-                                    }}
-                                  >
-                                    Interactions by Vendor
-                                  </div>
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      flexDirection: "column",
-                                      gap: 8,
-                                    }}
-                                  >
-                                    {vendorEntries
-                                      .slice(0, 8)
-                                      .map(([vendor, counts]) => (
-                                        <div key={vendor}>
-                                          <div
-                                            style={{
-                                              fontSize: 10,
-                                              color: "var(--w97-text-secondary)",
-                                              marginBottom: 3,
-                                              overflow: "hidden",
-                                              textOverflow: "ellipsis",
-                                              whiteSpace: "nowrap",
-                                            }}
-                                          >
-                                            {vendor}
-                                          </div>
-                                          <div
-                                            style={{
-                                              display: "flex",
-                                              alignItems: "center",
-                                              gap: 6,
-                                              height: 16,
-                                            }}
-                                          >
-                                            <div
-                                              style={{
-                                                height: 14,
-                                                borderRadius: 3,
-                                                background:
-                                                  "linear-gradient(90deg, var(--w97-yellow), #d4a017)",
-                                                width: `${
-                                                  (counts.pokes / maxBar) * 100
-                                                }%`,
-                                                minWidth:
-                                                  counts.pokes > 0 ? 4 : 0,
-                                                transition: "width 0.3s ease",
-                                              }}
-                                            />
-                                            <div
-                                              style={{
-                                                height: 14,
-                                                borderRadius: 3,
-                                                background:
-                                                  "linear-gradient(90deg, var(--w97-blue), #4ba3ff)",
-                                                width: `${
-                                                  (counts.emails / maxBar) * 100
-                                                }%`,
-                                                minWidth:
-                                                  counts.emails > 0 ? 4 : 0,
-                                                transition: "width 0.3s ease",
-                                              }}
-                                            />
-                                            <span
-                                              style={{
-                                                fontSize: 10,
-                                                color:
-                                                  "var(--w97-text-secondary)",
-                                                whiteSpace: "nowrap",
-                                              }}
-                                            >
-                                              {counts.pokes + counts.emails}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* ── Activity List (shown for both summary and year tabs) ── */}
-                            <DataTable
-                              title={vendorActivitySubTab === "summary" ? "All Vendor Activity" : `Vendor Activity — ${vendorActivitySubTab}`}
-                              titleIcon="📋"
-                              showRowNumbers={false}
-                              titleExtra={
-                                <span style={{ fontSize: 10, opacity: 0.7 }}>
-                                  {filteredActivities.length} interaction{filteredActivities.length !== 1 ? "s" : ""}
-                                </span>
-                              }
-                              columns={[
-                                {
-                                  key: "vendor",
-                                  header: "Vendor",
-                                  width: "30%",
-                                  render: (v) => <>{v.sender_email}</>,
-                                },
-                                {
-                                  key: "type",
-                                  header: "Type",
-                                  width: "8%",
-                                  render: (v) => (
-                                    <span
-                                      style={{
-                                        display: "inline-block",
-                                        padding: "1px 8px",
-                                        borderRadius: 10,
-                                        fontSize: 10,
-                                        fontWeight: 600,
-                                        background: v.is_email ? "#e8f0fe" : "#fff8e1",
-                                        color: v.is_email ? "var(--w97-blue)" : "var(--w97-yellow)",
-                                      }}
-                                    >
-                                      {v.is_email ? "Email" : "Poke"}
-                                    </span>
-                                  ),
-                                },
-                                {
-                                  key: "subject",
-                                  header: "Subject / Job",
-                                  render: (v) => (
-                                    <span style={{ color: "var(--w97-text-secondary)" }}>
-                                      {v.subject || v.job_title || "—"}
-                                    </span>
-                                  ),
-                                },
-                                {
-                                  key: "date",
-                                  header: "Date",
-                                  render: (v) => (
-                                    <span style={{ color: "var(--w97-text-secondary)" }}>
-                                      {fmtDate(v.created_at)}
-                                    </span>
-                                  ),
-                                },
-                              ] as DataTableColumn<(typeof activities)[number]>[]}
-                              data={filteredActivities}
-                              keyExtractor={(v) => String(v.id)}
-                              emptyMessage={vendorActivitySubTab === "summary" ? "No vendor activity." : `No vendor activity in ${vendorActivitySubTab}.`}
-                              paginate
-                              pageSize={25}
-                            />
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                {/* ════════════ TAB: Forwarded Openings ════════════ */}
-                {detailTab === "forwarded" &&
-                  (() => {
-                    const fwd = candidateDetail.forwarded_openings;
-                    return (
-                      <div>
-                        <Toolbar
-                          left={
-                            <h3
-                              style={{
-                                margin: 0,
-                                fontSize: 14,
-                                fontWeight: 700,
-                                color: "var(--w97-titlebar-from)",
-                              }}
-                            >
-                              📤 Forwarded Openings
-                            </h3>
-                          }
-                          right={
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontSize: 11,
-                                  color: "var(--w97-text-secondary)",
-                                }}
-                              >
-                                {fwd.length} sent
-                              </span>
-                              <Button
-                                size="xs"
-                                onClick={() =>
-                                  openSendJobModal(
-                                    candidateDetail.roster.candidate_email,
-                                    candidateDetail.roster.candidate_name,
-                                  )
-                                }
-                              >
-                                + Send New
-                              </Button>
-                            </div>
-                          }
-                          style={{ marginBottom: 12 }}
-                        />
-                        {fwd.length === 0 ? (
-                          <div
-                            className="matchdb-card"
-                            style={{
-                              padding: 40,
-                              textAlign: "center",
-                              color: "var(--w97-border-dark)",
-                              fontSize: 13,
-                            }}
-                          >
-                            <div style={{ fontSize: 32, marginBottom: 8 }}>
-                              📤
-                            </div>
-                            No openings forwarded to this candidate yet
-                          </div>
-                        ) : (
-                          <DataTable
-                            title="Forwarded Openings"
-                            titleIcon="📤"
-                            showRowNumbers={false}
-                            columns={[
-                              {
-                                key: "title",
-                                header: "Job Title",
-                                width: "20%",
-                                render: (f) => (
-                                  <span style={{ fontWeight: 600, color: "var(--w97-titlebar-from)" }}>
-                                    {f.job_title}
-                                  </span>
-                                ),
-                              },
-                              {
-                                key: "location",
-                                header: "Location",
-                                width: "14%",
-                                render: (f) => (
-                                  <span style={{ color: "var(--w97-text-secondary)" }}>
-                                    {f.job_location || "—"}
-                                  </span>
-                                ),
-                              },
-                              {
-                                key: "type",
-                                header: "Type",
-                                render: (f) => (
-                                  <span style={{ color: "var(--w97-text-secondary)" }}>
-                                    {f.job_type || "—"}
-                                  </span>
-                                ),
-                              },
-                              {
-                                key: "subType",
-                                header: "Sub Type",
-                                render: (f) => (
-                                  <span style={{ color: "var(--w97-text-secondary)" }}>
-                                    {f.job_sub_type || "—"}
-                                  </span>
-                                ),
-                              },
-                              {
-                                key: "vendor",
-                                header: "Vendor",
-                                render: (f) => (
-                                  <span style={{ color: "var(--w97-text-secondary)" }}>
-                                    {f.vendor_email || "—"}
-                                  </span>
-                                ),
-                              },
-                              {
-                                key: "status",
-                                header: "Status",
-                                render: (f) => (
-                                  <span
-                                    style={{
-                                      display: "inline-block",
-                                      padding: "1px 8px",
-                                      borderRadius: 10,
-                                      fontSize: 10,
-                                      fontWeight: 600,
-                                      background: f.status === "accepted" ? "#e8f5e9" : f.status === "rejected" ? "#ffebee" : "#fff3e0",
-                                      color: f.status === "accepted" ? "var(--w97-green)" : f.status === "rejected" ? "var(--w97-red)" : "var(--w97-orange)",
-                                    }}
-                                  >
-                                    {f.status || "pending"}
-                                  </span>
-                                ),
-                              },
-                              {
-                                key: "sent",
-                                header: "Sent",
-                                render: (f) => (
-                                  <span style={{ color: "var(--w97-text-secondary)" }}>
-                                    {fmtDate(f.created_at)}
-                                  </span>
-                                ),
-                              },
-                            ] as DataTableColumn<(typeof fwd)[number]>[]}
-                            data={fwd}
-                            keyExtractor={(f) => String(f.id)}
-                            emptyMessage="No forwarded openings."
-                            paginate
-                            pageSize={25}
-                          />
-                        )}
-                      </div>
-                    );
-                  })()}
-              </>
-            )}
-          </div>
-        ) : activeView === "company-candidates" ? (
-          <div>
-            {/* Company registration (one-time) */}
-            {!myCompany && (
-              <div
-                className="matchdb-card"
-                style={{ marginBottom: 12, padding: 12 }}
-              >
-                <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>
-                  🏢 Register Your Company
-                </h3>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <Input
-                    placeholder="Company name"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    style={{ flex: 1, maxWidth: 300 }}
-                  />
-                  <Button variant="primary" onClick={handleRegisterCompany}>
-                    Register
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {myCompany && (
-              <div
-                style={{
-                  marginBottom: 10,
-                  fontSize: 12,
-                  color: "var(--w97-text-secondary)",
-                }}
-              >
-                🏢 <strong>{myCompany.name}</strong> —{" "}
-                {myCompany.marketer_email}
-              </div>
-            )}
-
-            {/* Candidates table */}
-            <DataTable<MarketerCandidateItem>
-              columns={candidateColumns}
-              data={companyCandidates}
-              keyExtractor={(c) => c.id}
-              loading={false}
-              paginate
-              pageSize={25}
-              titleIcon="🏢"
-              title={
-                myCompany?.name
-                  ? `${myCompany.name} — Candidates`
-                  : "Company Candidates"
-              }
-              titleExtra={
-                <Button
-                  size="xs"
-                  className="matchdb-title-btn"
-                  onClick={() => setAddCandModalOpen(true)}
-                >
-                  + Add Candidate
-                </Button>
-              }
-            />
-          </div>
-        ) : (
-          /* activeView === "forwarded-openings" */
-          <DataTable<ForwardedOpeningItem>
-            columns={forwardedColumns}
-            data={forwardedOpenings}
-            keyExtractor={(f) => f.id}
-            loading={false}
-            paginate
-            titleIcon="📤"
-            title="Forwarded Openings"
-          />
-        )}
+        {renderActiveView()}
       </div>
 
       {/* ── Detail modal for job / candidate ── */}
@@ -3444,13 +5552,14 @@ const MarketerDashboard: React.FC<Props> = () => {
 
       {/* ── Invite Candidate Modal ── */}
       {inviteModalOpen && inviteTarget && (
-        <div
-          className="matchdb-modal-overlay"
-          onClick={() => setInviteModalOpen(false)}
-        >
+        <dialog open className="matchdb-modal-overlay">
+          <div
+            className="rm-backdrop"
+            role="none"
+            onClick={() => setInviteModalOpen(false)}
+          />
           <div
             className="matchdb-modal-window"
-            onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: 420, padding: 20 }}
           >
             <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>
@@ -3509,18 +5618,19 @@ const MarketerDashboard: React.FC<Props> = () => {
               </Button>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {/* ── Add Candidate Modal (opened from left nav) ── */}
       {addCandModalOpen && (
-        <div
-          className="matchdb-modal-overlay"
-          onClick={() => setAddCandModalOpen(false)}
-        >
+        <dialog open className="matchdb-modal-overlay">
+          <div
+            className="rm-backdrop"
+            role="none"
+            onClick={() => setAddCandModalOpen(false)}
+          />
           <div
             className="matchdb-modal-window"
-            onClick={(e) => e.stopPropagation()}
             style={{
               maxWidth: 620,
               padding: 20,
@@ -3564,10 +5674,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 2 }}
                 >
-                  <label style={{ fontSize: 10, fontWeight: 600 }}>
+                  <label
+                    htmlFor="add-cand-name"
+                    style={{ fontSize: 10, fontWeight: 600 }}
+                  >
                     Name *
                   </label>
                   <Input
+                    id="add-cand-name"
                     placeholder="Candidate name"
                     value={newCandName}
                     onChange={(e) => setNewCandName(e.target.value)}
@@ -3577,10 +5691,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 2 }}
                 >
-                  <label style={{ fontSize: 10, fontWeight: 600 }}>
+                  <label
+                    htmlFor="add-cand-email"
+                    style={{ fontSize: 10, fontWeight: 600 }}
+                  >
                     Email *
                   </label>
                   <Input
+                    id="add-cand-email"
                     placeholder="Candidate email"
                     value={newCandEmail}
                     onChange={(e) => setNewCandEmail(e.target.value)}
@@ -3590,10 +5708,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 2 }}
                 >
-                  <label style={{ fontSize: 10, fontWeight: 600 }}>
+                  <label
+                    htmlFor="add-cand-id"
+                    style={{ fontSize: 10, fontWeight: 600 }}
+                  >
                     Candidate ID
                   </label>
                   <Input
+                    id="add-cand-id"
                     placeholder="Optional"
                     value={newCandId}
                     onChange={(e) => setNewCandId(e.target.value)}
@@ -3621,56 +5743,87 @@ const MarketerDashboard: React.FC<Props> = () => {
               title={`Current Roster`}
               titleIcon="👥"
               showRowNumbers
-              columns={[
-                {
-                  key: "name",
-                  header: "Name",
-                  render: (c) => <>{c.candidate_name || "—"}</>,
-                },
-                {
-                  key: "email",
-                  header: "Email",
-                  render: (c) => (
-                    <span style={{ color: "var(--w97-blue)" }}>{c.candidate_email}</span>
-                  ),
-                },
-                {
-                  key: "invite",
-                  header: "Invite",
-                  render: (c) =>
-                    c.invite_status === "accepted" ? (
-                      <span style={{ color: "var(--w97-green)", fontWeight: 600 }}>✓ Accepted</span>
-                    ) : c.invite_status === "invited" ? (
-                      <span style={{ color: "var(--w97-yellow)" }}>⏳ Invited</span>
-                    ) : (
-                      <span style={{ color: "var(--w97-text-secondary)" }}>—</span>
+              columns={
+                [
+                  {
+                    key: "name",
+                    header: "Name",
+                    render: (c) => <>{c.candidate_name || "—"}</>,
+                  },
+                  {
+                    key: "email",
+                    header: "Email",
+                    render: (c) => (
+                      <span style={{ color: "var(--w97-blue)" }}>
+                        {c.candidate_email}
+                      </span>
                     ),
-                },
-                {
-                  key: "added",
-                  header: "Added",
-                  render: (c) => (
-                    <span style={{ color: "var(--w97-text-secondary)" }}>{fmtDate(c.created_at)}</span>
-                  ),
-                },
-              ] as DataTableColumn<(typeof companyCandidates)[number]>[]}
+                  },
+                  {
+                    key: "invite",
+                    header: "Invite",
+                    render: (c) => {
+                      const cfg: Record<
+                        string,
+                        { color: string; label: string }
+                      > = {
+                        accepted: {
+                          color: "var(--w97-green)",
+                          label: "✓ Accepted",
+                        },
+                        invited: {
+                          color: "var(--w97-yellow)",
+                          label: "⏳ Invited",
+                        },
+                      };
+                      const m = cfg[c.invite_status ?? ""];
+                      return m ? (
+                        <span
+                          style={{
+                            color: m.color,
+                            fontWeight: m.label.startsWith("✓")
+                              ? 600
+                              : undefined,
+                          }}
+                        >
+                          {m.label}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--w97-text-secondary)" }}>
+                          —
+                        </span>
+                      );
+                    },
+                  },
+                  {
+                    key: "added",
+                    header: "Added",
+                    render: (c) => (
+                      <span style={{ color: "var(--w97-text-secondary)" }}>
+                        {fmtDate(c.created_at)}
+                      </span>
+                    ),
+                  },
+                ] as DataTableColumn<(typeof companyCandidates)[number]>[]
+              }
               data={companyCandidates}
               keyExtractor={(c) => String(c.id)}
               emptyMessage="No candidates yet. Add one above."
             />
           </div>
-        </div>
+        </dialog>
       )}
 
       {/* ── Send Job Opening via Email Modal ── */}
       {sendJobModalOpen && sendJobCandidate && (
-        <div
-          className="matchdb-modal-overlay"
-          onClick={() => setSendJobModalOpen(false)}
-        >
+        <dialog open className="matchdb-modal-overlay">
+          <div
+            className="rm-backdrop"
+            role="none"
+            onClick={() => setSendJobModalOpen(false)}
+          />
           <div
             className="matchdb-modal-window"
-            onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: 460, padding: 20 }}
           >
             <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>
@@ -3756,14 +5909,243 @@ const MarketerDashboard: React.FC<Props> = () => {
                     forwardEmailLoading || !sendJobId
                       ? "not-allowed"
                       : "pointer",
-                  opacity: !sendJobId ? 0.5 : 1,
+                  opacity: sendJobId ? 1 : 0.5,
                 }}
               >
                 {forwardEmailLoading ? "Sending…" : "Send via Email"}
               </Button>
             </div>
           </div>
-        </div>
+        </dialog>
+      )}
+
+      {/* ── Email Report Modal ── */}
+      {emailModalOpen && emailModalTarget && (
+        <dialog open className="matchdb-modal-overlay">
+          <button
+            type="button"
+            className="rm-backdrop"
+            aria-label="Close modal"
+            tabIndex={-1}
+            onClick={() => {
+              setEmailModalOpen(false);
+              setEmailModalTarget(null);
+            }}
+          />
+          <div
+            className="matchdb-modal-window"
+            style={{ maxWidth: 420, width: "90%" }}
+          >
+            <div className="matchdb-modal-header">
+              <span>
+                📧 Email {contextLabel(emailModalTarget.context)} Report
+              </span>
+              <button
+                type="button"
+                className="matchdb-modal-close"
+                onClick={() => {
+                  setEmailModalOpen(false);
+                  setEmailModalTarget(null);
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              className="matchdb-modal-body"
+              style={{ display: "flex", flexDirection: "column", gap: 14 }}
+            >
+              {/* Target info */}
+              <div
+                style={{
+                  background: "var(--w97-bg)",
+                  border: "1px solid var(--w97-border-light)",
+                  borderRadius: 4,
+                  padding: "10px 14px",
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 600 }}>
+                  {emailModalTarget.name}
+                </div>
+                {emailModalTarget.email && (
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "var(--w97-text-secondary)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {emailModalTarget.email}
+                  </div>
+                )}
+              </div>
+
+              {/* Data preview */}
+              <div
+                style={{
+                  background: "var(--w97-bg)",
+                  border: "1px solid var(--w97-border-light)",
+                  borderRadius: 4,
+                  padding: "10px 14px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: "var(--w97-text-secondary)",
+                    marginBottom: 6,
+                  }}
+                >
+                  Report Data Preview
+                </div>
+                {Object.entries(emailModalTarget.data).map(([k, v]) => (
+                  <div
+                    key={k}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: 11,
+                      padding: "2px 0",
+                      borderBottom: "1px dotted var(--w97-border-light)",
+                    }}
+                  >
+                    <span style={{ color: "var(--w97-text-secondary)" }}>
+                      {k}
+                    </span>
+                    <span style={{ fontWeight: 600, fontFamily: "monospace" }}>
+                      {v}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Format dropdown */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <label
+                  htmlFor="email-format-select"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Attachment Format:
+                </label>
+                <select
+                  id="email-format-select"
+                  value={emailFormat}
+                  onChange={(e) =>
+                    setEmailFormat(e.target.value as "pdf" | "excel")
+                  }
+                  style={{
+                    flex: 1,
+                    padding: "6px 10px",
+                    fontSize: 11,
+                    border: "1px solid var(--w97-border)",
+                    borderRadius: 4,
+                    background: "var(--w97-window)",
+                  }}
+                >
+                  <option value="pdf">📄 PDF / CSV</option>
+                  <option value="excel">📊 Excel</option>
+                </select>
+              </div>
+            </div>
+            <div
+              className="matchdb-modal-footer"
+              style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}
+            >
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEmailModalOpen(false);
+                  setEmailModalTarget(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleEmailSend}>
+                📧 Email Candidate
+              </Button>
+            </div>
+          </div>
+        </dialog>
+      )}
+
+      {/* ── Download Report Modal ── */}
+      {downloadModalOpen && downloadModalTarget && (
+        <dialog open className="matchdb-modal-overlay">
+          <button
+            type="button"
+            className="rm-backdrop"
+            aria-label="Close modal"
+            tabIndex={-1}
+            onClick={() => {
+              setDownloadModalOpen(false);
+              setDownloadModalTarget(null);
+            }}
+          />
+          <div
+            className="matchdb-modal-window"
+            style={{ maxWidth: 340, width: "90%" }}
+          >
+            <div className="matchdb-modal-header">
+              <span>⬇ Download Report</span>
+              <button
+                type="button"
+                className="matchdb-modal-close"
+                onClick={() => {
+                  setDownloadModalOpen(false);
+                  setDownloadModalTarget(null);
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              className="matchdb-modal-body"
+              style={{ display: "flex", flexDirection: "column", gap: 14 }}
+            >
+              <div style={{ fontSize: 12 }}>
+                Download <strong>{downloadModalTarget.name}</strong>{" "}
+                {downloadModalTarget.context} report as:
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  style={{ flex: 1 }}
+                  onClick={() => handleDownloadSingle("pdf")}
+                >
+                  📄 PDF / CSV
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  style={{ flex: 1 }}
+                  onClick={() => handleDownloadSingle("excel")}
+                >
+                  📊 Excel
+                </Button>
+              </div>
+            </div>
+            <div
+              className="matchdb-modal-footer"
+              style={{ display: "flex", justifyContent: "flex-end" }}
+            >
+              <Button
+                size="sm"
+                onClick={() => {
+                  setDownloadModalOpen(false);
+                  setDownloadModalTarget(null);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </dialog>
       )}
     </DBLayout>
   );

@@ -71,50 +71,62 @@ interface PreviewProps {
   amountPending: number;
 }
 
-const PreviewStrip: React.FC<PreviewProps> = (p) => (
+function pendingColor(amount: number): string {
+  if (amount > 0) return "orange";
+  if (amount < 0) return "red";
+  return "green";
+}
+
+const PreviewStrip: React.FC<PreviewProps> = ({
+  totalBilled,
+  totalPay,
+  marginAmount,
+  marginPct,
+  taxAmount,
+  taxPct,
+  cashAmount,
+  cashPct,
+  netPayable,
+  amountPaid: _amountPaid,
+  amountPending,
+}) => (
   <div className="pf-preview-strip">
     <div className="pf-preview-metric">
       <span className="pf-preview-label">Vendor Billed</span>
-      <span className="pf-preview-value green">{fmt(p.totalBilled)}</span>
+      <span className="pf-preview-value green">{fmt(totalBilled)}</span>
     </div>
     <div className="pf-preview-divider" />
     <div className="pf-preview-metric">
       <span className="pf-preview-label">Gross Pay</span>
-      <span className="pf-preview-value blue">{fmt(p.totalPay)}</span>
+      <span className="pf-preview-value blue">{fmt(totalPay)}</span>
     </div>
     <div className="pf-preview-divider" />
     <div className="pf-preview-metric">
       <span className="pf-preview-label">Your Margin</span>
       <span className="pf-preview-value teal">
-        {fmt(p.marginAmount)} ({fmtPct(p.marginPct)})
+        {fmt(marginAmount)} ({fmtPct(marginPct)})
       </span>
     </div>
     <div className="pf-preview-divider" />
     <div className="pf-preview-metric">
-      <span className="pf-preview-label">State Tax ({fmtPct(p.taxPct)})</span>
-      <span className="pf-preview-value red">-{fmt(p.taxAmount)}</span>
+      <span className="pf-preview-label">State Tax ({fmtPct(taxPct)})</span>
+      <span className="pf-preview-value red">-{fmt(taxAmount)}</span>
     </div>
     <div className="pf-preview-divider" />
     <div className="pf-preview-metric">
-      <span className="pf-preview-label">
-        Withholding ({fmtPct(p.cashPct)})
-      </span>
-      <span className="pf-preview-value red">-{fmt(p.cashAmount)}</span>
+      <span className="pf-preview-label">Withholding ({fmtPct(cashPct)})</span>
+      <span className="pf-preview-value red">-{fmt(cashAmount)}</span>
     </div>
     <div className="pf-preview-divider" />
     <div className="pf-preview-metric">
       <span className="pf-preview-label">Net Payable</span>
-      <span className="pf-preview-value blue">{fmt(p.netPayable)}</span>
+      <span className="pf-preview-value blue">{fmt(netPayable)}</span>
     </div>
     <div className="pf-preview-divider" />
     <div className="pf-preview-metric">
       <span className="pf-preview-label">Outstanding</span>
-      <span
-        className={`pf-preview-value ${
-          p.amountPending > 0 ? "orange" : p.amountPending < 0 ? "red" : "green"
-        }`}
-      >
-        {fmt(Math.abs(p.amountPending))}
+      <span className={`pf-preview-value ${pendingColor(amountPending)}`}>
+        {fmt(Math.abs(amountPending))}
       </span>
     </div>
   </div>
@@ -263,9 +275,39 @@ const ProjectFinancialForm: React.FC<Props> = ({
     : null;
 
   const isActive = project.is_active;
+  const closedCls = isActive ? "" : " pf-card-closed";
+  const statusCls = isActive ? "pf-status-active" : "pf-status-closed";
+  const statusText = isActive ? "Active" : "Closed";
+
+  // ── Card header (shared structure) ──────────────────────────────────────────
+  function renderCardMeta() {
+    return (
+      <div className="pf-card-meta">
+        <span className={`pf-status-badge ${statusCls}`}>{statusText}</span>
+        {project.vendor_email && (
+          <span className="pf-meta-item">{project.vendor_email}</span>
+        )}
+        {project.location && (
+          <>
+            <span className="pf-meta-sep">·</span>
+            <span className="pf-meta-item">{project.location}</span>
+          </>
+        )}
+        {project.job_type && (
+          <>
+            <span className="pf-meta-sep">·</span>
+            <span className="pf-meta-item">
+              {project.job_type}
+              {project.job_sub_type ? ` › ${project.job_sub_type}` : ""}
+            </span>
+          </>
+        )}
+      </div>
+    );
+  }
 
   // ── EDIT mode ────────────────────────────────────────────────────────────────
-  if (editing || !fin) {
+  function renderEditMode() {
     const editStateTaxPct = stateTaxPct;
     const editMarginAmount = computed.totalBilled - computed.totalPay;
     const editMarginPct =
@@ -274,42 +316,11 @@ const ProjectFinancialForm: React.FC<Props> = ({
         : 0;
 
     return (
-      <div
-        className={`pf-root pf-card pf-card-editing${
-          !isActive ? " pf-card-closed" : ""
-        }`}
-      >
-        {/* Card header */}
+      <div className={`pf-root pf-card pf-card-editing${closedCls}`}>
         <div className="pf-card-header">
           <div className="pf-card-header-left">
             <span className="pf-job-title">{project.job_title}</span>
-            <div className="pf-card-meta">
-              <span
-                className={`pf-status-badge ${
-                  isActive ? "pf-status-active" : "pf-status-closed"
-                }`}
-              >
-                {isActive ? "Active" : "Closed"}
-              </span>
-              {project.vendor_email && (
-                <span className="pf-meta-item">{project.vendor_email}</span>
-              )}
-              {project.location && (
-                <>
-                  <span className="pf-meta-sep">·</span>
-                  <span className="pf-meta-item">{project.location}</span>
-                </>
-              )}
-              {project.job_type && (
-                <>
-                  <span className="pf-meta-sep">·</span>
-                  <span className="pf-meta-item">
-                    {project.job_type}
-                    {project.job_sub_type ? ` › ${project.job_sub_type}` : ""}
-                  </span>
-                </>
-              )}
-            </div>
+            {renderCardMeta()}
           </div>
           <div className="pf-card-header-right">
             {fin && (
@@ -328,7 +339,6 @@ const ProjectFinancialForm: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Live preview strip */}
         <PreviewStrip
           totalBilled={computed.totalBilled}
           totalPay={computed.totalPay}
@@ -343,9 +353,7 @@ const ProjectFinancialForm: React.FC<Props> = ({
           amountPending={computed.amountPending}
         />
 
-        {/* Edit form */}
         <div className="pf-edit-form">
-          {/* Section 1: Rates & Hours */}
           <div className="pf-edit-section-title">Billing &amp; Hours</div>
           <div className="pf-edit-grid" style={{ marginBottom: 6 }}>
             <div className="pf-field">
@@ -410,7 +418,6 @@ const ProjectFinancialForm: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Section 2: Deductions */}
           <div className="pf-edit-section-title" style={{ marginTop: 14 }}>
             Deductions &amp; Tax
           </div>
@@ -481,7 +488,6 @@ const ProjectFinancialForm: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Section 3: Dates */}
           <div className="pf-edit-section-title" style={{ marginTop: 14 }}>
             Project Timeline
           </div>
@@ -541,7 +547,6 @@ const ProjectFinancialForm: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Context footer */}
         <div className="pf-edit-context">
           {project.vendor_email && (
             <span className="pf-edit-context-item">
@@ -561,183 +566,158 @@ const ProjectFinancialForm: React.FC<Props> = ({
     );
   }
 
+  if (editing || !fin) return renderEditMode();
+
   // ── READ mode ────────────────────────────────────────────────────────────────
-  const d = display!;
-  const isOverpaid = d.amountPending < 0;
+  function renderReadMode() {
+    const d = display;
+    if (!d) return null;
+    const isOverpaid = d.amountPending < 0;
 
-  return (
-    <div className={`pf-root pf-card${!isActive ? " pf-card-closed" : ""}`}>
-      {/* Card header */}
-      <div className="pf-card-header">
-        <div className="pf-card-header-left">
-          <span className="pf-job-title">{project.job_title}</span>
-          <div className="pf-card-meta">
-            <span
-              className={`pf-status-badge ${
-                isActive ? "pf-status-active" : "pf-status-closed"
-              }`}
-            >
-              {isActive ? "Active" : "Closed"}
-            </span>
-            {project.vendor_email && (
-              <span className="pf-meta-item">{project.vendor_email}</span>
-            )}
-            {project.location && (
-              <>
-                <span className="pf-meta-sep">·</span>
-                <span className="pf-meta-item">{project.location}</span>
-              </>
-            )}
-            {project.job_type && (
-              <>
-                <span className="pf-meta-sep">·</span>
-                <span className="pf-meta-item">
-                  {project.job_type}
-                  {project.job_sub_type ? ` › ${project.job_sub_type}` : ""}
+    return (
+      <div className={`pf-root pf-card${closedCls}`}>
+        <div className="pf-card-header">
+          <div className="pf-card-header-left">
+            <span className="pf-job-title">{project.job_title}</span>
+            {renderCardMeta()}
+          </div>
+          <div className="pf-card-header-right">
+            <Button size="xs" onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+          </div>
+        </div>
+
+        <div className="pf-financial-body">
+          <div className="pf-billing-panel">
+            <div className="pf-panel-title">Billing Summary</div>
+
+            <div className="pf-rate-row">
+              <span className="pf-rate-label">Bill Rate</span>
+              <span className="pf-rate-value">${d.billRate}/hr</span>
+            </div>
+            <div className="pf-rate-row">
+              <span className="pf-rate-label">Pay Rate</span>
+              <span className="pf-rate-value">${d.payRate}/hr</span>
+            </div>
+            <div className="pf-rate-row">
+              <span className="pf-rate-label">Hours Worked</span>
+              <span className="pf-rate-value">
+                {d.hoursWorked.toLocaleString()}
+              </span>
+            </div>
+
+            <hr className="pf-divider" />
+
+            <div className="pf-total-row">
+              <span className="pf-total-row-label">Vendor Credited</span>
+              <span className="pf-value-billed">{fmt(d.totalBilled)}</span>
+            </div>
+            <div className="pf-total-row">
+              <span className="pf-total-row-label">Candidate Gross Pay</span>
+              <span className="pf-value-pay">{fmt(d.totalPay)}</span>
+            </div>
+
+            <div className="pf-margin-box">
+              <span className="pf-margin-label">Your Margin</span>
+              <div className="pf-margin-values">
+                <span className="pf-margin-amount">{fmt(d.marginAmount)}</span>
+                <span className="pf-margin-pct">
+                  {fmtPct(d.marginPct)} of billed
                 </span>
-              </>
+              </div>
+            </div>
+          </div>
+
+          <div className="pf-compensation-panel">
+            <div className="pf-panel-title">Candidate Compensation</div>
+
+            <div className="pf-comp-row">
+              <span className="pf-comp-label">Gross Pay</span>
+              <span className="pf-value-gross">{fmt(d.totalPay)}</span>
+            </div>
+            {d.taxAmount > 0 && (
+              <div className="pf-comp-row">
+                <span className="pf-comp-label">
+                  State Tax ({d.stateName || d.stateCode} {fmtPct(d.taxPct)})
+                </span>
+                <span className="pf-value-deduction">−{fmt(d.taxAmount)}</span>
+              </div>
             )}
-          </div>
-        </div>
-        <div className="pf-card-header-right">
-          <Button size="xs" onClick={() => setEditing(true)}>
-            Edit
-          </Button>
-        </div>
-      </div>
+            {d.cashAmount > 0 && (
+              <div className="pf-comp-row">
+                <span className="pf-comp-label">
+                  Withholding ({fmtPct(d.cashPct)})
+                </span>
+                <span className="pf-value-deduction">−{fmt(d.cashAmount)}</span>
+              </div>
+            )}
 
-      {/* Two-column financial body */}
-      <div className="pf-financial-body">
-        {/* LEFT: Billing Summary */}
-        <div className="pf-billing-panel">
-          <div className="pf-panel-title">Billing Summary</div>
+            <div className="pf-net-box">
+              <span className="pf-net-label">Net Payable</span>
+              <span className="pf-net-amount">{fmt(d.netPayable)}</span>
+            </div>
 
-          <div className="pf-rate-row">
-            <span className="pf-rate-label">Bill Rate</span>
-            <span className="pf-rate-value">${d.billRate}/hr</span>
-          </div>
-          <div className="pf-rate-row">
-            <span className="pf-rate-label">Pay Rate</span>
-            <span className="pf-rate-value">${d.payRate}/hr</span>
-          </div>
-          <div className="pf-rate-row">
-            <span className="pf-rate-label">Hours Worked</span>
-            <span className="pf-rate-value">
-              {d.hoursWorked.toLocaleString()}
-            </span>
-          </div>
-
-          <hr className="pf-divider" />
-
-          <div className="pf-total-row">
-            <span className="pf-total-row-label">Vendor Credited</span>
-            <span className="pf-value-billed">{fmt(d.totalBilled)}</span>
-          </div>
-          <div className="pf-total-row">
-            <span className="pf-total-row-label">Candidate Gross Pay</span>
-            <span className="pf-value-pay">{fmt(d.totalPay)}</span>
-          </div>
-
-          {/* Marketer margin highlight box */}
-          <div className="pf-margin-box">
-            <span className="pf-margin-label">Your Margin</span>
-            <div className="pf-margin-values">
-              <span className="pf-margin-amount">{fmt(d.marginAmount)}</span>
-              <span className="pf-margin-pct">
-                {fmtPct(d.marginPct)} of billed
-              </span>
+            <div className="pf-payment-tracker">
+              <div className="pf-payment-row">
+                <span className="pf-payment-label">Paid to Date</span>
+                <span className="pf-value-paid">{fmt(d.amountPaid)}</span>
+              </div>
+              <div className="pf-payment-row">
+                <span className="pf-payment-label">
+                  {isOverpaid ? "Overpaid" : "Outstanding"}
+                </span>
+                <span
+                  className={
+                    isOverpaid ? "pf-value-pending-neg" : "pf-value-pending-pos"
+                  }
+                >
+                  {isOverpaid
+                    ? `+${fmt(Math.abs(d.amountPending))}`
+                    : fmt(d.amountPending)}
+                </span>
+              </div>
+              <div className="pf-progress-wrap">
+                <div
+                  className={`pf-progress-fill${isOverpaid ? " overpaid" : ""}`}
+                  style={{ width: `${d.paidPct}%` }}
+                />
+              </div>
+              <div className="pf-progress-footer">
+                <span>{fmtPct(d.paidPct)} paid</span>
+                {d.hoursWorked > 0 && (
+                  <span>{d.hoursWorked.toLocaleString()} hrs</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT: Candidate Compensation */}
-        <div className="pf-compensation-panel">
-          <div className="pf-panel-title">Candidate Compensation</div>
-
-          <div className="pf-comp-row">
-            <span className="pf-comp-label">Gross Pay</span>
-            <span className="pf-value-gross">{fmt(d.totalPay)}</span>
-          </div>
-          {d.taxAmount > 0 && (
-            <div className="pf-comp-row">
-              <span className="pf-comp-label">
-                State Tax ({d.stateName || d.stateCode} {fmtPct(d.taxPct)})
-              </span>
-              <span className="pf-value-deduction">−{fmt(d.taxAmount)}</span>
-            </div>
-          )}
-          {d.cashAmount > 0 && (
-            <div className="pf-comp-row">
-              <span className="pf-comp-label">
-                Withholding ({fmtPct(d.cashPct)})
-              </span>
-              <span className="pf-value-deduction">−{fmt(d.cashAmount)}</span>
-            </div>
-          )}
-
-          {/* Net payable highlight box */}
-          <div className="pf-net-box">
-            <span className="pf-net-label">Net Payable</span>
-            <span className="pf-net-amount">{fmt(d.netPayable)}</span>
-          </div>
-
-          {/* Payment tracker */}
-          <div className="pf-payment-tracker">
-            <div className="pf-payment-row">
-              <span className="pf-payment-label">Paid to Date</span>
-              <span className="pf-value-paid">{fmt(d.amountPaid)}</span>
-            </div>
-            <div className="pf-payment-row">
-              <span className="pf-payment-label">
-                {isOverpaid ? "Overpaid" : "Outstanding"}
-              </span>
-              <span
-                className={
-                  isOverpaid ? "pf-value-pending-neg" : "pf-value-pending-pos"
-                }
-              >
-                {isOverpaid
-                  ? `+${fmt(Math.abs(d.amountPending))}`
-                  : fmt(d.amountPending)}
-              </span>
-            </div>
-            <div className="pf-progress-wrap">
-              <div
-                className={`pf-progress-fill${isOverpaid ? " overpaid" : ""}`}
-                style={{ width: `${d.paidPct}%` }}
-              />
-            </div>
-            <div className="pf-progress-footer">
-              <span>{fmtPct(d.paidPct)} paid</span>
-              {d.hoursWorked > 0 && (
-                <span>{d.hoursWorked.toLocaleString()} hrs</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Card footer */}
-      <div className="pf-card-footer">
-        {(fin.projectStart || fin.projectEnd) && (
-          <span className="pf-footer-item">
-            Project: {fmtDate(fin.projectStart)}
-            {fin.projectEnd ? ` — ${fmtDate(fin.projectEnd)}` : " — ongoing"}
-          </span>
-        )}
-        {d.stateCode && (
-          <>
-            <span className="pf-meta-sep">·</span>
+        <div className="pf-card-footer">
+          {(fin?.projectStart || fin?.projectEnd) && (
             <span className="pf-footer-item">
-              {d.stateName || d.stateCode}
-              {d.taxPct > 0 ? ` (${fmtPct(d.taxPct)} tax)` : " (no income tax)"}
+              Project: {fmtDate(fin.projectStart)}
+              {fin.projectEnd ? ` — ${fmtDate(fin.projectEnd)}` : " — ongoing"}
             </span>
-          </>
-        )}
-        {fin.notes && <span className="pf-footer-notes">{fin.notes}</span>}
+          )}
+          {d.stateCode && (
+            <>
+              <span className="pf-meta-sep">·</span>
+              <span className="pf-footer-item">
+                {d.stateName || d.stateCode}
+                {d.taxPct > 0
+                  ? ` (${fmtPct(d.taxPct)} tax)`
+                  : " (no income tax)"}
+              </span>
+            </>
+          )}
+          {fin?.notes && <span className="pf-footer-notes">{fin.notes}</span>}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return renderReadMode();
 };
 
 export default ProjectFinancialForm;

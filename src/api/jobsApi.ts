@@ -337,6 +337,76 @@ export interface FinancialSummary {
   hoursWorked: number;
 }
 
+// ─── Company Summary (aggregated across all candidates) ───────────────────────
+
+export interface CompanySummaryCandidate {
+  id: string;
+  candidateName: string;
+  candidateEmail: string;
+  inviteStatus: string;
+  currentRole: string;
+  location: string;
+  currentCompany: string;
+  skills: string[];
+  experienceYears: number;
+  projectCount: number;
+  activeProjects: number;
+  totalBilled: number;
+  totalPay: number;
+  netPayable: number;
+  amountPaid: number;
+  amountPending: number;
+  hoursWorked: number;
+}
+
+export interface CompanySummaryProject {
+  applicationId: string;
+  candidateId: string;
+  candidateName: string;
+  candidateEmail: string;
+  jobTitle: string;
+  vendorEmail: string;
+  location: string;
+  jobType: string;
+  jobSubType: string;
+  isActive: boolean;
+  appliedAt: string;
+  financials: {
+    billRate: number;
+    payRate: number;
+    hoursWorked: number;
+    projectStart: string | null;
+    projectEnd: string | null;
+    stateCode: string;
+    totalBilled: number;
+    totalPay: number;
+    netPayable: number;
+    amountPaid: number;
+    amountPending: number;
+  } | null;
+}
+
+export interface CompanySummaryDomainCount {
+  domain: string;
+  count: number;
+}
+
+export interface CompanySummaryResponse {
+  candidates: CompanySummaryCandidate[];
+  projects: CompanySummaryProject[];
+  domainCounts: CompanySummaryDomainCount[];
+  totals: {
+    totalBilled: number;
+    totalPay: number;
+    netPayable: number;
+    amountPaid: number;
+    amountPending: number;
+    hoursWorked: number;
+    taxAmount: number;
+    cashAmount: number;
+  };
+}
+
 export interface CandidateDetailVendorActivity {
   id: string;
   sender_email: string;
@@ -670,6 +740,11 @@ export const jobsApi = createApi({
       providesTags: ["MarketerCandidates"],
     }),
 
+    getCompanySummary: builder.query<CompanySummaryResponse, void>({
+      query: () => "api/jobs/marketer/company-summary",
+      providesTags: ["MarketerCandidates", "ProjectFinancials"],
+    }),
+
     getMarketerCandidateDetail: builder.query<CandidateDetailResponse, string>({
       query: (id) => `api/jobs/marketer/candidates/${id}/detail`,
       providesTags: ["MarketerCandidates"],
@@ -861,6 +936,7 @@ export const {
   // Marketer Candidates (company roster)
   useAddMarketerCandidateMutation,
   useGetMarketerCandidatesQuery,
+  useGetCompanySummaryQuery,
   useGetMarketerCandidateDetailQuery,
   useRemoveMarketerCandidateMutation,
   // Forward Openings

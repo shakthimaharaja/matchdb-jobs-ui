@@ -16,7 +16,7 @@ interface MembershipGatePageProps {
 }
 
 const openPricing = (tab: "vendor" | "candidate" | "marketer") => {
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new CustomEvent("matchdb:openPricing", { detail: { tab } }),
   );
 };
@@ -435,13 +435,10 @@ const MarketerGate: React.FC = () => (
 
 // ── Root export ───────────────────────────────────────────────────────────────
 
-const MembershipGatePage: React.FC<MembershipGatePageProps> = ({ userType }) =>
-  userType === "vendor" ? (
-    <VendorGate />
-  ) : userType === "marketer" ? (
-    <MarketerGate />
-  ) : (
-    <CandidateGate />
-  );
+const MembershipGatePage: React.FC<MembershipGatePageProps> = ({ userType }) => {
+  if (userType === "vendor") return <VendorGate />;
+  if (userType === "marketer") return <MarketerGate />;
+  return <CandidateGate />;
+};
 
 export default MembershipGatePage;

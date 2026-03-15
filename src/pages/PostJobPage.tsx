@@ -159,114 +159,132 @@ interface ParsedJob {
   experience_required?: number | null;
 }
 
+function parsePayRate(text: string): number | undefined {
+  const payRe = /\$\s*(\d+(?:\.\d+)?)\s*(?:\/\s*hr|\/\s*hour|per\s+hour)/i;
+  const m = payRe.exec(text);
+  return m ? Number.parseFloat(m[1]) : undefined;
+}
+
+function parseSalaryRange(
+  text: string,
+): { min: number; max: number } | undefined {
+  const salRe = /\$\s*(\d[\d,]*)\s*[kK]?\s*[-–]\s*\$?\s*(\d[\d,]*)\s*[kK]?/;
+  const m = salRe.exec(text);
+  if (!m) return undefined;
+  let lo = Number.parseFloat(m[1].replaceAll(",", ""));
+  let hi = Number.parseFloat(m[2].replaceAll(",", ""));
+  if (lo < 2000) {
+    lo *= 1000;
+    hi *= 1000;
+  }
+  return { min: lo, max: hi };
+}
+
+function parseJobType(lc: string): {
+  job_type?: string;
+  job_sub_type?: string;
+} {
+  if (/\bc2c\b/.test(lc) || /corp[- ]to[- ]corp/.test(lc)) {
+    return { job_type: "contract", job_sub_type: "c2c" };
+  } else if (/\bc2h\b/.test(lc) || /contract[- ]to[- ]hire/.test(lc)) {
+    return { job_type: "contract", job_sub_type: "c2h" };
+  } else if (/\b1099\b/.test(lc)) {
+    return { job_type: "contract", job_sub_type: "1099" };
+  } else if (/\bw2\b/.test(lc) && /\bcontract\b/.test(lc)) {
+    return { job_type: "contract", job_sub_type: "w2" };
+  } else if (/\bcontract\b/.test(lc) || /\bcontractor\b/.test(lc)) {
+    return { job_type: "contract" };
+  } else if (/\bfull[- ]time\b/.test(lc)) {
+    let job_sub_type: string | undefined;
+    if (/\bdirect hire\b/.test(lc)) job_sub_type = "direct_hire";
+    else if (/\bsalary\b/.test(lc)) job_sub_type = "salary";
+    else if (/\bw2\b/.test(lc)) job_sub_type = "w2";
+    return { job_type: "full_time", job_sub_type };
+  } else if (/\bpart[- ]time\b/.test(lc)) {
+    return { job_type: "part_time" };
+  }
+  return {};
+}
+
+function parseWorkMode(lc: string): string | undefined {
+  if (/\bremote\b/.test(lc)) return "remote";
+  if (/\bhybrid\b/.test(lc)) return "hybrid";
+  if (/\b(on[- ]?site|onsite|in[- ]office)\b/.test(lc)) return "onsite";
+  return undefined;
+}
+
+function parseLocation(
+  text: string,
+  nonEmpty: string[],
+  workMode: string | undefined,
+): string | undefined {
+  const locRe = /^(?:location|city|work\s+location)\s*:\s*(.+)/im;
+  const locLabel = locRe.exec(text);
+  if (locLabel) return locLabel[1].trim();
+  for (let i = 1; i < Math.min(4, nonEmpty.length); i++) {
+    const ln = nonEmpty[i];
+    if (
+      /^(remote|hybrid|on-?site|onsite)/i.test(ln) ||
+      (/,/.test(ln) &&
+        ln.length < 40 &&
+        !ln.includes("$") &&
+        !/years?/i.test(ln))
+    ) {
+      return ln;
+    }
+  }
+  if (workMode === "remote") return "Remote";
+  return undefined;
+}
+
+function parseExperience(text: string): number | undefined {
+  const expRe =
+    /(\d+)\s*\+?\s*years?\s*(of\s+)?(hands-on\s+)?(experience|exp)/i;
+  const m = expRe.exec(text);
+  return m ? Number.parseInt(m[1], 10) : undefined;
+}
+
+function parseSkills(text: string): string[] {
+  const skills: string[] = [];
+  for (const skill of SKILL_DICT) {
+    const escaped = skill.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+    const re = skill.includes(" ")
+      ? new RegExp(escaped, "i")
+      : new RegExp(String.raw`\b` + escaped + String.raw`\b`, "i");
+    if (re.test(text)) skills.push(skill);
+  }
+  return skills;
+}
+
 function parseJobText(raw: string): ParsedJob {
-  const text = raw.replace(/\r/g, "");
+  const text = raw.replaceAll("\r", "");
   const lines = text.split("\n").map((l) => l.trim());
   const nonEmpty = lines.filter(Boolean);
   const lc = text.toLowerCase();
   const result: ParsedJob = {};
 
-  // ── Title: first non-empty line ──
   if (nonEmpty.length > 0) result.title = nonEmpty[0];
 
-  // ── Pay rate: $60/hr, $60/hour, 60 per hour ──
-  const payMatch = text.match(
-    /\$\s*(\d+(?:\.\d+)?)\s*(?:\/\s*hr|\/\s*hour|per\s+hour)/i,
-  );
-  if (payMatch) result.pay_per_hour = parseFloat(payMatch[1]);
+  const payRate = parsePayRate(text);
+  if (payRate !== undefined) result.pay_per_hour = payRate;
 
-  // ── Salary range: $80k-$120k, $80,000-$120,000 ──
-  const salMatch = text.match(
-    /\$\s*(\d[\d,]*)\s*[kK]?\s*[-–]\s*\$?\s*(\d[\d,]*)\s*[kK]?/,
-  );
-  if (salMatch && !payMatch) {
-    let lo = parseFloat(salMatch[1].replace(/,/g, ""));
-    let hi = parseFloat(salMatch[2].replace(/,/g, ""));
-    if (lo < 2000) {
-      lo *= 1000;
-      hi *= 1000;
+  if (payRate === undefined) {
+    const salary = parseSalaryRange(text);
+    if (salary) {
+      result.salary_min = salary.min;
+      result.salary_max = salary.max;
     }
-    result.salary_min = lo;
-    result.salary_max = hi;
   }
 
-  // ── Job type + sub-type ──
-  if (/\bc2c\b/.test(lc) || /corp[- ]to[- ]corp/.test(lc)) {
-    result.job_type = "contract";
-    result.job_sub_type = "c2c";
-  } else if (/\bc2h\b/.test(lc) || /contract[- ]to[- ]hire/.test(lc)) {
-    result.job_type = "contract";
-    result.job_sub_type = "c2h";
-  } else if (/\b1099\b/.test(lc)) {
-    result.job_type = "contract";
-    result.job_sub_type = "1099";
-  } else if (/\bw2\b/.test(lc) && /\bcontract\b/.test(lc)) {
-    result.job_type = "contract";
-    result.job_sub_type = "w2";
-  } else if (/\bcontract\b/.test(lc) || /\bcontractor\b/.test(lc)) {
-    result.job_type = "contract";
-  } else if (/\bfull[- ]time\b/.test(lc)) {
-    result.job_type = "full_time";
-    if (/\bdirect hire\b/.test(lc)) result.job_sub_type = "direct_hire";
-    else if (/\bsalary\b/.test(lc)) result.job_sub_type = "salary";
-    else if (/\bw2\b/.test(lc)) result.job_sub_type = "w2";
-  } else if (/\bpart[- ]time\b/.test(lc)) {
-    result.job_type = "part_time";
-  }
+  const jt = parseJobType(lc);
+  if (jt.job_type) result.job_type = jt.job_type;
+  if (jt.job_sub_type) result.job_sub_type = jt.job_sub_type;
 
-  // ── Work mode ──
-  if (/\bremote\b/.test(lc)) {
-    result.work_mode = "remote";
-  } else if (/\bhybrid\b/.test(lc)) {
-    result.work_mode = "hybrid";
-  } else if (/\b(on[- ]?site|onsite|in[- ]office)\b/.test(lc)) {
-    result.work_mode = "onsite";
-  }
-
-  // ── Location ──
-  // Look for explicit "Location:" label first
-  const locLabel = text.match(
-    /^(?:location|city|work\s+location)\s*:\s*(.+)/im,
-  );
-  if (locLabel) {
-    result.location = locLabel[1].trim();
-  } else {
-    // Check 2nd/3rd non-empty lines for short location strings
-    for (let i = 1; i < Math.min(4, nonEmpty.length); i++) {
-      const ln = nonEmpty[i];
-      if (
-        /^(remote|hybrid|on-?site|onsite)/i.test(ln) ||
-        (/,/.test(ln) &&
-          ln.length < 40 &&
-          !/\$/.test(ln) &&
-          !/years?/i.test(ln))
-      ) {
-        result.location = ln;
-        break;
-      }
-    }
-    if (!result.location && result.work_mode === "remote")
-      result.location = "Remote";
-  }
-
-  // ── Experience ──
-  const expMatch = text.match(
-    /(\d+)\s*\+?\s*years?\s*(of\s+)?(hands-on\s+)?(experience|exp)/i,
-  );
-  if (expMatch) result.experience_required = parseInt(expMatch[1]);
-
-  // ── Skills — match against known dictionary ──
-  const skills: string[] = [];
-  for (const skill of SKILL_DICT) {
-    const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = skill.includes(" ")
-      ? new RegExp(escaped, "i")
-      : new RegExp(`\\b${escaped}\\b`, "i");
-    if (re.test(text)) skills.push(skill);
-  }
-  result.skills_required = skills;
-
-  // ── Full description = raw paste ──
+  result.work_mode = parseWorkMode(lc);
+  result.location = parseLocation(text, nonEmpty, result.work_mode);
+  const exp = parseExperience(text);
+  if (exp !== undefined) result.experience_required = exp;
+  result.skills_required = parseSkills(text);
   result.description = raw.trim();
 
   return result;
@@ -323,7 +341,6 @@ const EMPTY: FormState = {
 };
 
 interface Props {
-  token?: string | null;
   onPosted?: () => void;
 }
 
@@ -366,33 +383,33 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
     setParseResult(parsed);
     setForm((f) => ({
       ...f,
-      ...(parsed.title !== undefined ? { title: parsed.title } : {}),
-      ...(parsed.description !== undefined
-        ? { description: parsed.description }
-        : {}),
-      ...(parsed.location !== undefined ? { location: parsed.location } : {}),
-      ...(parsed.job_type !== undefined ? { job_type: parsed.job_type } : {}),
-      ...(parsed.job_sub_type !== undefined
-        ? { job_sub_type: parsed.job_sub_type }
-        : {}),
-      ...(parsed.work_mode !== undefined
-        ? { work_mode: parsed.work_mode }
-        : {}),
-      ...(parsed.pay_per_hour !== undefined
-        ? { pay_per_hour: parsed.pay_per_hour }
-        : {}),
-      ...(parsed.salary_min !== undefined
-        ? { salary_min: parsed.salary_min }
-        : {}),
-      ...(parsed.salary_max !== undefined
-        ? { salary_max: parsed.salary_max }
-        : {}),
-      ...(parsed.experience_required !== undefined
-        ? { experience_required: parsed.experience_required }
-        : {}),
-      ...(parsed.skills_required !== undefined
-        ? { skills_required: parsed.skills_required }
-        : {}),
+      ...(parsed.title === undefined ? {} : { title: parsed.title }),
+      ...(parsed.description === undefined
+        ? {}
+        : { description: parsed.description }),
+      ...(parsed.location === undefined ? {} : { location: parsed.location }),
+      ...(parsed.job_type === undefined ? {} : { job_type: parsed.job_type }),
+      ...(parsed.job_sub_type === undefined
+        ? {}
+        : { job_sub_type: parsed.job_sub_type }),
+      ...(parsed.work_mode === undefined
+        ? {}
+        : { work_mode: parsed.work_mode }),
+      ...(parsed.pay_per_hour === undefined
+        ? {}
+        : { pay_per_hour: parsed.pay_per_hour }),
+      ...(parsed.salary_min === undefined
+        ? {}
+        : { salary_min: parsed.salary_min }),
+      ...(parsed.salary_max === undefined
+        ? {}
+        : { salary_max: parsed.salary_max }),
+      ...(parsed.experience_required === undefined
+        ? {}
+        : { experience_required: parsed.experience_required }),
+      ...(parsed.skills_required === undefined
+        ? {}
+        : { skills_required: parsed.skills_required }),
     }));
     setSuccess(false);
   };
@@ -576,8 +593,8 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
                 )}
                 {parseResult.salary_min != null && (
                   <span className="pjp-chip">
-                    💲 ${(parseResult.salary_min! / 1000).toFixed(0)}k–$
-                    {(parseResult.salary_max! / 1000).toFixed(0)}k/yr
+                    💲 ${(parseResult.salary_min / 1000).toFixed(0)}k–$
+                    {((parseResult.salary_max ?? 0) / 1000).toFixed(0)}k/yr
                   </span>
                 )}
                 {parseResult.experience_required != null && (
@@ -590,7 +607,7 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
                 )}
                 {(parseResult.skills_required?.length ?? 0) > 0 && (
                   <span className="pjp-chip">
-                    🔧 {parseResult.skills_required!.length} skills detected
+                    🔧 {parseResult.skills_required?.length} skills detected
                   </span>
                 )}
               </div>
@@ -602,8 +619,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
         <fieldset className="rm-fieldset">
           <legend>Job Details</legend>
           <div className="rm-field">
-            <label>Job Title *</label>
+            <label htmlFor="pjp-title">Job Title *</label>
             <input
+              id="pjp-title"
               type="text"
               className="rm-input"
               value={form.title}
@@ -612,8 +630,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
             />
           </div>
           <div className="rm-field rm-field-mt">
-            <label>Job Description *</label>
+            <label htmlFor="pjp-description">Job Description *</label>
             <textarea
+              id="pjp-description"
               className="rm-textarea pjp-desc-area"
               rows={6}
               value={form.description}
@@ -623,8 +642,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
           </div>
           <div className="rm-grid-2" style={{ marginTop: 6 }}>
             <div className="rm-field">
-              <label>Location</label>
+              <label htmlFor="pjp-location">Location</label>
               <input
+                id="pjp-location"
                 type="text"
                 className="rm-input"
                 value={form.location}
@@ -633,8 +653,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
               />
             </div>
             <div className="rm-field">
-              <label>Job Type *</label>
+              <label htmlFor="pjp-job-type">Job Type *</label>
               <select
+                id="pjp-job-type"
                 className="rm-input"
                 value={form.job_type}
                 onChange={(e) => {
@@ -653,7 +674,7 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
 
           {/* ── Candidate Location (Country / State / City) ── */}
           <div style={{ marginTop: 6 }}>
-            <label
+            <span
               style={{
                 fontSize: 11,
                 fontWeight: 700,
@@ -663,11 +684,12 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
               }}
             >
               🌍 Where do you need a candidate?
-            </label>
+            </span>
             <div className="rm-grid-2" style={{ marginTop: 2 }}>
               <div className="rm-field">
-                <label>Country *</label>
+                <label htmlFor="pjp-country">Country *</label>
                 <select
+                  id="pjp-country"
                   className="rm-input"
                   value={form.job_country}
                   onChange={(e) => {
@@ -684,8 +706,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
                 </select>
               </div>
               <div className="rm-field">
-                <label>State / Province</label>
+                <label htmlFor="pjp-state">State / Province</label>
                 <input
+                  id="pjp-state"
                   type="text"
                   className="rm-input"
                   value={form.job_state}
@@ -696,8 +719,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
             </div>
             <div className="rm-grid-2" style={{ marginTop: 4 }}>
               <div className="rm-field">
-                <label>City</label>
+                <label htmlFor="pjp-city">City</label>
                 <input
+                  id="pjp-city"
                   type="text"
                   className="rm-input"
                   value={form.job_city}
@@ -711,8 +735,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
           <div className="rm-grid-2" style={{ marginTop: 6 }}>
             {showSubType && (
               <div className="rm-field">
-                <label>Sub Type</label>
+                <label htmlFor="pjp-sub-type">Sub Type</label>
                 <select
+                  id="pjp-sub-type"
                   className="rm-input"
                   value={form.job_sub_type}
                   onChange={(e) => setField("job_sub_type", e.target.value)}
@@ -726,8 +751,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
               </div>
             )}
             <div className="rm-field">
-              <label>Work Mode</label>
+              <label htmlFor="pjp-work-mode">Work Mode</label>
               <select
+                id="pjp-work-mode"
                 className="rm-input"
                 value={form.work_mode}
                 onChange={(e) => setField("work_mode", e.target.value)}
@@ -747,8 +773,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
           <legend>Compensation</legend>
           <div className="pjp-three-col">
             <div className="rm-field">
-              <label>Salary Min ($/yr)</label>
+              <label htmlFor="pjp-salary-min">Salary Min ($/yr)</label>
               <input
+                id="pjp-salary-min"
                 type="number"
                 className="rm-input"
                 min={0}
@@ -763,8 +790,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
               />
             </div>
             <div className="rm-field">
-              <label>Salary Max ($/yr)</label>
+              <label htmlFor="pjp-salary-max">Salary Max ($/yr)</label>
               <input
+                id="pjp-salary-max"
                 type="number"
                 className="rm-input"
                 min={0}
@@ -779,8 +807,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
               />
             </div>
             <div className="rm-field">
-              <label>Pay Per Hour ($)</label>
+              <label htmlFor="pjp-pay-hr">Pay Per Hour ($)</label>
               <input
+                id="pjp-pay-hr"
                 type="number"
                 className="rm-input"
                 min={0}
@@ -805,8 +834,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
             description when the job is saved.
           </p>
           <div className="rm-field rm-field-mt pjp-exp-field">
-            <label>Experience Required (Years)</label>
+            <label htmlFor="pjp-exp">Experience Required (Years)</label>
             <input
+              id="pjp-exp"
               type="number"
               className="rm-input"
               min={0}
@@ -827,8 +857,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
           <legend>Recruiter Contact</legend>
           <div className="rm-grid-2">
             <div className="rm-field">
-              <label>Recruiter Name</label>
+              <label htmlFor="pjp-rec-name">Recruiter Name</label>
               <input
+                id="pjp-rec-name"
                 type="text"
                 className="rm-input"
                 value={form.recruiter_name}
@@ -837,8 +868,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
               />
             </div>
             <div className="rm-field">
-              <label>Recruiter Phone</label>
+              <label htmlFor="pjp-rec-phone">Recruiter Phone</label>
               <input
+                id="pjp-rec-phone"
                 type="text"
                 className="rm-input"
                 value={form.recruiter_phone}

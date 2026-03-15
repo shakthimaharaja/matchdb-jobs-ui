@@ -21,15 +21,12 @@ import {
   type Job,
   type CandidateProfileMatch,
   type PokeRecord,
-  type PaginatedResponse,
   type VendorJobsArgs,
   type VendorCandidateMatchesArgs,
-  type SendPokeArgs,
 } from "../api/jobsApi";
 
 interface Props {
   token: string | null;
-  userId: string | undefined;
   userEmail: string | undefined;
   plan?: string;
   onPostJob?: () => void;
@@ -141,10 +138,20 @@ type ViewMode =
   | "mails-received";
 
 /** Color badge for count thresholds */
+const COUNT_COLOR_THRESHOLDS: [number, string][] = [
+  [50, "#2e7d32"],
+  [25, "#b8860b"],
+  [10, "#d4600a"],
+];
+const COUNT_BG_THRESHOLDS: [number, string][] = [
+  [50, "#e8f5e9"],
+  [25, "#fffde6"],
+  [10, "#fff3e0"],
+];
 const countColor = (n: number): string =>
-  n >= 50 ? "#2e7d32" : n >= 25 ? "#b8860b" : n >= 10 ? "#d4600a" : "#bb3333";
+  COUNT_COLOR_THRESHOLDS.find(([t]) => n >= t)?.[1] ?? "#bb3333";
 const countBg = (n: number): string =>
-  n >= 50 ? "#e8f5e9" : n >= 25 ? "#fffde6" : n >= 10 ? "#fff3e0" : "#fff5f5";
+  COUNT_BG_THRESHOLDS.find(([t]) => n >= t)?.[1] ?? "#fff5f5";
 
 /** Column definitions for the job postings table are built inside the component
  *  via useMemo so that render functions can close over handlers and state. */
@@ -156,7 +163,7 @@ const VendorDashboard: React.FC<Props> = ({
   onPostJob,
 }) => {
   // ── RTK Query data hooks ───────────────────────────────────────────────────
-  const [jobsArgs, setJobsArgs] = useState<VendorJobsArgs>({});
+  const [jobsArgs] = useState<VendorJobsArgs>({});
   const [matchArgs, setMatchArgs] = useState<VendorCandidateMatchesArgs>({});
   const {
     data: jobsData,
@@ -190,18 +197,18 @@ const VendorDashboard: React.FC<Props> = ({
   // Derive flat arrays from paginated-or-array responses
   const vendorJobs: Job[] = Array.isArray(jobsData)
     ? jobsData
-    : (jobsData as PaginatedResponse<Job>)?.data ?? [];
+    : jobsData?.data ?? [];
   const vendorJobsTotal: number = Array.isArray(jobsData)
     ? jobsData.length
-    : (jobsData as PaginatedResponse<Job>)?.total ?? 0;
+    : jobsData?.total ?? 0;
   const vendorCandidateMatches: CandidateProfileMatch[] = Array.isArray(
     matchesData,
   )
     ? matchesData
-    : (matchesData as PaginatedResponse<CandidateProfileMatch>)?.data ?? [];
+    : matchesData?.data ?? [];
   const vendorCandidateMatchesTotal: number = Array.isArray(matchesData)
     ? matchesData.length
-    : (matchesData as PaginatedResponse<CandidateProfileMatch>)?.total ?? 0;
+    : matchesData?.total ?? 0;
 
   const pokesSent: PokeRecord[] = pokesSentData;
   const pokesReceived: PokeRecord[] = pokesReceivedData;
@@ -220,6 +227,15 @@ const VendorDashboard: React.FC<Props> = ({
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set("view", mode);
+      return next;
+    });
+  };
+
+  const navigateToViewJob = (mode: ViewMode, jobId: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("view", mode);
+      next.set("job", jobId);
       return next;
     });
   };
@@ -256,7 +272,11 @@ const VendorDashboard: React.FC<Props> = ({
   useEffect(() => {
     if (!searchParams.get("view")) {
       setSearchParams(
-        (prev) => { const next = new URLSearchParams(prev); next.set("view", "postings"); return next; },
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("view", "postings");
+          return next;
+        },
         { replace: true },
       );
     }
@@ -343,15 +363,16 @@ const VendorDashboard: React.FC<Props> = ({
 
   const openPricingModal = () => {
     setPricingBlur(true);
-    window.dispatchEvent(
+    globalThis.dispatchEvent(
       new CustomEvent("matchdb:openPricing", { detail: { tab: "vendor" } }),
     );
   };
 
   useEffect(() => {
     const onClose = () => setPricingBlur(false);
-    window.addEventListener("matchdb:pricingClosed", onClose);
-    return () => window.removeEventListener("matchdb:pricingClosed", onClose);
+    globalThis.addEventListener("matchdb:pricingClosed", onClose);
+    return () =>
+      globalThis.removeEventListener("matchdb:pricingClosed", onClose);
   }, []);
 
   const handlePageChange = (page: number, pageSize: number) => {
@@ -368,14 +389,14 @@ const VendorDashboard: React.FC<Props> = ({
   const pokeLimit = POKE_LIMIT[plan] ?? 0;
   const activeJobs = vendorJobs.filter((j) => j.is_active);
   const activeJobCount = activeJobs.length;
-  const atJobLimit = isFinite(jobLimit) && activeJobCount >= jobLimit;
+  const atJobLimit = Number.isFinite(jobLimit) && activeJobCount >= jobLimit;
 
   // Dispatch vendor's primary location to shell (derived from most-posted job location)
   useEffect(() => {
     if (vendorJobs.length > 0) {
       const loc = vendorJobs.find((j) => j.location)?.location || "";
       if (loc) {
-        window.dispatchEvent(
+        globalThis.dispatchEvent(
           new CustomEvent("matchdb:profileLocation", {
             detail: { location: loc },
           }),
@@ -389,8 +410,10 @@ const VendorDashboard: React.FC<Props> = ({
     const postedCountries = Array.from(
       new Set(
         vendorJobs
-          .filter((j) => j.is_active && j.job_country)
-          .map((j) => j.job_country!),
+          .filter((j): j is typeof j & { job_country: string } =>
+            Boolean(j.is_active && j.job_country),
+          )
+          .map((j) => j.job_country),
       ),
     );
     if (postedCountries.length > 0) {
@@ -402,13 +425,13 @@ const VendorDashboard: React.FC<Props> = ({
         .join(" · ");
       const text = `Hiring in: ${countryLabels} — ${
         activeJobs.length
-      } active opening${activeJobs.length !== 1 ? "s" : ""}.`;
-      window.dispatchEvent(
+      } active opening${activeJobs.length === 1 ? "" : "s"}.`;
+      globalThis.dispatchEvent(
         new CustomEvent("matchdb:visibleIn", { detail: { text } }),
       );
     }
     return () => {
-      window.dispatchEvent(
+      globalThis.dispatchEvent(
         new CustomEvent("matchdb:visibleIn", { detail: { text: "" } }),
       );
     };
@@ -416,31 +439,26 @@ const VendorDashboard: React.FC<Props> = ({
 
   // Emit footer info for shell to display
   useEffect(() => {
-    const count =
-      viewMode === "active-openings"
-        ? activeJobs.length
-        : viewMode === "postings"
-        ? vendorJobs.length
-        : viewMode === "candidates"
-        ? vendorCandidateMatchesTotal
-        : viewMode === "pokes-sent"
-        ? pokesSentOnly.length
-        : viewMode === "pokes-received"
-        ? pokesReceivedOnly.length
-        : viewMode === "mails-sent"
-        ? mailsSentOnly.length
-        : viewMode === "mails-received"
-        ? mailsReceivedOnly.length
-        : 0;
-    window.dispatchEvent(
+    const VIEW_COUNT: Record<ViewMode, number> = {
+      "active-openings": activeJobs.length,
+      postings: vendorJobs.length,
+      candidates: vendorCandidateMatchesTotal,
+      "pokes-sent": pokesSentOnly.length,
+      "pokes-received": pokesReceivedOnly.length,
+      "mails-sent": mailsSentOnly.length,
+      "mails-received": mailsReceivedOnly.length,
+    };
+    const count = VIEW_COUNT[viewMode] ?? 0;
+    const suffix = count === 1 ? "" : "s";
+    globalThis.dispatchEvent(
       new CustomEvent("matchdb:footerInfo", {
         detail: {
-          text: `Showing ${count} row${count !== 1 ? "s" : ""} | InnoDB`,
+          text: `Showing ${count} row${suffix} | InnoDB`,
         },
       }),
     );
     return () => {
-      window.dispatchEvent(
+      globalThis.dispatchEvent(
         new CustomEvent("matchdb:footerInfo", { detail: { text: "" } }),
       );
     };
@@ -687,9 +705,9 @@ const VendorDashboard: React.FC<Props> = ({
         thProps: { title: "Years of experience required" },
         render: (job: Job) => (
           <>
-            {job.experience_required != null
-              ? `${job.experience_required}y`
-              : "—"}
+            {job.experience_required == null
+              ? "—"
+              : `${job.experience_required}y`}
           </>
         ),
       },
@@ -709,6 +727,11 @@ const VendorDashboard: React.FC<Props> = ({
         thProps: { title: "Pokes sent for this opening" },
         render: (job: Job) => {
           const n_poke = pokesPerJob[job.id] || 0;
+          const pokeSuffix = n_poke === 1 ? "" : "s";
+          const pokeTitle =
+            n_poke > 0
+              ? `View ${n_poke} poke${pokeSuffix} sent for "${job.title}"`
+              : "No pokes sent";
           return (
             <Button
               style={{
@@ -721,21 +744,8 @@ const VendorDashboard: React.FC<Props> = ({
                 background: countBg(n_poke),
                 border: `1px solid ${countColor(n_poke)}40`,
               }}
-              title={
-                n_poke > 0
-                  ? `View ${n_poke} poke${n_poke !== 1 ? "s" : ""} sent for "${
-                      job.title
-                    }"`
-                  : "No pokes sent"
-              }
-              onClick={() =>
-                setSearchParams((prev) => {
-                  const next = new URLSearchParams(prev);
-                  next.set("view", "pokes-sent");
-                  next.set("job", job.id);
-                  return next;
-                })
-              }
+              title={pokeTitle}
+              onClick={() => navigateToViewJob("pokes-sent", job.id)}
             >
               {n_poke}
             </Button>
@@ -750,6 +760,11 @@ const VendorDashboard: React.FC<Props> = ({
         thProps: { title: "Mails sent for this opening" },
         render: (job: Job) => {
           const n_mail = mailsPerJob[job.id] || 0;
+          const mailSuffix = n_mail === 1 ? "" : "s";
+          const mailTitle =
+            n_mail > 0
+              ? `View ${n_mail} mail${mailSuffix} sent for "${job.title}"`
+              : "No mails sent";
           return (
             <Button
               style={{
@@ -762,21 +777,8 @@ const VendorDashboard: React.FC<Props> = ({
                 background: countBg(n_mail),
                 border: `1px solid ${countColor(n_mail)}40`,
               }}
-              title={
-                n_mail > 0
-                  ? `View ${n_mail} mail${n_mail !== 1 ? "s" : ""} sent for "${
-                      job.title
-                    }"`
-                  : "No mails sent"
-              }
-              onClick={() =>
-                setSearchParams((prev) => {
-                  const next = new URLSearchParams(prev);
-                  next.set("view", "mails-sent");
-                  next.set("job", job.id);
-                  return next;
-                })
-              }
+              title={mailTitle}
+              onClick={() => navigateToViewJob("mails-sent", job.id)}
             >
               {n_mail}
             </Button>
@@ -806,14 +808,7 @@ const VendorDashboard: React.FC<Props> = ({
                 ? `View candidates matched to "${job.title}"`
                 : "Position is closed — reopen to view matches"
             }
-            onClick={() =>
-              setSearchParams((prev) => {
-                const next = new URLSearchParams(prev);
-                next.set("view", "candidates");
-                next.set("job", job.id);
-                return next;
-              })
-            }
+            onClick={() => navigateToViewJob("candidates", job.id)}
           >
             👥 View
           </Button>
@@ -888,7 +883,7 @@ const VendorDashboard: React.FC<Props> = ({
 
   const handlePoke = (row: MatchRow) => {
     if (!row.pokeTargetEmail) return;
-    if (isFinite(pokeLimit) && pokeCount >= pokeLimit) return;
+    if (Number.isFinite(pokeLimit) && pokeCount >= pokeLimit) return;
     clearPokeState();
     sendPoke({
       to_email: row.pokeTargetEmail,
@@ -968,7 +963,7 @@ const VendorDashboard: React.FC<Props> = ({
         r.matchPercentage,
         r.location,
       ]
-        .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
+        .map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`)
         .join(","),
     );
     const csv = [headers.join(","), ...csvRows].join("\n");
@@ -982,210 +977,329 @@ const VendorDashboard: React.FC<Props> = ({
   };
 
   /* ── Sidebar nav groups ── */
-  const navGroups: NavGroup[] = [
-    {
-      label: "View",
-      icon: "",
-      items: [
-        {
-          id: "view-candidates",
-          label: "Matched Candidates",
-          count: vendorCandidateMatchesTotal,
-          active: viewMode === "candidates",
-          onClick: () => navigateToView("candidates"),
-        },
-        {
-          id: "view-postings",
-          label: "My Job Postings",
-          count: vendorJobsTotal,
-          active: viewMode === "postings",
-          onClick: () => navigateToView("postings"),
-        },
-      ],
-    },
-    {
-      label: "Job Openings",
-      icon: "",
-      items: [
-        {
-          id: "active-openings",
-          label: "All Active Openings",
-          count: activeJobs.length,
-          active: viewMode === "active-openings",
-          onClick: () => navigateToView("active-openings"),
-        },
-        ...activeJobs.map((job) => ({
-          id: job.id,
-          label: job.title,
-          active: viewMode === "candidates" && selectedJobId === job.id,
-          onClick: () => navigateToJob(job.id),
-        })),
-      ],
-    },
-    {
-      label: `Pokes (${pokeCount}/${isFinite(pokeLimit) ? pokeLimit : "∞"})`,
-      icon: "",
-      items: [
-        {
-          id: "pokes-sent",
-          label: "Pokes Sent",
-          count: pokesSentOnly.length,
-          active: viewMode === "pokes-sent" && !selectedJobId,
-          onClick: () => navigateToView("pokes-sent"),
-        },
-        {
-          id: "pokes-received",
-          label: "Pokes Received",
-          count: pokesReceivedOnly.length,
-          active: viewMode === "pokes-received" && !selectedJobId,
-          onClick: () => navigateToView("pokes-received"),
-        },
-        ...(isFinite(pokeLimit)
-          ? [
-              {
-                id: "pokes-remaining",
-                label: "Remaining",
-                count: Math.max(0, pokeLimit - pokeCount),
-              },
-            ]
-          : []),
-        // Per-job poke sub-items when in pokes view
-        ...(viewMode === "pokes-sent" || viewMode === "pokes-received"
-          ? activeJobs
-              .filter(
-                (job) =>
-                  (pokesPerJob[job.id] || 0) > 0 ||
-                  (viewMode === "pokes-received" &&
-                    pokesReceivedOnly.some((p) => p.job_id === job.id)),
-              )
-              .map((job) => ({
-                id: `poke-job-${job.id}`,
-                label: job.title,
-                count:
-                  viewMode === "pokes-sent"
-                    ? pokesPerJob[job.id] || 0
-                    : pokesReceivedOnly.filter((p) => p.job_id === job.id)
-                        .length,
-                active: selectedJobId === job.id,
-                onClick: () => navigateToView(viewMode, job.id),
-              }))
-          : []),
-      ],
-    },
-    {
-      label: `Mails (${emailCount})`,
-      icon: "",
-      items: [
-        {
-          id: "mails-sent",
-          label: "Mails Sent",
-          count: mailsSentOnly.length,
-          active: viewMode === "mails-sent" && !selectedJobId,
-          onClick: () => navigateToView("mails-sent"),
-        },
-        {
-          id: "mails-received",
-          label: "Mails Received",
-          count: mailsReceivedOnly.length,
-          active: viewMode === "mails-received" && !selectedJobId,
-          onClick: () => navigateToView("mails-received"),
-        },
-        ...(plan !== "free" && rows.length > 0
-          ? [
-              {
-                id: "mail-template",
-                label: "✉ Mail Template",
-                tooltip:
-                  "Compose a personalised email to any matched candidate — click ✉ next to any row",
-                onClick: () => {
-                  setViewMode("candidates");
-                  if (rows.length > 0) handlePokeEmail(rows[0]);
+  function buildNavGroups(): NavGroup[] {
+    return [
+      {
+        label: "View",
+        icon: "",
+        items: [
+          {
+            id: "view-candidates",
+            label: "Matched Candidates",
+            count: vendorCandidateMatchesTotal,
+            active: viewMode === "candidates",
+            onClick: () => navigateToView("candidates"),
+          },
+          {
+            id: "view-postings",
+            label: "My Job Postings",
+            count: vendorJobsTotal,
+            active: viewMode === "postings",
+            onClick: () => navigateToView("postings"),
+          },
+        ],
+      },
+      {
+        label: "Job Openings",
+        icon: "",
+        items: [
+          {
+            id: "active-openings",
+            label: "All Active Openings",
+            count: activeJobs.length,
+            active: viewMode === "active-openings",
+            onClick: () => navigateToView("active-openings"),
+          },
+          ...activeJobs.map((job) => ({
+            id: job.id,
+            label: job.title,
+            active: viewMode === "candidates" && selectedJobId === job.id,
+            onClick: () => navigateToJob(job.id),
+          })),
+        ],
+      },
+      {
+        label: `Pokes (${pokeCount}/${
+          Number.isFinite(pokeLimit) ? pokeLimit : "∞"
+        })`,
+        icon: "",
+        items: [
+          {
+            id: "pokes-sent",
+            label: "Pokes Sent",
+            count: pokesSentOnly.length,
+            active: viewMode === "pokes-sent" && !selectedJobId,
+            onClick: () => navigateToView("pokes-sent"),
+          },
+          {
+            id: "pokes-received",
+            label: "Pokes Received",
+            count: pokesReceivedOnly.length,
+            active: viewMode === "pokes-received" && !selectedJobId,
+            onClick: () => navigateToView("pokes-received"),
+          },
+          ...(Number.isFinite(pokeLimit)
+            ? [
+                {
+                  id: "pokes-remaining",
+                  label: "Remaining",
+                  count: Math.max(0, pokeLimit - pokeCount),
                 },
-              },
-            ]
-          : []),
-        // Per-job mail sub-items when in mails view
-        ...(viewMode === "mails-sent" || viewMode === "mails-received"
-          ? activeJobs
-              .filter(
-                (job) =>
-                  (mailsPerJob[job.id] || 0) > 0 ||
-                  (viewMode === "mails-received" &&
-                    mailsReceivedOnly.some((p) => p.job_id === job.id)),
-              )
-              .map((job) => ({
-                id: `mail-job-${job.id}`,
-                label: job.title,
-                count:
-                  viewMode === "mails-sent"
-                    ? mailsPerJob[job.id] || 0
-                    : mailsReceivedOnly.filter((p) => p.job_id === job.id)
-                        .length,
-                active: selectedJobId === job.id,
-                onClick: () => navigateToView(viewMode, job.id),
-              }))
-          : []),
-      ],
-    },
-    {
-      label: "Actions",
-      icon: "",
-      items: [
-        {
-          id: "refresh",
-          label: "Refresh Data",
-          onClick: () => {
-            refetchJobs();
-            refetchPokesSent();
-            refetchPokesReceived();
-            if (viewMode === "candidates") {
-              setCurrentPage(1);
-              setMatchArgs({
-                job_id: selectedJobId || undefined,
-                page: 1,
-                limit: currentPageSize,
-              });
-            }
+              ]
+            : []),
+          // Per-job poke sub-items when in pokes view
+          ...(viewMode === "pokes-sent" || viewMode === "pokes-received"
+            ? activeJobs
+                .filter(
+                  (job) =>
+                    (pokesPerJob[job.id] || 0) > 0 ||
+                    (viewMode === "pokes-received" &&
+                      pokesReceivedOnly.some((p) => p.job_id === job.id)),
+                )
+                .map((job) => ({
+                  id: `poke-job-${job.id}`,
+                  label: job.title,
+                  count:
+                    viewMode === "pokes-sent"
+                      ? pokesPerJob[job.id] || 0
+                      : pokesReceivedOnly.filter((p) => p.job_id === job.id)
+                          .length,
+                  active: selectedJobId === job.id,
+                  onClick: () => navigateToView(viewMode, job.id),
+                }))
+            : []),
+        ],
+      },
+      {
+        label: `Mails (${emailCount})`,
+        icon: "",
+        items: [
+          {
+            id: "mails-sent",
+            label: "Mails Sent",
+            count: mailsSentOnly.length,
+            active: viewMode === "mails-sent" && !selectedJobId,
+            onClick: () => navigateToView("mails-sent"),
           },
-        },
-        {
-          id: "reset",
-          label: "Reset Filters",
-          onClick: () => {
-            setSelectedJobId("");
-            setSearchText("");
-            setPostingSearch("");
+          {
+            id: "mails-received",
+            label: "Mails Received",
+            count: mailsReceivedOnly.length,
+            active: viewMode === "mails-received" && !selectedJobId,
+            onClick: () => navigateToView("mails-received"),
           },
-        },
-      ],
-    },
-  ];
+          ...(plan !== "free" && rows.length > 0
+            ? [
+                {
+                  id: "mail-template",
+                  label: "✉ Mail Template",
+                  tooltip:
+                    "Compose a personalised email to any matched candidate — click ✉ next to any row",
+                  onClick: () => {
+                    setViewMode("candidates");
+                    if (rows.length > 0) handlePokeEmail(rows[0]);
+                  },
+                },
+              ]
+            : []),
+          // Per-job mail sub-items when in mails view
+          ...(viewMode === "mails-sent" || viewMode === "mails-received"
+            ? activeJobs
+                .filter(
+                  (job) =>
+                    (mailsPerJob[job.id] || 0) > 0 ||
+                    (viewMode === "mails-received" &&
+                      mailsReceivedOnly.some((p) => p.job_id === job.id)),
+                )
+                .map((job) => ({
+                  id: `mail-job-${job.id}`,
+                  label: job.title,
+                  count:
+                    viewMode === "mails-sent"
+                      ? mailsPerJob[job.id] || 0
+                      : mailsReceivedOnly.filter((p) => p.job_id === job.id)
+                          .length,
+                  active: selectedJobId === job.id,
+                  onClick: () => navigateToView(viewMode, job.id),
+                }))
+            : []),
+        ],
+      },
+      {
+        label: "Actions",
+        icon: "",
+        items: [
+          {
+            id: "refresh",
+            label: "Refresh Data",
+            onClick: () => {
+              refetchJobs();
+              refetchPokesSent();
+              refetchPokesReceived();
+              if (viewMode === "candidates") {
+                setCurrentPage(1);
+                setMatchArgs({
+                  job_id: selectedJobId || undefined,
+                  page: 1,
+                  limit: currentPageSize,
+                });
+              }
+            },
+          },
+          {
+            id: "reset",
+            label: "Reset Filters",
+            onClick: () => {
+              setSelectedJobId("");
+              setSearchText("");
+              setPostingSearch("");
+            },
+          },
+        ],
+      },
+    ];
+  }
+  const navGroups = buildNavGroups();
 
-  const breadcrumb: [string, string] | [string, string, string] =
-    viewMode === "pokes-sent"
-      ? ["Vendor Portal", "Pokes", "Pokes Sent"]
-      : viewMode === "pokes-received"
-      ? ["Vendor Portal", "Pokes", "Pokes Received"]
-      : viewMode === "mails-sent"
-      ? ["Vendor Portal", "Mails", "Mails Sent"]
-      : viewMode === "mails-received"
-      ? ["Vendor Portal", "Mails", "Mails Received"]
-      : viewMode === "candidates"
-      ? ["Vendor Portal", selectedJobTitle]
-      : viewMode === "active-openings"
-      ? ["Vendor Portal", "Active Openings"]
-      : ["Vendor Portal", "My Job Postings"];
+  const BREADCRUMB_MAP: Record<
+    ViewMode,
+    [string, string] | [string, string, string]
+  > = {
+    "pokes-sent": ["Vendor Portal", "Pokes", "Pokes Sent"],
+    "pokes-received": ["Vendor Portal", "Pokes", "Pokes Received"],
+    "mails-sent": ["Vendor Portal", "Mails", "Mails Sent"],
+    "mails-received": ["Vendor Portal", "Mails", "Mails Received"],
+    candidates: ["Vendor Portal", selectedJobTitle],
+    "active-openings": ["Vendor Portal", "Active Openings"],
+    postings: ["Vendor Portal", "My Job Postings"],
+  };
+
+  function renderCandidatesView() {
+    if (plan === "free") {
+      return (
+        <div
+          className="matchdb-panel"
+          style={{ textAlign: "center", padding: "48px 24px" }}
+        >
+          <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
+          <h3
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              marginBottom: 8,
+              color: "#333",
+              margin: "0 0 8px",
+            }}
+          >
+            Subscription Required
+          </h3>
+          <p
+            style={{
+              fontSize: 13,
+              color: "#666",
+              maxWidth: 400,
+              margin: "0 auto 20px",
+              lineHeight: 1.6,
+            }}
+          >
+            Viewing matched candidates requires an active subscription.
+            Subscribe to the <strong>Basic</strong> plan ($22/mo) or higher to
+            browse candidates and send pokes.
+          </p>
+          <Button variant="primary" onClick={openPricingModal}>
+            View Subscription Plans →
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <MatchDataTable
+        title="Related Candidate Profiles"
+        titleIcon="👥"
+        titleExtra={
+          <div className="matchdb-title-toolbar">
+            <Select
+              id="vendor-job-filter"
+              className="matchdb-title-select"
+              value={selectedJobId}
+              onChange={(e) => setSelectedJobId(e.target.value)}
+            >
+              <option value="">All Openings</option>
+              {activeJobs.map((job) => (
+                <option key={job.id} value={job.id}>
+                  {job.title}
+                </option>
+              ))}
+            </Select>
+            <Input
+              id="vendor-search"
+              className="matchdb-title-search"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Search..."
+            />
+            <Button
+              size="xs"
+              onClick={() => {
+                setSelectedJobId("");
+                setSearchText("");
+              }}
+            >
+              Reset
+            </Button>
+            <Button
+              size="xs"
+              onClick={() => {
+                setCurrentPage(1);
+                refetchJobs();
+                setMatchArgs({
+                  job_id: selectedJobId || undefined,
+                  page: 1,
+                  limit: currentPageSize,
+                });
+              }}
+            >
+              ↻
+            </Button>
+          </div>
+        }
+        rows={rows}
+        loading={matchesLoading}
+        error={pokeError ? "An error occurred" : null}
+        serverTotal={vendorCandidateMatchesTotal}
+        serverPage={currentPage}
+        serverPageSize={currentPageSize}
+        onPageChange={handlePageChange}
+        pokeLoading={pokeLoading}
+        pokeSuccessMessage={pokeSuccessMessage}
+        pokeError={pokeError ? "Failed to send poke" : null}
+        isVendor={true}
+        pokedRowIds={pokedRowIds}
+        emailedRowIds={emailedRowIds}
+        pokedAtMap={pokedAtMap}
+        onPoke={handlePoke}
+        onPokeEmail={handlePokeEmail}
+        onRowClick={(row) => setSelectedCandidate(row.rawData || null)}
+        onDownload={handleDownloadCSV}
+        downloadLabel="Download CSV"
+        flashIds={candidatesFlash.flashIds}
+        deleteFlashIds={candidatesFlash.deleteFlashIds}
+      />
+    );
+  }
+
+  const breadcrumb = BREADCRUMB_MAP[viewMode];
+  const pageStyle = pricingBlur
+    ? {
+        filter: "blur(2px)",
+        pointerEvents: "none" as const,
+        userSelect: "none" as const,
+      }
+    : undefined;
 
   return (
     <DBLayout userType="vendor" navGroups={navGroups} breadcrumb={breadcrumb}>
-      <div
-        className="matchdb-page"
-        style={
-          pricingBlur
-            ? { filter: "blur(2px)", pointerEvents: "none", userSelect: "none" }
-            : undefined
-        }
-      >
+      <div className="matchdb-page" style={pageStyle}>
         {/* ── Dashboard stat cards ── */}
         <div className="matchdb-stat-bar">
           {[
@@ -1304,15 +1418,14 @@ const VendorDashboard: React.FC<Props> = ({
               const modeLabel = job.work_mode
                 ? MODE_LABELS[job.work_mode] || job.work_mode
                 : "-";
-              const rate = job.pay_per_hour
-                ? `$${Number(job.pay_per_hour).toFixed(0)}/hr`
-                : job.salary_max
-                ? `$${Number(job.salary_max).toLocaleString()}`
-                : "-";
+              let salaryDisplay = "-";
+              if (job.pay_per_hour)
+                salaryDisplay = `$${Number(job.pay_per_hour).toFixed(0)}/hr`;
+              else if (job.salary_max)
+                salaryDisplay = `$${Number(job.salary_max).toLocaleString()}`;
               return (
-                <div
+                <output
                   className="w97-alert w97-alert-info"
-                  role="status"
                   style={{
                     display: "flex",
                     flexWrap: "wrap",
@@ -1328,7 +1441,7 @@ const VendorDashboard: React.FC<Props> = ({
                     {subLabel ? ` / ${subLabel}` : ""}
                   </span>
                   <span>Mode: {modeLabel}</span>
-                  <span>Rate: {rate}</span>
+                  <span>Rate: {salaryDisplay}</span>
                   <span>Exp: {formatExperience(job.experience_required)}</span>
                   <span
                     style={{
@@ -1355,7 +1468,7 @@ const VendorDashboard: React.FC<Props> = ({
                         : ""}
                     </span>
                   )}
-                </div>
+                </output>
               );
             })()
           : null}
@@ -1449,185 +1562,65 @@ const VendorDashboard: React.FC<Props> = ({
             const panelLabel = isActiveView
               ? "Active Openings"
               : "My Job Postings";
+            let postBtnLabel = "+ Post";
+            if (atJobLimit)
+              postBtnLabel = plan === "free" ? "🔒 Subscribe" : "🔒 Upgrade";
             return (
-              <>
-                <DataTable<Job>
-                  key={postingSearch}
-                  columns={postingsColumns}
-                  data={tableData}
-                  keyExtractor={(j) => j.id}
-                  loading={jobsLoading}
-                  paginate
-                  titleExtra={
-                    <div className="matchdb-title-toolbar">
-                      <Input
-                        id="posting-search"
-                        className="matchdb-title-search"
-                        value={postingSearch}
-                        onChange={(e) => setPostingSearch(e.target.value)}
-                        placeholder="Search..."
-                      />
-                      <Button size="xs" onClick={() => setPostingSearch("")}>
-                        Reset
+              <DataTable<Job>
+                key={postingSearch}
+                columns={postingsColumns}
+                data={tableData}
+                keyExtractor={(j) => j.id}
+                loading={jobsLoading}
+                paginate
+                titleExtra={
+                  <div className="matchdb-title-toolbar">
+                    <Input
+                      id="posting-search"
+                      className="matchdb-title-search"
+                      value={postingSearch}
+                      onChange={(e) => setPostingSearch(e.target.value)}
+                      placeholder="Search..."
+                    />
+                    <Button size="xs" onClick={() => setPostingSearch("")}>
+                      Reset
+                    </Button>
+                    <span className="matchdb-title-count">
+                      {jobsLoading
+                        ? "..."
+                        : `${tableData.length}/${totalCount}`}
+                    </span>
+                    <Button size="xs" onClick={() => refetchJobs()}>
+                      ↻
+                    </Button>
+                    {onPostJob && (
+                      <Button
+                        variant="primary"
+                        size="xs"
+                        onClick={atJobLimit ? openPricingModal : onPostJob}
+                      >
+                        {postBtnLabel}
                       </Button>
-                      <span className="matchdb-title-count">
-                        {jobsLoading
-                          ? "..."
-                          : `${tableData.length}/${totalCount}`}
-                      </span>
-                      <Button size="xs" onClick={() => refetchJobs()}>
-                        ↻
-                      </Button>
-                      {onPostJob && (
-                        <Button
-                          variant="primary"
-                          size="xs"
-                          onClick={atJobLimit ? openPricingModal : onPostJob}
-                        >
-                          {atJobLimit
-                            ? plan === "free"
-                              ? "🔒 Subscribe"
-                              : "🔒 Upgrade"
-                            : "+ Post"}
-                        </Button>
-                      )}
-                    </div>
-                  }
-                  emptyMessage={
-                    isActiveView
-                      ? "No active job openings. Post a new job or reopen a closed one."
-                      : vendorJobs.length === 0
-                      ? 'No job postings yet. Click "+ Post New Job" to get started.'
-                      : "No postings match your search."
-                  }
-                  title={panelLabel}
-                  titleIcon={isActiveView ? "🔓" : "📋"}
-                  flashIds={jobsFlash.flashIds}
-                  deleteFlashIds={jobsFlash.deleteFlashIds}
-                />
-              </>
+                    )}
+                  </div>
+                }
+                emptyMessage={(() => {
+                  if (isActiveView)
+                    return "No active job openings. Post a new job or reopen a closed one.";
+                  if (vendorJobs.length === 0)
+                    return 'No job postings yet. Click "+ Post New Job" to get started.';
+                  return "No postings match your search.";
+                })()}
+                title={panelLabel}
+                titleIcon={isActiveView ? "🔓" : "📋"}
+                flashIds={jobsFlash.flashIds}
+                deleteFlashIds={jobsFlash.deleteFlashIds}
+              />
             );
           })()}
 
         {/* ── MATCHED CANDIDATES VIEW ── */}
-        {viewMode === "candidates" && (
-          <>
-            {plan === "free" && (
-              <div
-                className="matchdb-panel"
-                style={{ textAlign: "center", padding: "48px 24px" }}
-              >
-                <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
-                <h3
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 700,
-                    marginBottom: 8,
-                    color: "#333",
-                    margin: "0 0 8px",
-                  }}
-                >
-                  Subscription Required
-                </h3>
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "#666",
-                    maxWidth: 400,
-                    margin: "0 auto 20px",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  Viewing matched candidates requires an active subscription.
-                  Subscribe to the <strong>Basic</strong> plan ($22/mo) or
-                  higher to browse candidates and send pokes.
-                </p>
-                <Button variant="primary" onClick={openPricingModal}>
-                  View Subscription Plans →
-                </Button>
-              </div>
-            )}
-
-            {plan !== "free" && (
-              <>
-                <MatchDataTable
-                  title="Related Candidate Profiles"
-                  titleIcon="👥"
-                  titleExtra={
-                    <div className="matchdb-title-toolbar">
-                      <Select
-                        id="vendor-job-filter"
-                        className="matchdb-title-select"
-                        value={selectedJobId}
-                        onChange={(e) => setSelectedJobId(e.target.value)}
-                      >
-                        <option value="">All Openings</option>
-                        {activeJobs.map((job) => (
-                          <option key={job.id} value={job.id}>
-                            {job.title}
-                          </option>
-                        ))}
-                      </Select>
-                      <Input
-                        id="vendor-search"
-                        className="matchdb-title-search"
-                        value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
-                        placeholder="Search..."
-                      />
-                      <Button
-                        size="xs"
-                        onClick={() => {
-                          setSelectedJobId("");
-                          setSearchText("");
-                        }}
-                      >
-                        Reset
-                      </Button>
-                      <Button
-                        size="xs"
-                        onClick={() => {
-                          setCurrentPage(1);
-                          refetchJobs();
-                          setMatchArgs({
-                            job_id: selectedJobId || undefined,
-                            page: 1,
-                            limit: currentPageSize,
-                          });
-                        }}
-                      >
-                        ↻
-                      </Button>
-                    </div>
-                  }
-                  rows={rows}
-                  loading={matchesLoading}
-                  error={pokeError ? "An error occurred" : null}
-                  serverTotal={vendorCandidateMatchesTotal}
-                  serverPage={currentPage}
-                  serverPageSize={currentPageSize}
-                  onPageChange={handlePageChange}
-                  pokeLoading={pokeLoading}
-                  pokeSuccessMessage={pokeSuccessMessage}
-                  pokeError={pokeError ? "Failed to send poke" : null}
-                  isVendor={true}
-                  pokedRowIds={pokedRowIds}
-                  emailedRowIds={emailedRowIds}
-                  pokedAtMap={pokedAtMap}
-                  onPoke={handlePoke}
-                  onPokeEmail={handlePokeEmail}
-                  onRowClick={(row) =>
-                    setSelectedCandidate(row.rawData || null)
-                  }
-                  onDownload={handleDownloadCSV}
-                  downloadLabel="Download CSV"
-                  flashIds={candidatesFlash.flashIds}
-                  deleteFlashIds={candidatesFlash.deleteFlashIds}
-                />
-              </>
-            )}
-          </>
-        )}
+        {viewMode === "candidates" && renderCandidatesView()}
       </div>
 
       {/* Candidate detail modal */}

@@ -92,7 +92,7 @@ function generatePeriods(fin: ProjectFinancialData | null): PayPeriod[] {
     fin?.hoursWorked && fin.hoursWorked > 0 ? fin.hoursWorked / 12 : 80;
   // Slight realistic variation across months
   const variationPct = [
-    1.0, 0.92, 1.08, 1.02, 0.94, 1.06, 1.0, 0.92, 1.08, 1.0, 0.94, 1.04,
+    1, 0.92, 1.08, 1.02, 0.94, 1.06, 1, 0.92, 1.08, 1, 0.94, 1.04,
   ];
 
   const periods: PayPeriod[] = Array.from({ length: 12 }, (_, i) => {
@@ -142,6 +142,38 @@ interface Props {
   candidateId: string;
   candidateEmail: string;
   onSaved?: () => void;
+}
+
+// ─── Balance helpers ─────────────────────────────────────────────────────────
+
+function balanceClass(balance: number, threshold = 0.01): string {
+  if (balance > threshold) return "ppt-bal-pos";
+  if (balance < -threshold) return "ppt-bal-neg";
+  return "ppt-bal-zero";
+}
+
+function balanceDisplay(balance: number): string {
+  if (Math.abs(balance) < 0.01) return "✓";
+  if (balance > 0) return fmt(balance);
+  return `+${fmt(Math.abs(balance))}`;
+}
+
+function totalBalanceDisplay(balance: number): string {
+  if (Math.abs(balance) < 0.01) return "✓ Settled";
+  if (balance > 0) return fmt(balance);
+  return `Overpaid ${fmt(Math.abs(balance))}`;
+}
+
+function outstandingClass(balance: number): string {
+  if (balance > 0) return "ppt-ts-orange";
+  if (balance < 0) return "ppt-ts-red";
+  return "ppt-ts-green";
+}
+
+function outstandingDisplay(balance: number): string {
+  if (balance > 0) return fmtC(balance);
+  if (balance < 0) return `+${fmtC(Math.abs(balance))}`;
+  return "$0";
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -198,10 +230,7 @@ const ProjectPayTable: React.FC<Props> = ({
     () => states.find((s) => s.code === stateCode)?.taxPct ?? 0,
     [states, stateCode],
   );
-  const stateName = useMemo(
-    () => states.find((s) => s.code === stateCode)?.name ?? stateCode,
-    [states, stateCode],
-  );
+
 
   // ── Per-row computation ───────────────────────────────────────────────────
   const computeRow = useCallback(
@@ -298,7 +327,6 @@ const ProjectPayTable: React.FC<Props> = ({
     onSaved,
   ]);
 
-  const isActive = project.is_active;
   const paidPct =
     totals.net > 0 ? Math.min(100, (totals.amountPaid / totals.net) * 100) : 0;
 
@@ -310,8 +338,9 @@ const ProjectPayTable: React.FC<Props> = ({
           {editingSettings ? (
             <>
               <div className="ppt-sfield">
-                <label className="ppt-slabel">Bill Rate ($/hr)</label>
+                <label htmlFor="ppt-bill-rate" className="ppt-slabel">Bill Rate ($/hr)</label>
                 <input
+                  id="ppt-bill-rate"
                   type="number"
                   className="ppt-sinput ppt-sinput-rate"
                   value={billRate || ""}
@@ -322,8 +351,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 />
               </div>
               <div className="ppt-sfield">
-                <label className="ppt-slabel">Pay Rate ($/hr)</label>
+                <label htmlFor="ppt-pay-rate" className="ppt-slabel">Pay Rate ($/hr)</label>
                 <input
+                  id="ppt-pay-rate"
                   type="number"
                   className="ppt-sinput ppt-sinput-rate"
                   value={payRate || ""}
@@ -334,8 +364,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 />
               </div>
               <div className="ppt-sfield ppt-sfield-wide">
-                <label className="ppt-slabel">State (Work Location)</label>
+                <label htmlFor="ppt-state" className="ppt-slabel">State (Work Location)</label>
                 <select
+                  id="ppt-state"
                   className="ppt-sinput"
                   value={stateCode}
                   onChange={(e) => setStateCode(e.target.value)}
@@ -349,8 +380,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 </select>
               </div>
               <div className="ppt-sfield">
-                <label className="ppt-slabel">Withholding %</label>
+                <label htmlFor="ppt-withhold" className="ppt-slabel">Withholding %</label>
                 <input
+                  id="ppt-withhold"
                   type="number"
                   className="ppt-sinput"
                   value={cashPct || ""}
@@ -362,8 +394,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 />
               </div>
               <div className="ppt-sfield">
-                <label className="ppt-slabel">Project Start</label>
+                <label htmlFor="ppt-proj-start" className="ppt-slabel">Project Start</label>
                 <input
+                  id="ppt-proj-start"
                   type="date"
                   className="ppt-sinput"
                   value={projectStart}
@@ -371,8 +404,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 />
               </div>
               <div className="ppt-sfield">
-                <label className="ppt-slabel">Project End</label>
+                <label htmlFor="ppt-proj-end" className="ppt-slabel">Project End</label>
                 <input
+                  id="ppt-proj-end"
                   type="date"
                   className="ppt-sinput"
                   value={projectEnd}
@@ -479,8 +513,9 @@ const ProjectPayTable: React.FC<Props> = ({
       {/* ── Notes (only in edit mode) ─────────────────────────────────────── */}
       {editingSettings && (
         <div className="ppt-notes-bar">
-          <label className="ppt-slabel">Notes</label>
+          <label htmlFor="ppt-notes" className="ppt-slabel">Notes</label>
           <input
+            id="ppt-notes"
             type="text"
             className="ppt-notes-input"
             value={notes}
@@ -534,19 +569,9 @@ const ProjectPayTable: React.FC<Props> = ({
         <div className="ppt-ts-tile">
           <span className="ppt-ts-label">Outstanding</span>
           <span
-            className={`ppt-ts-value ${
-              totals.balance > 0
-                ? "ppt-ts-orange"
-                : totals.balance < 0
-                ? "ppt-ts-red"
-                : "ppt-ts-green"
-            }`}
+            className={`ppt-ts-value ${outstandingClass(totals.balance)}`}
           >
-            {totals.balance > 0
-              ? fmtC(totals.balance)
-              : totals.balance < 0
-              ? `+${fmtC(Math.abs(totals.balance))}`
-              : "$0"}
+            {outstandingDisplay(totals.balance)}
           </span>
         </div>
         <div className="ppt-ts-divider" />
@@ -599,7 +624,6 @@ const ProjectPayTable: React.FC<Props> = ({
           <tbody>
             {periods.map((period, idx) => {
               const r = computeRow(period);
-              const isFuture = r.net === 0 && period.hours === 0;
               return (
                 <tr
                   key={period.label}
@@ -669,19 +693,9 @@ const ProjectPayTable: React.FC<Props> = ({
 
                   {/* Balance */}
                   <td
-                    className={`ppt-td ppt-td-balance ${
-                      r.balance > 0.01
-                        ? "ppt-bal-pos"
-                        : r.balance < -0.01
-                        ? "ppt-bal-neg"
-                        : "ppt-bal-zero"
-                    }`}
+                    className={`ppt-td ppt-td-balance ${balanceClass(r.balance)}`}
                   >
-                    {Math.abs(r.balance) < 0.01
-                      ? "✓"
-                      : r.balance > 0
-                      ? fmt(r.balance)
-                      : `+${fmt(Math.abs(r.balance))}`}
+                    {balanceDisplay(r.balance)}
                   </td>
                 </tr>
               );
@@ -712,19 +726,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 {fmt(totals.amountPaid)}
               </td>
               <td
-                className={`ppt-tf ppt-tf-balance ${
-                  totals.balance > 0.01
-                    ? "ppt-bal-pos"
-                    : totals.balance < -0.01
-                    ? "ppt-bal-neg"
-                    : "ppt-bal-zero"
-                }`}
+                className={`ppt-tf ppt-tf-balance ${balanceClass(totals.balance)}`}
               >
-                {Math.abs(totals.balance) < 0.01
-                  ? "✓ Settled"
-                  : totals.balance > 0
-                  ? fmt(totals.balance)
-                  : `Overpaid ${fmt(Math.abs(totals.balance))}`}
+                {totalBalanceDisplay(totals.balance)}
               </td>
             </tr>
           </tfoot>

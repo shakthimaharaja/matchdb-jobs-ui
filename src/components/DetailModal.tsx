@@ -38,10 +38,100 @@ interface DetailModalProps {
   forwardLoading?: boolean;
 }
 
-const fmtList = (arr?: string[]) => (arr && arr.length ? arr.join(", ") : "—");
+const fmtList = (arr?: string[]) => (arr?.length ? arr.join(", ") : "—");
 
 const fmtVal = (v: any) =>
   v !== undefined && v !== null && v !== "" ? String(v) : "—";
+
+function openPdfPreview(
+  type: "job" | "candidate",
+  data: Record<string, any>,
+  matchPercentage?: number,
+) {
+  const isCandidate = type === "candidate";
+  const title = isCandidate
+    ? `Candidate Profile – ${data.name || ""}`
+    : `Job Details – ${data.title || ""}`;
+
+  const rows = isCandidate
+    ? [
+        ["Name", fmtVal(data.name)],
+        ["Email", fmtVal(data.email)],
+        ["Phone", fmtVal(data.phone)],
+        ["Location", fmtVal(data.location)],
+        ["Current Role", fmtVal(data.current_role)],
+        ["Current Company", fmtVal(data.current_company)],
+        ["Experience", `${fmtVal(data.experience_years)} yrs`],
+        ["Preferred Type", fmtVal(data.preferred_job_type)],
+        [
+          "Expected Rate",
+          data.expected_hourly_rate ? `$${data.expected_hourly_rate}/hr` : "—",
+        ],
+        ["Skills", fmtList(data.skills)],
+        ["Summary", fmtVal(data.resume_summary)],
+        ["Experience Detail", fmtVal(data.resume_experience)],
+        ["Education", fmtVal(data.resume_education)],
+        ["Achievements", fmtVal(data.resume_achievements)],
+        ["Bio", fmtVal(data.bio)],
+        ...(matchPercentage === undefined
+          ? []
+          : [["Match %", `${matchPercentage}%`]]),
+      ]
+    : [
+        ["Title", fmtVal(data.title)],
+        ["Description", fmtVal(data.description)],
+        ["Location", fmtVal(data.location)],
+        ["Job Type", fmtVal(data.job_type)],
+        ["Sub Type", fmtVal(data.job_sub_type)],
+        ["Work Mode", fmtVal(data.work_mode)],
+        ["Pay/Hr", data.pay_per_hour ? `$${data.pay_per_hour}` : "—"],
+        [
+          "Salary Range",
+          data.salary_min || data.salary_max
+            ? `$${data.salary_min || "?"} – $${data.salary_max || "?"}`
+            : "—",
+        ],
+        ["Experience Required", `${fmtVal(data.experience_required)} yrs`],
+        ["Skills Required", fmtList(data.skills_required)],
+        ["Recruiter", fmtVal(data.recruiter_name)],
+        ["Recruiter Phone", fmtVal(data.recruiter_phone)],
+        ["Vendor Email", fmtVal(data.vendor_email)],
+        ...(matchPercentage === undefined
+          ? []
+          : [["Match %", `${matchPercentage}%`]]),
+      ];
+
+  const tableRows = rows
+    .map(
+      ([label, value]) => `
+    <tr>
+      <td style="font-weight:bold;padding:5px 10px;border:1px solid #ccc;background:#f5f5f5;width:180px;vertical-align:top;">${label}</td>
+      <td style="padding:5px 10px;border:1px solid #ccc;white-space:pre-wrap;">${value}</td>
+    </tr>`,
+    )
+    .join("");
+
+  const htmlContent = `<!DOCTYPE html>
+<html>
+<head><title>${title}</title>
+<style>
+body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+h1 { font-size: 16px; color: #235a81; border-bottom: 2px solid #235a81; padding-bottom: 6px; }
+table { border-collapse: collapse; width: 100%; }
+@media print { button { display: none; } }
+</style>
+</head>
+<body>
+<h1>${title}</h1>
+<table>${tableRows}</table>
+<br/>
+<button onclick="window.print()" style="padding:6px 14px;background:#235a81;color:#fff;border:none;cursor:pointer;font-size:12px;">Print / Save as PDF</button>
+</body></html>`;
+  const blob = new Blob([htmlContent], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  globalThis.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
 
 const DetailModal: React.FC<DetailModalProps> = ({
   open,
@@ -94,112 +184,294 @@ const DetailModal: React.FC<DetailModalProps> = ({
     setForwardNote("");
   };
 
-  const handleDownloadPDF = () => {
-    const win = window.open("", "_blank");
-    if (!win) return;
+  let matchTier = "low";
+  if (matchPercentage !== undefined) {
+    if (matchPercentage >= 75) matchTier = "high";
+    else if (matchPercentage >= 45) matchTier = "mid";
+  }
 
-    const isCandidate = type === "candidate";
-    const title = isCandidate
-      ? `Candidate Profile – ${data.name || ""}`
-      : `Job Details – ${data.title || ""}`;
+  function renderCandidateBody() {
+    if (!data) return null;
+    return (
+      <>
+        <section className="detail-section">
+          <h3>Personal Info</h3>
+          <div className="detail-grid">
+            <Row label="Name" value={data.name} />
+            <Row label="Email" value={data.email} />
+            <Row label="Phone" value={data.phone} />
+            <Row label="Location" value={data.location} />
+          </div>
+        </section>
+        <section className="detail-section">
+          <h3>Professional Details</h3>
+          <div className="detail-grid">
+            <Row label="Current Role" value={data.current_role} />
+            <Row label="Company" value={data.current_company} />
+            <Row
+              label="Experience"
+              value={`${data.experience_years || 0} yrs`}
+            />
+            <Row label="Preferred Type" value={data.preferred_job_type} />
+            <Row
+              label="Expected Rate"
+              value={
+                data.expected_hourly_rate
+                  ? `$${data.expected_hourly_rate}/hr`
+                  : undefined
+              }
+            />
+          </div>
+        </section>
+        {data.skills && data.skills.length > 0 && (
+          <section className="detail-section">
+            <h3>Extracted Skills</h3>
+            <div className="detail-tags">
+              {data.skills.map((s: string) => (
+                <span key={s} className="detail-tag">
+                  {s}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+        {(data.resume_summary ||
+          data.resume_experience ||
+          data.resume_education ||
+          data.resume_achievements) && (
+          <section className="detail-section">
+            <h3>Resume</h3>
+            {data.resume_summary && (
+              <Block label="Summary" value={data.resume_summary} />
+            )}
+            {data.resume_experience && (
+              <Block label="Work Experience" value={data.resume_experience} />
+            )}
+            {data.resume_education && (
+              <Block label="Education" value={data.resume_education} />
+            )}
+            {data.resume_achievements && (
+              <Block
+                label="Certifications & Achievements"
+                value={data.resume_achievements}
+              />
+            )}
+          </section>
+        )}
+        {data.bio && (
+          <section className="detail-section">
+            <h3>Bio</h3>
+            <p className="detail-text">{data.bio}</p>
+          </section>
+        )}
+      </>
+    );
+  }
 
-    const rows = isCandidate
-      ? [
-          ["Name", fmtVal(data.name)],
-          ["Email", fmtVal(data.email)],
-          ["Phone", fmtVal(data.phone)],
-          ["Location", fmtVal(data.location)],
-          ["Current Role", fmtVal(data.current_role)],
-          ["Current Company", fmtVal(data.current_company)],
-          ["Experience", `${fmtVal(data.experience_years)} yrs`],
-          ["Preferred Type", fmtVal(data.preferred_job_type)],
-          [
-            "Expected Rate",
-            data.expected_hourly_rate
-              ? `$${data.expected_hourly_rate}/hr`
-              : "—",
-          ],
-          ["Skills", fmtList(data.skills)],
-          ["Summary", fmtVal(data.resume_summary)],
-          ["Experience Detail", fmtVal(data.resume_experience)],
-          ["Education", fmtVal(data.resume_education)],
-          ["Achievements", fmtVal(data.resume_achievements)],
-          ["Bio", fmtVal(data.bio)],
-          ...(matchPercentage !== undefined
-            ? [["Match %", `${matchPercentage}%`]]
-            : []),
-        ]
-      : [
-          ["Title", fmtVal(data.title)],
-          ["Description", fmtVal(data.description)],
-          ["Location", fmtVal(data.location)],
-          ["Job Type", fmtVal(data.job_type)],
-          ["Sub Type", fmtVal(data.job_sub_type)],
-          ["Work Mode", fmtVal(data.work_mode)],
-          ["Pay/Hr", data.pay_per_hour ? `$${data.pay_per_hour}` : "—"],
-          [
-            "Salary Range",
-            data.salary_min || data.salary_max
-              ? `$${data.salary_min || "?"} – $${data.salary_max || "?"}`
-              : "—",
-          ],
-          ["Experience Required", `${fmtVal(data.experience_required)} yrs`],
-          ["Skills Required", fmtList(data.skills_required)],
-          ["Recruiter", fmtVal(data.recruiter_name)],
-          ["Recruiter Phone", fmtVal(data.recruiter_phone)],
-          ["Vendor Email", fmtVal(data.vendor_email)],
-          ...(matchPercentage !== undefined
-            ? [["Match %", `${matchPercentage}%`]]
-            : []),
-        ];
+  function renderJobBody() {
+    if (!data) return null;
+    return (
+      <>
+        <section className="detail-section">
+          <h3>{data.title}</h3>
+          <div className="detail-grid">
+            <Row label="Job Type" value={data.job_type} />
+            <Row label="Sub Type" value={data.job_sub_type} />
+            <Row label="Work Mode" value={data.work_mode} />
+            <Row label="Location" value={data.location} />
+            <Row
+              label="Pay/Hr"
+              value={data.pay_per_hour ? `$${data.pay_per_hour}` : undefined}
+            />
+            <Row
+              label="Salary"
+              value={
+                data.salary_min || data.salary_max
+                  ? `$${data.salary_min || "?"} – $${data.salary_max || "?"}`
+                  : undefined
+              }
+            />
+            <Row
+              label="Exp Required"
+              value={`${data.experience_required || 0} yrs`}
+            />
+            <Row label="Recruiter" value={data.recruiter_name} />
+            <Row label="Recruiter Ph" value={data.recruiter_phone} />
+            <Row label="Vendor Email" value={data.vendor_email} />
+          </div>
+        </section>
+        {data.description && (
+          <section className="detail-section">
+            <h3>Description</h3>
+            <p className="detail-text">{data.description}</p>
+          </section>
+        )}
+        {data.skills_required && data.skills_required.length > 0 && (
+          <section className="detail-section">
+            <h3>Skills Required</h3>
+            <div className="detail-tags">
+              {data.skills_required.map((s: string) => (
+                <span key={s} className="detail-tag">
+                  {s}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+      </>
+    );
+  }
 
-    const tableRows = rows
-      .map(
-        ([label, value]) => `
-      <tr>
-        <td style="font-weight:bold;padding:5px 10px;border:1px solid #ccc;background:#f5f5f5;width:180px;vertical-align:top;">${label}</td>
-        <td style="padding:5px 10px;border:1px solid #ccc;white-space:pre-wrap;">${value}</td>
-      </tr>`,
-      )
-      .join("");
+  function renderFooter() {
+    return (
+      <div className="detail-modal-footer">
+        {isCandidate && (
+          <Button
+            variant="download"
+            className="detail-btn detail-btn-pdf"
+            onClick={() => openPdfPreview(type, data!, matchPercentage)}
+          >
+            ⬇ Download PDF
+          </Button>
+        )}
 
-    win.document.write(`<!DOCTYPE html>
-<html>
-<head><title>${title}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
-  h1 { font-size: 16px; color: #235a81; border-bottom: 2px solid #235a81; padding-bottom: 6px; }
-  table { border-collapse: collapse; width: 100%; }
-  @media print { button { display: none; } }
-</style>
-</head>
-<body>
-<h1>${title}</h1>
-<table>${tableRows}</table>
-<br/>
-<button onclick="window.print()" style="padding:6px 14px;background:#235a81;color:#fff;border:none;cursor:pointer;font-size:12px;">Print / Save as PDF</button>
-</body></html>`);
-    win.document.close();
-  };
+        {/* ── Job modal: "Forward Candidate to Vendor" ── */}
+        {canForwardCandidate && !showSendPanel && (
+          <Button
+            variant="primary"
+            className="detail-btn detail-btn-send"
+            onClick={() => setShowSendPanel(true)}
+            title="Select one of your company candidates to forward to this job's vendor"
+          >
+            📤 Forward Candidate
+          </Button>
+        )}
+
+        {canForwardCandidate && showSendPanel && (
+          <div className="detail-send-panel">
+            {hasCandidates ? (
+              <>
+                <Select
+                  className="detail-send-select"
+                  value={selectedCandidate}
+                  onChange={(e) => setSelectedCandidate(e.target.value)}
+                >
+                  <option value="">— Pick your candidate —</option>
+                  {companyCandidates.map((c) => (
+                    <option key={c.candidate_email} value={c.candidate_email}>
+                      {c.candidate_name
+                        ? `${c.candidate_name} (${c.candidate_email})`
+                        : c.candidate_email}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  className="detail-send-note"
+                  placeholder="Note to vendor…"
+                  value={forwardNote}
+                  onChange={(e) => setForwardNote(e.target.value)}
+                />
+                <Button
+                  variant="primary"
+                  className="detail-btn detail-btn-pdf"
+                  disabled={!selectedCandidate || forwardLoading}
+                  onClick={handleForwardCandidate}
+                >
+                  {forwardLoading ? "Sending…" : "→ Forward"}
+                </Button>
+              </>
+            ) : (
+              <span style={{ fontSize: 11, color: "#bb3333", fontWeight: 600 }}>
+                No candidates in your roster yet — add them in &quot;Company
+                Candidates&quot; first.
+              </span>
+            )}
+            <Button
+              variant="close"
+              className="detail-btn detail-btn-close"
+              onClick={closeSendPanel}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+
+        {/* ── Candidate modal: "Forward to Job Opening" ── */}
+        {canForwardToJob && !showSendPanel && (
+          <Button
+            variant="primary"
+            className="detail-btn detail-btn-send"
+            onClick={() => setShowSendPanel(true)}
+            title="Forward this candidate to a job opening's vendor"
+          >
+            📤 Forward to Job
+          </Button>
+        )}
+
+        {canForwardToJob && showSendPanel && (
+          <div className="detail-send-panel">
+            {hasJobs ? (
+              <>
+                <Select
+                  className="detail-send-select"
+                  value={selectedJob}
+                  onChange={(e) => setSelectedJob(e.target.value)}
+                  style={{ minWidth: 260 }}
+                >
+                  <option value="">— Pick a job opening —</option>
+                  {forwardableJobs.map((j) => (
+                    <option key={j.id} value={j.id}>
+                      {j.title} ({j.vendor_email})
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  className="detail-send-note"
+                  placeholder="Note to vendor…"
+                  value={forwardNote}
+                  onChange={(e) => setForwardNote(e.target.value)}
+                />
+                <Button
+                  variant="primary"
+                  className="detail-btn detail-btn-pdf"
+                  disabled={!selectedJob || forwardLoading}
+                  onClick={handleForwardToJob}
+                >
+                  {forwardLoading ? "Sending…" : "→ Forward"}
+                </Button>
+              </>
+            ) : (
+              <span style={{ fontSize: 11, color: "#bb3333", fontWeight: 600 }}>
+                No job openings loaded to forward to.
+              </span>
+            )}
+            <Button
+              variant="close"
+              className="detail-btn detail-btn-close"
+              onClick={closeSendPanel}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+
+        <Button className="detail-btn detail-btn-close" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="detail-modal-overlay" onClick={onClose}>
-      <div className="detail-modal" onClick={(e) => e.stopPropagation()}>
-        {/* Title bar */}
+    <dialog open className="detail-modal-overlay">
+      <div className="rm-backdrop" role="none" onClick={onClose} />
+      <div className="detail-modal">
         <div className="detail-modal-titlebar">
           <span className="detail-modal-title">
             {isCandidate ? "👤 Candidate Profile" : "💼 Job Details"}
           </span>
           {matchPercentage !== undefined && (
-            <span
-              className={`detail-modal-match ${
-                matchPercentage >= 75
-                  ? "high"
-                  : matchPercentage >= 45
-                  ? "mid"
-                  : "low"
-              }`}
-            >
+            <span className={`detail-modal-match ${matchTier}`}>
               Match: {matchPercentage}%
             </span>
           )}
@@ -212,283 +484,12 @@ const DetailModal: React.FC<DetailModalProps> = ({
             ✕
           </Button>
         </div>
-
-        {/* Content */}
         <div className="detail-modal-body">
-          {isCandidate ? (
-            <>
-              <section className="detail-section">
-                <h3>Personal Info</h3>
-                <div className="detail-grid">
-                  <Row label="Name" value={data.name} />
-                  <Row label="Email" value={data.email} />
-                  <Row label="Phone" value={data.phone} />
-                  <Row label="Location" value={data.location} />
-                </div>
-              </section>
-              <section className="detail-section">
-                <h3>Professional Details</h3>
-                <div className="detail-grid">
-                  <Row label="Current Role" value={data.current_role} />
-                  <Row label="Company" value={data.current_company} />
-                  <Row
-                    label="Experience"
-                    value={`${data.experience_years || 0} yrs`}
-                  />
-                  <Row label="Preferred Type" value={data.preferred_job_type} />
-                  <Row
-                    label="Expected Rate"
-                    value={
-                      data.expected_hourly_rate
-                        ? `$${data.expected_hourly_rate}/hr`
-                        : undefined
-                    }
-                  />
-                </div>
-              </section>
-              {data.skills && data.skills.length > 0 && (
-                <section className="detail-section">
-                  <h3>Extracted Skills</h3>
-                  <div className="detail-tags">
-                    {data.skills.map((s: string) => (
-                      <span key={s} className="detail-tag">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </section>
-              )}
-              {(data.resume_summary ||
-                data.resume_experience ||
-                data.resume_education ||
-                data.resume_achievements) && (
-                <section className="detail-section">
-                  <h3>Resume</h3>
-                  {data.resume_summary && (
-                    <Block label="Summary" value={data.resume_summary} />
-                  )}
-                  {data.resume_experience && (
-                    <Block
-                      label="Work Experience"
-                      value={data.resume_experience}
-                    />
-                  )}
-                  {data.resume_education && (
-                    <Block label="Education" value={data.resume_education} />
-                  )}
-                  {data.resume_achievements && (
-                    <Block
-                      label="Certifications & Achievements"
-                      value={data.resume_achievements}
-                    />
-                  )}
-                </section>
-              )}
-              {data.bio && (
-                <section className="detail-section">
-                  <h3>Bio</h3>
-                  <p className="detail-text">{data.bio}</p>
-                </section>
-              )}
-            </>
-          ) : (
-            <>
-              <section className="detail-section">
-                <h3>{data.title}</h3>
-                <div className="detail-grid">
-                  <Row label="Job Type" value={data.job_type} />
-                  <Row label="Sub Type" value={data.job_sub_type} />
-                  <Row label="Work Mode" value={data.work_mode} />
-                  <Row label="Location" value={data.location} />
-                  <Row
-                    label="Pay/Hr"
-                    value={
-                      data.pay_per_hour ? `$${data.pay_per_hour}` : undefined
-                    }
-                  />
-                  <Row
-                    label="Salary"
-                    value={
-                      data.salary_min || data.salary_max
-                        ? `$${data.salary_min || "?"} – $${
-                            data.salary_max || "?"
-                          }`
-                        : undefined
-                    }
-                  />
-                  <Row
-                    label="Exp Required"
-                    value={`${data.experience_required || 0} yrs`}
-                  />
-                  <Row label="Recruiter" value={data.recruiter_name} />
-                  <Row label="Recruiter Ph" value={data.recruiter_phone} />
-                  <Row label="Vendor Email" value={data.vendor_email} />
-                </div>
-              </section>
-              {data.description && (
-                <section className="detail-section">
-                  <h3>Description</h3>
-                  <p className="detail-text">{data.description}</p>
-                </section>
-              )}
-              {data.skills_required && data.skills_required.length > 0 && (
-                <section className="detail-section">
-                  <h3>Skills Required</h3>
-                  <div className="detail-tags">
-                    {data.skills_required.map((s: string) => (
-                      <span key={s} className="detail-tag">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </section>
-              )}
-            </>
-          )}
+          {isCandidate ? renderCandidateBody() : renderJobBody()}
         </div>
-
-        {/* Footer actions */}
-        <div className="detail-modal-footer">
-          {isCandidate && (
-            <Button
-              variant="download"
-              className="detail-btn detail-btn-pdf"
-              onClick={handleDownloadPDF}
-            >
-              ⬇ Download PDF
-            </Button>
-          )}
-
-          {/* ── Job modal: "Forward Candidate to Vendor" ── */}
-          {canForwardCandidate && !showSendPanel && (
-            <Button
-              variant="primary"
-              className="detail-btn detail-btn-send"
-              onClick={() => setShowSendPanel(true)}
-              title="Select one of your company candidates to forward to this job's vendor"
-            >
-              📤 Forward Candidate
-            </Button>
-          )}
-
-          {canForwardCandidate && showSendPanel && (
-            <div className="detail-send-panel">
-              {hasCandidates ? (
-                <>
-                  <Select
-                    className="detail-send-select"
-                    value={selectedCandidate}
-                    onChange={(e) => setSelectedCandidate(e.target.value)}
-                  >
-                    <option value="">— Pick your candidate —</option>
-                    {companyCandidates!.map((c) => (
-                      <option key={c.candidate_email} value={c.candidate_email}>
-                        {c.candidate_name
-                          ? `${c.candidate_name} (${c.candidate_email})`
-                          : c.candidate_email}
-                      </option>
-                    ))}
-                  </Select>
-                  <Input
-                    className="detail-send-note"
-                    placeholder="Note to vendor…"
-                    value={forwardNote}
-                    onChange={(e) => setForwardNote(e.target.value)}
-                  />
-                  <Button
-                    variant="primary"
-                    className="detail-btn detail-btn-pdf"
-                    disabled={!selectedCandidate || forwardLoading}
-                    onClick={handleForwardCandidate}
-                  >
-                    {forwardLoading ? "Sending…" : "→ Forward"}
-                  </Button>
-                </>
-              ) : (
-                <span
-                  style={{ fontSize: 11, color: "#bb3333", fontWeight: 600 }}
-                >
-                  No candidates in your roster yet — add them in &quot;Company
-                  Candidates&quot; first.
-                </span>
-              )}
-              <Button
-                variant="close"
-                className="detail-btn detail-btn-close"
-                onClick={closeSendPanel}
-              >
-                Cancel
-              </Button>
-            </div>
-          )}
-
-          {/* ── Candidate modal: "Forward to Job Opening" ── */}
-          {canForwardToJob && !showSendPanel && (
-            <Button
-              variant="primary"
-              className="detail-btn detail-btn-send"
-              onClick={() => setShowSendPanel(true)}
-              title="Forward this candidate to a job opening's vendor"
-            >
-              📤 Forward to Job
-            </Button>
-          )}
-
-          {canForwardToJob && showSendPanel && (
-            <div className="detail-send-panel">
-              {hasJobs ? (
-                <>
-                  <Select
-                    className="detail-send-select"
-                    value={selectedJob}
-                    onChange={(e) => setSelectedJob(e.target.value)}
-                    style={{ minWidth: 260 }}
-                  >
-                    <option value="">— Pick a job opening —</option>
-                    {forwardableJobs!.map((j) => (
-                      <option key={j.id} value={j.id}>
-                        {j.title} ({j.vendor_email})
-                      </option>
-                    ))}
-                  </Select>
-                  <Input
-                    className="detail-send-note"
-                    placeholder="Note to vendor…"
-                    value={forwardNote}
-                    onChange={(e) => setForwardNote(e.target.value)}
-                  />
-                  <Button
-                    variant="primary"
-                    className="detail-btn detail-btn-pdf"
-                    disabled={!selectedJob || forwardLoading}
-                    onClick={handleForwardToJob}
-                  >
-                    {forwardLoading ? "Sending…" : "→ Forward"}
-                  </Button>
-                </>
-              ) : (
-                <span
-                  style={{ fontSize: 11, color: "#bb3333", fontWeight: 600 }}
-                >
-                  No job openings loaded to forward to.
-                </span>
-              )}
-              <Button
-                variant="close"
-                className="detail-btn detail-btn-close"
-                onClick={closeSendPanel}
-              >
-                Cancel
-              </Button>
-            </div>
-          )}
-
-          <Button className="detail-btn detail-btn-close" onClick={onClose}>
-            Close
-          </Button>
-        </div>
+        {renderFooter()}
       </div>
-    </div>
+    </dialog>
   );
 };
 
