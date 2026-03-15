@@ -122,7 +122,7 @@ interface Props {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-const TimesheetView: React.FC<Props> = ({ candidateName = "", userEmail = "" }) => {
+const TimesheetView: React.FC<Props> = ({ candidateName = "", userEmail: _userEmail = "" }) => {
   // Current week
   const currentWeekStart = useMemo(() => getWeekStart(), []);
   const weekDates = useMemo(() => buildWeekDates(currentWeekStart), [currentWeekStart]);
@@ -333,7 +333,7 @@ const TimesheetView: React.FC<Props> = ({ candidateName = "", userEmail = "" }) 
 
         {isCurrentWeekAlreadySubmitted ? (
           <div style={{ padding: "16px 12px", fontSize: 13, color: "var(--w97-text-secondary)" }}>
-            This week's timesheet is <strong>{currentWeekSheet.status}</strong>
+            This week&apos;s timesheet is <strong>{currentWeekSheet.status}</strong>
             {currentWeekSheet.approvedAt && ` on ${fmtDate(currentWeekSheet.approvedAt)}`}.
             {(currentWeekSheet.status === "submitted" || currentWeekSheet.status === "approved") && (
               <Button
@@ -514,7 +514,7 @@ const TimesheetView: React.FC<Props> = ({ candidateName = "", userEmail = "" }) 
               </p>
               <p style={{ margin: "0 0 14px", fontSize: 12, color: "#555" }}>
                 Total: <strong>{totalHours.toFixed(1)} hours</strong>. Once submitted, your employer
-                will review and approve it. You won't be able to edit it after submission.
+                will review and approve it. You won&apos;t be able to edit it after submission.
               </p>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <Button onClick={() => setSubmitConfirm(false)}>Cancel</Button>
