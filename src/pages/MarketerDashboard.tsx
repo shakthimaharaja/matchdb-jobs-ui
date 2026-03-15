@@ -4103,8 +4103,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                               {p.job_sub_type
                                 ? ` · ${p.job_sub_type.toUpperCase()}`
                                 : ""}
-                              {p.financials?.stateCode
-                                ? ` · ${p.financials.stateCode}`
+                              {p.vendor_email
+                                ? ` · ${p.vendor_email.split("@")[1]?.split(".")[0] || p.vendor_email}`
                                 : ""}
                             </div>
                           </>
@@ -4698,8 +4698,8 @@ const MarketerDashboard: React.FC<Props> = () => {
               {activeProject.job_sub_type
                 ? ` · ${activeProject.job_sub_type.toUpperCase()}`
                 : ""}
-              {activeProject.financials?.stateCode
-                ? ` · ${activeProject.financials.stateCode}`
+              {activeProject.vendor_email
+                ? ` · ${activeProject.vendor_email.split("@")[1]?.split(".")[0] || activeProject.vendor_email}`
                 : ""}
             </span>
             <span style={{ opacity: 0.4 }}>|</span>
