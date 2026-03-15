@@ -7,7 +7,7 @@ export interface MatchRow {
   name: string;
   company: string;
   email: string;
-  phone: string;
+  phone?: string;
   role: string;
   type: string;
   payPerHour: string;
@@ -262,6 +262,16 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
             {alreadyEmailed ? "✓" : "✉"}
           </button>
         )}
+        <button
+          className="matchdb-btn matchdb-btn-call"
+          type="button"
+          disabled
+          title="Call feature — coming soon"
+          aria-label="Call (coming soon)"
+          style={{ flex: 1, opacity: 0.5, cursor: "not-allowed" }}
+        >
+          📞
+        </button>
       </div>
     );
   }
@@ -325,7 +335,19 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
           "aria-sort": ariaSort("name"),
         },
         skeletonWidth: 100,
-        render: (row: MatchRow) => <>{row.name}</>,
+        render: (row: MatchRow) =>
+          onRowClick ? (
+            <button
+              type="button"
+              className="matchdb-link-btn"
+              onClick={() => onRowClick(row)}
+              title={`View details for ${row.name}`}
+            >
+              {row.name}
+            </button>
+          ) : (
+            <>{row.name}</>
+          ),
         tooltip: (row: MatchRow) => row.name,
       },
       {
@@ -360,16 +382,6 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
           </a>
         ),
         tooltip: (row: MatchRow) => row.email,
-      },
-      {
-        key: "phone",
-        header: "Ph No",
-        width: "9%",
-        className: "col-phone",
-        skeletonWidth: 80,
-        thProps: { title: "Contact phone" },
-        render: (row: MatchRow) => <>{row.phone}</>,
-        tooltip: (row: MatchRow) => row.phone,
       },
       {
         key: "role",

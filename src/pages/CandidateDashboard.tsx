@@ -729,7 +729,6 @@ const CandidateDashboard: React.FC<Props> = ({
       name: job.recruiter_name || "Recruiter",
       company: companyFromEmail(job.vendor_email),
       email: job.vendor_email || "-",
-      phone: job.recruiter_phone || "-",
       role: job.title,
       type: job.job_sub_type
         ? `${job.job_type || "-"} (${job.job_sub_type.toUpperCase()})`
@@ -854,7 +853,16 @@ const CandidateDashboard: React.FC<Props> = ({
           "aria-sort": ariaSort("name"),
         },
         skeletonWidth: 100,
-        render: (row: MatchRow) => <>{row.name}</>,
+        render: (row: MatchRow) => (
+          <button
+            type="button"
+            className="matchdb-link-btn"
+            onClick={() => onRowClick(row)}
+            title={`View details for ${row.name}`}
+          >
+            {row.name}
+          </button>
+        ),
         tooltip: (row: MatchRow) => row.name,
       },
       {
@@ -886,16 +894,6 @@ const CandidateDashboard: React.FC<Props> = ({
           </a>
         ),
         tooltip: (row: MatchRow) => row.email,
-      },
-      {
-        key: "phone",
-        header: "Ph No",
-        width: "9%",
-        className: "col-phone",
-        skeletonWidth: 80,
-        thProps: { title: "Contact phone" },
-        render: (row: MatchRow) => <>{row.phone}</>,
-        tooltip: (row: MatchRow) => row.phone,
       },
       {
         key: "role",
@@ -1143,7 +1141,6 @@ const CandidateDashboard: React.FC<Props> = ({
       "Name",
       "Company",
       "Email",
-      "Phone",
       "Role",
       "Type",
       "Mode",
@@ -1157,7 +1154,6 @@ const CandidateDashboard: React.FC<Props> = ({
         r.name,
         r.company,
         r.email,
-        r.phone,
         r.role,
         r.type,
         r.workMode || "-",
