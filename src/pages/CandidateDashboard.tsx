@@ -156,12 +156,18 @@ const finCellValues = (fin: {
 ];
 
 /** Extracted to keep JSX nesting below 4 levels */
-const FinancialRow: React.FC<{ fin: Parameters<typeof finCellValues>[0] & { id: string } }> = ({ fin }) => (
+const FinancialRow: React.FC<{
+  fin: Parameters<typeof finCellValues>[0] & { id: string };
+}> = ({ fin }) => (
   <tr style={{ borderBottom: "1px solid var(--w97-border-light)" }}>
     {finCellValues(fin).map((v, i) => (
       <td
         key={`col-${i}-${v}`}
-        style={{ textAlign: "right", padding: "5px 8px", fontFamily: "monospace" }}
+        style={{
+          textAlign: "right",
+          padding: "5px 8px",
+          fontFamily: "monospace",
+        }}
       >
         {v}
       </td>
@@ -390,13 +396,18 @@ const CandidateDashboard: React.FC<Props> = ({
 
   // Interview invites — fetched only when interviews view is active
   const { data: interviewInvitesData, refetch: refetchInterviews } =
-    useGetInterviewInvitesReceivedQuery(undefined, { skip: activeView !== "interviews" });
-  const [respondToInvite, { isLoading: respondingInvite }] = useRespondToInterviewInviteMutation();
+    useGetInterviewInvitesReceivedQuery(undefined, {
+      skip: activeView !== "interviews",
+    });
+  const [respondToInvite, { isLoading: respondingInvite }] =
+    useRespondToInterviewInviteMutation();
   const interviewInvites: InterviewInvite[] = interviewInvitesData?.data ?? [];
 
   // Respond modal state
   const [respondInviteId, setRespondInviteId] = useState<string | null>(null);
-  const [respondAction, setRespondAction] = useState<"accept" | "decline" | null>(null);
+  const [respondAction, setRespondAction] = useState<
+    "accept" | "decline" | null
+  >(null);
   const [respondNote, setRespondNote] = useState("");
 
   // My Detail — only fetched when the "my-detail" view is active
@@ -2938,19 +2949,28 @@ const CandidateDashboard: React.FC<Props> = ({
     const fmtProposed = (iso: string | null) =>
       iso
         ? new Date(iso).toLocaleString("en-US", {
-            month: "short", day: "numeric", year: "numeric",
-            hour: "2-digit", minute: "2-digit",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
           })
         : "TBD";
 
     const statusColor: Record<string, string> = {
-      pending: "#1565c0", accepted: "#2e7d32",
-      declined: "#c62828", cancelled: "#888",
+      pending: "#1565c0",
+      accepted: "#2e7d32",
+      declined: "#c62828",
+      cancelled: "#888",
     };
 
     const handleRespondConfirm = async () => {
       if (!respondInviteId || !respondAction) return;
-      await respondToInvite({ id: respondInviteId, action: respondAction, note: respondNote });
+      await respondToInvite({
+        id: respondInviteId,
+        action: respondAction,
+        note: respondNote,
+      });
       setRespondInviteId(null);
       setRespondAction(null);
       setRespondNote("");
@@ -2963,7 +2983,9 @@ const CandidateDashboard: React.FC<Props> = ({
         header: "From (Recruiter)",
         width: "14%",
         skeletonWidth: 110,
-        render: (r) => <span title={r.vendorEmail}>{r.vendorName || r.vendorEmail}</span>,
+        render: (r) => (
+          <span title={r.vendorEmail}>{r.vendorName || r.vendorEmail}</span>
+        ),
         tooltip: (r) => r.vendorEmail,
       },
       {
@@ -2987,7 +3009,10 @@ const CandidateDashboard: React.FC<Props> = ({
         skeletonWidth: 90,
         render: (r) =>
           r.status === "accepted" || r.status === "pending" ? (
-            <a href={r.meetLink} target="_blank" rel="noopener noreferrer"
+            <a
+              href={r.meetLink}
+              target="_blank"
+              rel="noopener noreferrer"
               style={{ color: "#1a73e8", textDecoration: "none", fontSize: 12 }}
             >
               Join Meet
@@ -3010,8 +3035,12 @@ const CandidateDashboard: React.FC<Props> = ({
         width: "9%",
         skeletonWidth: 70,
         render: (r) => (
-          <span className="matchdb-type-pill"
-            style={{ color: statusColor[r.status] ?? "#555", textTransform: "capitalize" }}
+          <span
+            className="matchdb-type-pill"
+            style={{
+              color: statusColor[r.status] ?? "#555",
+              textTransform: "capitalize",
+            }}
           >
             {r.status}
           </span>
@@ -3023,18 +3052,30 @@ const CandidateDashboard: React.FC<Props> = ({
         width: "13%",
         skeletonWidth: 100,
         render: (r) => {
-          if (r.status !== "pending") return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
+          if (r.status !== "pending")
+            return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
           return (
             <div style={{ display: "flex", gap: 4 }}>
-              <Button size="sm" variant="primary"
+              <Button
+                size="sm"
+                variant="primary"
                 disabled={respondingInvite}
-                onClick={() => { setRespondInviteId(r.id); setRespondAction("accept"); setRespondNote(""); }}
+                onClick={() => {
+                  setRespondInviteId(r.id);
+                  setRespondAction("accept");
+                  setRespondNote("");
+                }}
               >
                 Accept
               </Button>
-              <Button size="sm"
+              <Button
+                size="sm"
                 disabled={respondingInvite}
-                onClick={() => { setRespondInviteId(r.id); setRespondAction("decline"); setRespondNote(""); }}
+                onClick={() => {
+                  setRespondInviteId(r.id);
+                  setRespondAction("decline");
+                  setRespondNote("");
+                }}
               >
                 Decline
               </Button>
@@ -3050,35 +3091,66 @@ const CandidateDashboard: React.FC<Props> = ({
       <>
         {/* Respond confirm dialog */}
         {isRespondOpen && (
-          <div style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)",
-            zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <div className="matchdb-panel"
-              style={{ width: 360, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.35)",
+              zIndex: 1200,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              className="matchdb-panel"
+              style={{
+                width: 360,
+                padding: 20,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
             >
               <div style={{ fontWeight: 700, fontSize: 13 }}>
-                {respondAction === "accept" ? "Accept Interview Invite" : "Decline Interview Invite"}
+                {respondAction === "accept"
+                  ? "Accept Interview Invite"
+                  : "Decline Interview Invite"}
               </div>
               <textarea
                 rows={3}
-                placeholder={respondAction === "accept" ? "Optional note to the recruiter…" : "Reason for declining…"}
+                placeholder={
+                  respondAction === "accept"
+                    ? "Optional note to the recruiter…"
+                    : "Reason for declining…"
+                }
                 value={respondNote}
                 onChange={(e) => setRespondNote(e.target.value)}
                 style={{
-                  width: "100%", fontSize: 12, padding: "4px 6px",
-                  border: "1px solid var(--w97-border-dark)", resize: "vertical",
+                  width: "100%",
+                  fontSize: 12,
+                  padding: "4px 6px",
+                  border: "1px solid var(--w97-border-dark)",
+                  resize: "vertical",
                   fontFamily: "inherit",
                 }}
               />
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <Button size="sm"
-                  onClick={() => { setRespondInviteId(null); setRespondAction(null); }}
+              <div
+                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+              >
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setRespondInviteId(null);
+                    setRespondAction(null);
+                  }}
                   disabled={respondingInvite}
                 >
                   Cancel
                 </Button>
-                <Button size="sm" variant="primary"
+                <Button
+                  size="sm"
+                  variant="primary"
                   onClick={handleRespondConfirm}
                   disabled={respondingInvite}
                 >
@@ -3383,10 +3455,7 @@ const CandidateDashboard: React.FC<Props> = ({
 
         {/* Timesheets */}
         {activeView === "timesheets" && (
-          <TimesheetView
-            candidateName={profile?.name}
-            userEmail={userEmail}
-          />
+          <TimesheetView candidateName={profile?.name} userEmail={userEmail} />
         )}
 
         {/* Interviews view */}

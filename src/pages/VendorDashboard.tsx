@@ -158,7 +158,9 @@ const countBg = (n: number): string =>
   COUNT_BG_THRESHOLDS.find(([t]) => n >= t)?.[1] ?? "#fff5f5";
 
 /** Unwrap paginated-or-array API responses (reduces component cognitive complexity) */
-function unwrapPaginated<T>(data: T[] | { data: T[]; total: number } | undefined): [T[], number] {
+function unwrapPaginated<T>(
+  data: T[] | { data: T[]; total: number } | undefined,
+): [T[], number] {
   if (Array.isArray(data)) return [data, data.length];
   return [data?.data ?? [], data?.total ?? 0];
 }
@@ -203,12 +205,15 @@ const VendorDashboard: React.FC<Props> = ({
   ] = useSendPokeMutation();
   const [closeJobMutation] = useCloseJobMutation();
   const [reopenJobMutation] = useReopenJobMutation();
-  const [sendInterviewInvite, { isLoading: inviteSending }] = useSendInterviewInviteMutation();
-  const { data: invitesSentData, refetch: refetchInvites } = useGetInterviewInvitesSentQuery();
+  const [sendInterviewInvite, { isLoading: inviteSending }] =
+    useSendInterviewInviteMutation();
+  const { data: invitesSentData, refetch: refetchInvites } =
+    useGetInterviewInvitesSentQuery();
 
   // Derive flat arrays from paginated-or-array responses
   const [vendorJobs, vendorJobsTotal] = unwrapPaginated<Job>(jobsData);
-  const [vendorCandidateMatches, vendorCandidateMatchesTotal] = unwrapPaginated<CandidateProfileMatch>(matchesData);
+  const [vendorCandidateMatches, vendorCandidateMatchesTotal] =
+    unwrapPaginated<CandidateProfileMatch>(matchesData);
 
   const pokesSent: PokeRecord[] = pokesSentData;
   const pokesReceived: PokeRecord[] = pokesReceivedData;
@@ -881,7 +886,8 @@ const VendorDashboard: React.FC<Props> = ({
 
   // Set of candidate emails for which an invite has already been sent
   const invitedRowIds = useMemo(
-    () => new Set((invitesSentData?.data ?? []).map((inv) => inv.candidateEmail)),
+    () =>
+      new Set((invitesSentData?.data ?? []).map((inv) => inv.candidateEmail)),
     [invitesSentData],
   );
   const invitesSent: InterviewInvite[] = invitesSentData?.data ?? [];
@@ -1224,8 +1230,11 @@ const VendorDashboard: React.FC<Props> = ({
     const fmtProposed = (iso: string | null) =>
       iso
         ? new Date(iso).toLocaleString("en-US", {
-            month: "short", day: "numeric", year: "numeric",
-            hour: "2-digit", minute: "2-digit",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
           })
         : "TBD";
 
@@ -1242,7 +1251,11 @@ const VendorDashboard: React.FC<Props> = ({
         header: "Candidate",
         width: "16%",
         skeletonWidth: 110,
-        render: (r) => <span title={r.candidateEmail}>{r.candidateName || r.candidateEmail}</span>,
+        render: (r) => (
+          <span title={r.candidateEmail}>
+            {r.candidateName || r.candidateEmail}
+          </span>
+        ),
         tooltip: (r) => r.candidateEmail,
       },
       {
@@ -1265,7 +1278,10 @@ const VendorDashboard: React.FC<Props> = ({
         width: "14%",
         skeletonWidth: 110,
         render: (r) => (
-          <a href={r.meetLink} target="_blank" rel="noopener noreferrer"
+          <a
+            href={r.meetLink}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{ color: "#1a73e8", textDecoration: "none", fontSize: 12 }}
           >
             Join Meet
@@ -1278,8 +1294,12 @@ const VendorDashboard: React.FC<Props> = ({
         width: "9%",
         skeletonWidth: 70,
         render: (r) => (
-          <span className="matchdb-type-pill"
-            style={{ color: statusColor[r.status] ?? "#555", textTransform: "capitalize" }}
+          <span
+            className="matchdb-type-pill"
+            style={{
+              color: statusColor[r.status] ?? "#555",
+              textTransform: "capitalize",
+            }}
           >
             {r.status}
           </span>
@@ -1300,7 +1320,8 @@ const VendorDashboard: React.FC<Props> = ({
         skeletonWidth: 70,
         render: (r) =>
           new Date(r.createdAt).toLocaleDateString("en-US", {
-            month: "short", day: "numeric",
+            month: "short",
+            day: "numeric",
           }),
       },
     ];
@@ -1801,37 +1822,69 @@ const VendorDashboard: React.FC<Props> = ({
       {inviteRow && (
         <div
           style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
-            zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center",
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.4)",
+            zIndex: 1200,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           <div
             className="matchdb-panel"
-            style={{ width: 420, padding: 24, display: "flex", flexDirection: "column", gap: 14 }}
+            style={{
+              width: 420,
+              padding: 24,
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
           >
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>📞 Send Interview Invite</span>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span style={{ fontWeight: 700, fontSize: 14 }}>
+                📞 Send Interview Invite
+              </span>
               <button
                 type="button"
                 className="matchdb-btn"
                 style={{ padding: "2px 8px" }}
-                onClick={() => { setInviteRow(null); setInviteSentSuccess(false); }}
+                onClick={() => {
+                  setInviteRow(null);
+                  setInviteSentSuccess(false);
+                }}
               >
                 ✕
               </button>
             </div>
 
             {inviteSentSuccess ? (
-              <div style={{ textAlign: "center", padding: "20px 0", color: "#2e7d32", fontWeight: 600 }}>
-                ✓ Invite sent! A Google Meet link has been emailed to {inviteRow.pokeTargetName}.
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "20px 0",
+                  color: "#2e7d32",
+                  fontWeight: 600,
+                }}
+              >
+                ✓ Invite sent! A Google Meet link has been emailed to{" "}
+                {inviteRow.pokeTargetName}.
               </div>
             ) : (
               <>
                 {/* Candidate info */}
                 <div style={{ fontSize: 12, color: "#555" }}>
                   <strong>To:</strong> {inviteRow.pokeTargetName}{" "}
-                  <span style={{ color: "#888" }}>({inviteRow.pokeTargetEmail})</span>
+                  <span style={{ color: "#888" }}>
+                    ({inviteRow.pokeTargetEmail})
+                  </span>
                 </div>
 
                 {/* Position (read-only, from current job filter) */}
@@ -1842,25 +1895,42 @@ const VendorDashboard: React.FC<Props> = ({
                 )}
 
                 {/* Proposed date/time */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <label htmlFor="invite-proposed-at" style={{ fontSize: 12, fontWeight: 600 }}>Proposed Date & Time</label>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                >
+                  <label
+                    htmlFor="invite-proposed-at"
+                    style={{ fontSize: 12, fontWeight: 600 }}
+                  >
+                    Proposed Date & Time
+                  </label>
                   <input
                     id="invite-proposed-at"
                     type="datetime-local"
                     value={inviteProposedAt}
                     onChange={(e) => setInviteProposedAt(e.target.value)}
                     style={{
-                      fontSize: 12, padding: "4px 6px",
+                      fontSize: 12,
+                      padding: "4px 6px",
                       border: "1px solid var(--w97-border-dark)",
                       fontFamily: "inherit",
                     }}
                   />
-                  <span style={{ fontSize: 11, color: "#888" }}>Leave blank if TBD</span>
+                  <span style={{ fontSize: 11, color: "#888" }}>
+                    Leave blank if TBD
+                  </span>
                 </div>
 
                 {/* Message */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <label htmlFor="invite-message" style={{ fontSize: 12, fontWeight: 600 }}>Message (optional)</label>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                >
+                  <label
+                    htmlFor="invite-message"
+                    style={{ fontSize: 12, fontWeight: 600 }}
+                  >
+                    Message (optional)
+                  </label>
                   <textarea
                     id="invite-message"
                     rows={3}
@@ -1868,7 +1938,9 @@ const VendorDashboard: React.FC<Props> = ({
                     onChange={(e) => setInviteMessage(e.target.value)}
                     placeholder="e.g. Looking forward to connecting about the role…"
                     style={{
-                      fontSize: 12, padding: "4px 6px", resize: "vertical",
+                      fontSize: 12,
+                      padding: "4px 6px",
+                      resize: "vertical",
                       border: "1px solid var(--w97-border-dark)",
                       fontFamily: "inherit",
                     }}
@@ -1876,18 +1948,34 @@ const VendorDashboard: React.FC<Props> = ({
                 </div>
 
                 {/* Meet link notice */}
-                <div style={{
-                  background: "#e8f0fe", border: "1px solid #c5d5f5",
-                  borderRadius: 2, padding: "8px 12px", fontSize: 12, color: "#1a3e7a",
-                }}>
-                  🔗 A unique Google Meet link will be auto-generated and included in the email.
+                <div
+                  style={{
+                    background: "#e8f0fe",
+                    border: "1px solid #c5d5f5",
+                    borderRadius: 2,
+                    padding: "8px 12px",
+                    fontSize: 12,
+                    color: "#1a3e7a",
+                  }}
+                >
+                  🔗 A unique Google Meet link will be auto-generated and
+                  included in the email.
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    justifyContent: "flex-end",
+                  }}
+                >
                   <Button
                     size="sm"
-                    onClick={() => { setInviteRow(null); setInviteSentSuccess(false); }}
+                    onClick={() => {
+                      setInviteRow(null);
+                      setInviteSentSuccess(false);
+                    }}
                     disabled={inviteSending}
                   >
                     Cancel

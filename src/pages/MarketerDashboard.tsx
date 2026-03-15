@@ -544,11 +544,21 @@ const MarketerDashboard: React.FC<Props> = () => {
   const [approveNotes, setApproveNotes] = useState("");
   const [rejectNotes, setRejectNotes] = useState("");
   const [tsActionId, setTsActionId] = useState<string | null>(null);
-  const [tsActionType, setTsActionType] = useState<"approve" | "reject" | null>(null);
-  const { data: marketerTimesheetsData, isLoading: timesheetsLoading, refetch: refetchTimesheets } =
-    useGetMarketerTimesheetsQuery({ status: tsStatusFilter }, { skip: activeView !== "timesheets" });
-  const [approveTimesheet, { isLoading: approvingTs }] = useApproveTimesheetMutation();
-  const [rejectTimesheet, { isLoading: rejectingTs }] = useRejectTimesheetMutation();
+  const [tsActionType, setTsActionType] = useState<"approve" | "reject" | null>(
+    null,
+  );
+  const {
+    data: marketerTimesheetsData,
+    isLoading: timesheetsLoading,
+    refetch: refetchTimesheets,
+  } = useGetMarketerTimesheetsQuery(
+    { status: tsStatusFilter },
+    { skip: activeView !== "timesheets" },
+  );
+  const [approveTimesheet, { isLoading: approvingTs }] =
+    useApproveTimesheetMutation();
+  const [rejectTimesheet, { isLoading: rejectingTs }] =
+    useRejectTimesheetMutation();
   const marketerTimesheets: Timesheet[] = marketerTimesheetsData?.data ?? [];
 
   const jobs: MarketerJob[] = jobsData?.data ?? [];
@@ -3585,10 +3595,20 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderTimesheetsView() {
     const fmtWeek = (iso: string) => {
       const d = new Date(iso);
-      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+      return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      });
     };
     const fmtTs = (iso: string | null) =>
-      iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
+      iso
+        ? new Date(iso).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        : "—";
 
     const columns: DataTableColumn<Timesheet>[] = [
       {
@@ -3596,7 +3616,11 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Candidate",
         width: "14%",
         skeletonWidth: 100,
-        render: (r) => <span title={r.candidateEmail}>{r.candidateName || r.candidateEmail}</span>,
+        render: (r) => (
+          <span title={r.candidateEmail}>
+            {r.candidateName || r.candidateEmail}
+          </span>
+        ),
         tooltip: (r) => r.candidateEmail,
       },
       {
@@ -3635,7 +3659,10 @@ const MarketerDashboard: React.FC<Props> = () => {
           return (
             <span
               className="matchdb-type-pill"
-              style={{ color: colors[r.status] ?? "#555", textTransform: "capitalize" }}
+              style={{
+                color: colors[r.status] ?? "#555",
+                textTransform: "capitalize",
+              }}
             >
               {r.status}
             </span>
@@ -3670,7 +3697,8 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "14%",
         skeletonWidth: 100,
         render: (r) => {
-          if (r.status !== "submitted") return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
+          if (r.status !== "submitted")
+            return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
           return (
             <div style={{ display: "flex", gap: 4 }}>
               <Button
@@ -3724,16 +3752,29 @@ const MarketerDashboard: React.FC<Props> = () => {
         {isConfirmOpen && (
           <div
             style={{
-              position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)",
-              zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center",
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.35)",
+              zIndex: 1200,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <div
               className="matchdb-panel"
-              style={{ width: 380, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}
+              style={{
+                width: 380,
+                padding: 20,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
             >
               <div style={{ fontWeight: 700, fontSize: 13 }}>
-                {tsActionType === "approve" ? "Approve Timesheet" : "Reject Timesheet"}
+                {tsActionType === "approve"
+                  ? "Approve Timesheet"
+                  : "Reject Timesheet"}
               </div>
               <div style={{ fontSize: 12, color: "var(--w97-text-secondary)" }}>
                 {tsActionType === "approve"
@@ -3742,7 +3783,11 @@ const MarketerDashboard: React.FC<Props> = () => {
               </div>
               <textarea
                 rows={3}
-                placeholder={tsActionType === "approve" ? "Optional note…" : "Reason for rejection…"}
+                placeholder={
+                  tsActionType === "approve"
+                    ? "Optional note…"
+                    : "Reason for rejection…"
+                }
                 value={tsActionType === "approve" ? approveNotes : rejectNotes}
                 onChange={(e) =>
                   tsActionType === "approve"
@@ -3750,15 +3795,23 @@ const MarketerDashboard: React.FC<Props> = () => {
                     : setRejectNotes(e.target.value)
                 }
                 style={{
-                  width: "100%", fontSize: 12, padding: "4px 6px",
-                  border: "1px solid var(--w97-border-dark)", resize: "vertical",
+                  width: "100%",
+                  fontSize: 12,
+                  padding: "4px 6px",
+                  border: "1px solid var(--w97-border-dark)",
+                  resize: "vertical",
                   fontFamily: "inherit",
                 }}
               />
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <div
+                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+              >
                 <Button
                   size="sm"
-                  onClick={() => { setTsActionId(null); setTsActionType(null); }}
+                  onClick={() => {
+                    setTsActionId(null);
+                    setTsActionType(null);
+                  }}
                   disabled={approvingTs || rejectingTs}
                 >
                   Cancel
@@ -3777,7 +3830,14 @@ const MarketerDashboard: React.FC<Props> = () => {
         )}
 
         {/* Filter toolbar */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 0 4px" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            padding: "8px 0 4px",
+          }}
+        >
           <span style={{ fontSize: 12, fontWeight: 600 }}>Status:</span>
           {(["submitted", "approved", "rejected", "all"] as const).map((s) => (
             <Button
@@ -4354,7 +4414,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                                 ? ` · ${p.job_sub_type.toUpperCase()}`
                                 : ""}
                               {p.vendor_email
-                                ? ` · ${p.vendor_email.split("@")[1]?.split(".")[0] || p.vendor_email}`
+                                ? ` · ${
+                                    p.vendor_email
+                                      .split("@")[1]
+                                      ?.split(".")[0] || p.vendor_email
+                                  }`
                                 : ""}
                             </div>
                           </>
@@ -4949,7 +5013,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                 ? ` · ${activeProject.job_sub_type.toUpperCase()}`
                 : ""}
               {activeProject.vendor_email
-                ? ` · ${activeProject.vendor_email.split("@")[1]?.split(".")[0] || activeProject.vendor_email}`
+                ? ` · ${
+                    activeProject.vendor_email.split("@")[1]?.split(".")[0] ||
+                    activeProject.vendor_email
+                  }`
                 : ""}
             </span>
             <span style={{ opacity: 0.4 }}>|</span>
