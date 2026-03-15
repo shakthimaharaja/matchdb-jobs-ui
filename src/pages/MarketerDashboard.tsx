@@ -36,6 +36,10 @@ import {
   type ForwardedOpeningItem,
   type CompanySummaryCandidate,
   type CompanySummaryProject,
+  useGetMarketerTimesheetsQuery,
+  useApproveTimesheetMutation,
+  useRejectTimesheetMutation,
+  type Timesheet,
 } from "../api/jobsApi";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -55,7 +59,8 @@ type ActiveView =
   | "financial-summary"
   | "project-summary"
   | "job-positions-summary"
-  | "immigration";
+  | "immigration"
+  | "timesheets";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -534,6 +539,18 @@ const MarketerDashboard: React.FC<Props> = () => {
     useForwardOpeningWithEmailMutation();
   const [updateForwardedStatus] = useUpdateForwardedStatusMutation();
 
+  // ── Timesheet hooks ─────────────────────────────────────────────────────────
+  const [tsStatusFilter, setTsStatusFilter] = useState<string>("submitted");
+  const [approveNotes, setApproveNotes] = useState("");
+  const [rejectNotes, setRejectNotes] = useState("");
+  const [tsActionId, setTsActionId] = useState<string | null>(null);
+  const [tsActionType, setTsActionType] = useState<"approve" | "reject" | null>(null);
+  const { data: marketerTimesheetsData, isLoading: timesheetsLoading, refetch: refetchTimesheets } =
+    useGetMarketerTimesheetsQuery({ status: tsStatusFilter }, { skip: activeView !== "timesheets" });
+  const [approveTimesheet, { isLoading: approvingTs }] = useApproveTimesheetMutation();
+  const [rejectTimesheet, { isLoading: rejectingTs }] = useRejectTimesheetMutation();
+  const marketerTimesheets: Timesheet[] = marketerTimesheetsData?.data ?? [];
+
   const jobs: MarketerJob[] = jobsData?.data ?? [];
   const profiles: MarketerProfile[] = profilesData?.data ?? [];
   const jobsTotal = jobsData?.total ?? 0;
@@ -847,6 +864,12 @@ const MarketerDashboard: React.FC<Props> = () => {
             active: activeView === "immigration",
             onClick: () => navigateTo("immigration"),
           },
+          {
+            id: "timesheets",
+            label: "Timesheets",
+            active: activeView === "timesheets",
+            onClick: () => navigateTo("timesheets"),
+          },
         ],
       },
       {
@@ -989,6 +1012,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     "project-summary": ["Jobs", "Marketer", "Dashboard", "Project"],
     "job-positions-summary": ["Jobs", "Marketer", "Dashboard", "Positions"],
     immigration: ["Jobs", "Marketer", "Dashboard", "Immigration"],
+    timesheets: ["Jobs", "Marketer", "Dashboard", "Timesheets"],
   };
   const breadcrumb = BREADCRUMB_MAP[activeView] ?? ["Jobs", "Marketer"];
 
@@ -1725,6 +1749,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     if (activeView === "job-positions-summary")
       return renderJobPositionsSummaryView();
     if (activeView === "immigration") return renderImmigrationView();
+    if (activeView === "timesheets") return renderTimesheetsView();
     return renderForwardedOpeningsView();
   }
 
@@ -3551,6 +3576,231 @@ const MarketerDashboard: React.FC<Props> = () => {
             candidates will appear here. This section is under development.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  // ── Timesheets View ────────────────────────────────────────────────────────
+
+  function renderTimesheetsView() {
+    const fmtWeek = (iso: string) => {
+      const d = new Date(iso);
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+    };
+    const fmtTs = (iso: string | null) =>
+      iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
+
+    const columns: DataTableColumn<Timesheet>[] = [
+      {
+        key: "candidate",
+        header: "Candidate",
+        width: "14%",
+        skeletonWidth: 100,
+        render: (r) => <span title={r.candidateEmail}>{r.candidateName || r.candidateEmail}</span>,
+        tooltip: (r) => r.candidateEmail,
+      },
+      {
+        key: "week",
+        header: "Week",
+        width: "12%",
+        skeletonWidth: 90,
+        render: (r) => fmtWeek(r.weekStart),
+      },
+      {
+        key: "company",
+        header: "Company",
+        width: "12%",
+        skeletonWidth: 90,
+        render: (r) => <>{r.companyName || "—"}</>,
+      },
+      {
+        key: "hours",
+        header: "Total Hrs",
+        width: "8%",
+        skeletonWidth: 60,
+        render: (r) => <>{Number(r.totalHours).toFixed(1)}</>,
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: "9%",
+        skeletonWidth: 70,
+        render: (r) => {
+          const colors: Record<string, string> = {
+            draft: "#888",
+            submitted: "#1565c0",
+            approved: "#2e7d32",
+            rejected: "#c62828",
+          };
+          return (
+            <span
+              className="matchdb-type-pill"
+              style={{ color: colors[r.status] ?? "#555", textTransform: "capitalize" }}
+            >
+              {r.status}
+            </span>
+          );
+        },
+      },
+      {
+        key: "submitted",
+        header: "Submitted",
+        width: "9%",
+        skeletonWidth: 70,
+        render: (r) => <>{fmtTs(r.submittedAt)}</>,
+      },
+      {
+        key: "approved",
+        header: "Approved",
+        width: "9%",
+        skeletonWidth: 70,
+        render: (r) => <>{fmtTs(r.approvedAt)}</>,
+      },
+      {
+        key: "remarks",
+        header: "Remarks",
+        width: "13%",
+        skeletonWidth: 90,
+        render: (r) => <>{r.approverNotes || "—"}</>,
+        tooltip: (r) => r.approverNotes || "",
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        width: "14%",
+        skeletonWidth: 100,
+        render: (r) => {
+          if (r.status !== "submitted") return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
+          return (
+            <div style={{ display: "flex", gap: 4 }}>
+              <Button
+                size="sm"
+                variant="primary"
+                disabled={approvingTs || rejectingTs}
+                onClick={() => {
+                  setTsActionId(r.id);
+                  setTsActionType("approve");
+                  setApproveNotes("");
+                }}
+              >
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                disabled={approvingTs || rejectingTs}
+                onClick={() => {
+                  setTsActionId(r.id);
+                  setTsActionType("reject");
+                  setRejectNotes("");
+                }}
+              >
+                Reject
+              </Button>
+            </div>
+          );
+        },
+      },
+    ];
+
+    const isConfirmOpen = !!tsActionId && !!tsActionType;
+
+    const handleConfirm = async () => {
+      if (!tsActionId || !tsActionType) return;
+      if (tsActionType === "approve") {
+        await approveTimesheet({ id: tsActionId, notes: approveNotes });
+      } else {
+        await rejectTimesheet({ id: tsActionId, notes: rejectNotes });
+      }
+      setTsActionId(null);
+      setTsActionType(null);
+      setApproveNotes("");
+      setRejectNotes("");
+      refetchTimesheets();
+    };
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        {/* Confirm dialog */}
+        {isConfirmOpen && (
+          <div
+            style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)",
+              zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <div
+              className="matchdb-panel"
+              style={{ width: 380, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 13 }}>
+                {tsActionType === "approve" ? "Approve Timesheet" : "Reject Timesheet"}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--w97-text-secondary)" }}>
+                {tsActionType === "approve"
+                  ? "Optionally add a note, then confirm approval."
+                  : "Provide a reason for rejection (required for the candidate)."}
+              </div>
+              <textarea
+                rows={3}
+                placeholder={tsActionType === "approve" ? "Optional note…" : "Reason for rejection…"}
+                value={tsActionType === "approve" ? approveNotes : rejectNotes}
+                onChange={(e) =>
+                  tsActionType === "approve"
+                    ? setApproveNotes(e.target.value)
+                    : setRejectNotes(e.target.value)
+                }
+                style={{
+                  width: "100%", fontSize: 12, padding: "4px 6px",
+                  border: "1px solid var(--w97-border-dark)", resize: "vertical",
+                  fontFamily: "inherit",
+                }}
+              />
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <Button
+                  size="sm"
+                  onClick={() => { setTsActionId(null); setTsActionType(null); }}
+                  disabled={approvingTs || rejectingTs}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleConfirm}
+                  disabled={approvingTs || rejectingTs}
+                >
+                  {approvingTs || rejectingTs ? "Saving…" : "Confirm"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Filter toolbar */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 0 4px" }}>
+          <span style={{ fontSize: 12, fontWeight: 600 }}>Status:</span>
+          {(["submitted", "approved", "rejected", "all"] as const).map((s) => (
+            <Button
+              key={s}
+              size="sm"
+              variant={tsStatusFilter === s ? "primary" : undefined}
+              onClick={() => setTsStatusFilter(s)}
+            >
+              {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+            </Button>
+          ))}
+        </div>
+
+        <DataTable<Timesheet>
+          columns={columns}
+          data={marketerTimesheets}
+          keyExtractor={(r) => r.id}
+          loading={timesheetsLoading}
+          paginate
+          emptyMessage="No timesheets found for the selected status."
+          title="Candidate Timesheets"
+          titleIcon="🗂️"
+        />
       </div>
     );
   }

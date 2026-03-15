@@ -20,6 +20,7 @@ import DBLayout, { NavGroup } from "../components/DBLayout";
 import DetailModal from "../components/DetailModal";
 import PokeEmailModal from "../components/PokeEmailModal";
 import CandidateProfile from "./CandidateProfile";
+import TimesheetView from "./TimesheetView";
 import { PokesTable } from "../shared";
 import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
@@ -31,9 +32,12 @@ import {
   useSendPokeMutation,
   useGetCandidateForwardedOpeningsQuery,
   useGetCandidateMyDetailQuery,
+  useGetInterviewInvitesReceivedQuery,
+  useRespondToInterviewInviteMutation,
   type Job,
   type CandidateMatchesArgs,
   type ForwardedOpeningItem,
+  type InterviewInvite,
 } from "../api/jobsApi";
 
 interface Props {
@@ -56,7 +60,9 @@ type ActiveView =
   | "vendor-openings"
   | "employer-openings"
   | "employer-finance"
-  | "employer-immigration";
+  | "employer-immigration"
+  | "timesheets"
+  | "interviews";
 
 type MyDetailTab =
   | "overview"
@@ -148,6 +154,20 @@ const finCellValues = (fin: {
       : "now",
   ].join(" – "),
 ];
+
+/** Extracted to keep JSX nesting below 4 levels */
+const FinancialRow: React.FC<{ fin: Parameters<typeof finCellValues>[0] & { id: string } }> = ({ fin }) => (
+  <tr style={{ borderBottom: "1px solid var(--w97-border-light)" }}>
+    {finCellValues(fin).map((v, i) => (
+      <td
+        key={`col-${i}-${v}`}
+        style={{ textAlign: "right", padding: "5px 8px", fontFamily: "monospace" }}
+      >
+        {v}
+      </td>
+    ))}
+  </tr>
+);
 
 const countBg = (n: number): string => {
   if (n >= 50) return "#e8f5e9";
@@ -367,6 +387,17 @@ const CandidateDashboard: React.FC<Props> = ({
   // Forwarded openings from marketer companies
   const { data: forwardedOpenings = [] } =
     useGetCandidateForwardedOpeningsQuery();
+
+  // Interview invites — fetched only when interviews view is active
+  const { data: interviewInvitesData, refetch: refetchInterviews } =
+    useGetInterviewInvitesReceivedQuery(undefined, { skip: activeView !== "interviews" });
+  const [respondToInvite, { isLoading: respondingInvite }] = useRespondToInterviewInviteMutation();
+  const interviewInvites: InterviewInvite[] = interviewInvitesData?.data ?? [];
+
+  // Respond modal state
+  const [respondInviteId, setRespondInviteId] = useState<string | null>(null);
+  const [respondAction, setRespondAction] = useState<"accept" | "decline" | null>(null);
+  const [respondNote, setRespondNote] = useState("");
 
   // My Detail — only fetched when the "my-detail" view is active
   const { data: myDetail, isLoading: myDetailLoading } =
@@ -1539,6 +1570,19 @@ const CandidateDashboard: React.FC<Props> = ({
             active: activeView === "employer-immigration",
             onClick: () => navParams({ view: "employer-immigration" }),
           },
+          {
+            id: "timesheets",
+            label: "Timesheets",
+            active: activeView === "timesheets",
+            onClick: () => navParams({ view: "timesheets" }),
+          },
+          {
+            id: "interviews",
+            label: "Interviews",
+            count: interviewInvites.length,
+            active: activeView === "interviews",
+            onClick: () => navParams({ view: "interviews" }),
+          },
         ],
       },
     ];
@@ -1593,6 +1637,10 @@ const CandidateDashboard: React.FC<Props> = ({
       return ["Candidate Portal", "Employer", "Finance"];
     if (activeView === "employer-immigration")
       return ["Candidate Portal", "Employer", "Immigration"];
+    if (activeView === "timesheets")
+      return ["Candidate Portal", "Employer", "Timesheets"];
+    if (activeView === "interviews")
+      return ["Candidate Portal", "Employer", "Interviews"];
     return ["Candidate Portal", "Matched Jobs", filterLabel];
   })();
 
@@ -1970,25 +2018,7 @@ const CandidateDashboard: React.FC<Props> = ({
               </thead>
               <tbody>
                 {proj.financials.map((fin) => (
-                  <tr
-                    key={fin.id}
-                    style={{
-                      borderBottom: "1px solid var(--w97-border-light)",
-                    }}
-                  >
-                    {finCellValues(fin).map((v, i) => (
-                      <td
-                        key={`col-${i}-${v}`}
-                        style={{
-                          textAlign: "right",
-                          padding: "5px 8px",
-                          fontFamily: "monospace",
-                        }}
-                      >
-                        {v}
-                      </td>
-                    ))}
-                  </tr>
+                  <FinancialRow key={fin.id} fin={fin} />
                 ))}
               </tbody>
             </table>
@@ -2487,25 +2517,7 @@ const CandidateDashboard: React.FC<Props> = ({
                     </thead>
                     <tbody>
                       {proj.financials.map((fin) => (
-                        <tr
-                          key={fin.id}
-                          style={{
-                            borderBottom: "1px solid var(--w97-border-light)",
-                          }}
-                        >
-                          {finCellValues(fin).map((v, i) => (
-                            <td
-                              key={`col-${i}-${v}`}
-                              style={{
-                                textAlign: "right",
-                                padding: "5px 8px",
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              {v}
-                            </td>
-                          ))}
-                        </tr>
+                        <FinancialRow key={fin.id} fin={fin} />
                       ))}
                     </tbody>
                   </table>
@@ -2922,6 +2934,175 @@ const CandidateDashboard: React.FC<Props> = ({
     );
   }
 
+  function renderInterviewsView() {
+    const fmtProposed = (iso: string | null) =>
+      iso
+        ? new Date(iso).toLocaleString("en-US", {
+            month: "short", day: "numeric", year: "numeric",
+            hour: "2-digit", minute: "2-digit",
+          })
+        : "TBD";
+
+    const statusColor: Record<string, string> = {
+      pending: "#1565c0", accepted: "#2e7d32",
+      declined: "#c62828", cancelled: "#888",
+    };
+
+    const handleRespondConfirm = async () => {
+      if (!respondInviteId || !respondAction) return;
+      await respondToInvite({ id: respondInviteId, action: respondAction, note: respondNote });
+      setRespondInviteId(null);
+      setRespondAction(null);
+      setRespondNote("");
+      refetchInterviews();
+    };
+
+    const columns: DataTableColumn<InterviewInvite>[] = [
+      {
+        key: "vendor",
+        header: "From (Recruiter)",
+        width: "14%",
+        skeletonWidth: 110,
+        render: (r) => <span title={r.vendorEmail}>{r.vendorName || r.vendorEmail}</span>,
+        tooltip: (r) => r.vendorEmail,
+      },
+      {
+        key: "job",
+        header: "Position",
+        width: "14%",
+        skeletonWidth: 100,
+        render: (r) => <>{r.jobTitle || "—"}</>,
+      },
+      {
+        key: "proposed",
+        header: "Proposed Time",
+        width: "14%",
+        skeletonWidth: 100,
+        render: (r) => <>{fmtProposed(r.proposedAt)}</>,
+      },
+      {
+        key: "meet",
+        header: "Google Meet",
+        width: "11%",
+        skeletonWidth: 90,
+        render: (r) =>
+          r.status === "accepted" || r.status === "pending" ? (
+            <a href={r.meetLink} target="_blank" rel="noopener noreferrer"
+              style={{ color: "#1a73e8", textDecoration: "none", fontSize: 12 }}
+            >
+              Join Meet
+            </a>
+          ) : (
+            <span style={{ color: "#aaa", fontSize: 12 }}>—</span>
+          ),
+      },
+      {
+        key: "message",
+        header: "Message",
+        width: "13%",
+        skeletonWidth: 90,
+        render: (r) => <>{r.message || "—"}</>,
+        tooltip: (r) => r.message || "",
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: "9%",
+        skeletonWidth: 70,
+        render: (r) => (
+          <span className="matchdb-type-pill"
+            style={{ color: statusColor[r.status] ?? "#555", textTransform: "capitalize" }}
+          >
+            {r.status}
+          </span>
+        ),
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        width: "13%",
+        skeletonWidth: 100,
+        render: (r) => {
+          if (r.status !== "pending") return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
+          return (
+            <div style={{ display: "flex", gap: 4 }}>
+              <Button size="sm" variant="primary"
+                disabled={respondingInvite}
+                onClick={() => { setRespondInviteId(r.id); setRespondAction("accept"); setRespondNote(""); }}
+              >
+                Accept
+              </Button>
+              <Button size="sm"
+                disabled={respondingInvite}
+                onClick={() => { setRespondInviteId(r.id); setRespondAction("decline"); setRespondNote(""); }}
+              >
+                Decline
+              </Button>
+            </div>
+          );
+        },
+      },
+    ];
+
+    const isRespondOpen = !!respondInviteId && !!respondAction;
+
+    return (
+      <>
+        {/* Respond confirm dialog */}
+        {isRespondOpen && (
+          <div style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)",
+            zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <div className="matchdb-panel"
+              style={{ width: 360, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 13 }}>
+                {respondAction === "accept" ? "Accept Interview Invite" : "Decline Interview Invite"}
+              </div>
+              <textarea
+                rows={3}
+                placeholder={respondAction === "accept" ? "Optional note to the recruiter…" : "Reason for declining…"}
+                value={respondNote}
+                onChange={(e) => setRespondNote(e.target.value)}
+                style={{
+                  width: "100%", fontSize: 12, padding: "4px 6px",
+                  border: "1px solid var(--w97-border-dark)", resize: "vertical",
+                  fontFamily: "inherit",
+                }}
+              />
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <Button size="sm"
+                  onClick={() => { setRespondInviteId(null); setRespondAction(null); }}
+                  disabled={respondingInvite}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" variant="primary"
+                  onClick={handleRespondConfirm}
+                  disabled={respondingInvite}
+                >
+                  {respondingInvite ? "Saving…" : "Confirm"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DataTable<InterviewInvite>
+          columns={columns}
+          data={interviewInvites}
+          keyExtractor={(r) => r.id}
+          loading={false}
+          paginate
+          emptyMessage="No interview invites received yet."
+          title="Interview Invites"
+          titleIcon="📞"
+        />
+      </>
+    );
+  }
+
   function renderUnlockedContent() {
     return (
       <>
@@ -2975,6 +3156,12 @@ const CandidateDashboard: React.FC<Props> = ({
               value: mailsReceivedOnly.length,
               icon: "📬",
               view: "mails-received" as ActiveView,
+            },
+            {
+              label: "Interviews",
+              value: interviewInvites.length,
+              icon: "📞",
+              view: "interviews" as ActiveView,
             },
             {
               label: "Visibility",
@@ -3193,6 +3380,17 @@ const CandidateDashboard: React.FC<Props> = ({
 
         {/* Employer Immigration (read-only) */}
         {activeView === "employer-immigration" && renderEmployerImmigration()}
+
+        {/* Timesheets */}
+        {activeView === "timesheets" && (
+          <TimesheetView
+            candidateName={profile?.name}
+            userEmail={userEmail}
+          />
+        )}
+
+        {/* Interviews view */}
+        {activeView === "interviews" && renderInterviewsView()}
 
         {/* Matched Jobs view */}
         {activeView === "matches" && (

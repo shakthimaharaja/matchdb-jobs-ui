@@ -18,9 +18,12 @@ import {
   useSendPokeMutation,
   useCloseJobMutation,
   useReopenJobMutation,
+  useSendInterviewInviteMutation,
+  useGetInterviewInvitesSentQuery,
   type Job,
   type CandidateProfileMatch,
   type PokeRecord,
+  type InterviewInvite,
   type VendorJobsArgs,
   type VendorCandidateMatchesArgs,
 } from "../api/jobsApi";
@@ -135,7 +138,8 @@ type ViewMode =
   | "pokes-sent"
   | "pokes-received"
   | "mails-sent"
-  | "mails-received";
+  | "mails-received"
+  | "interviews-sent";
 
 /** Color badge for count thresholds */
 const COUNT_COLOR_THRESHOLDS: [number, string][] = [
@@ -152,6 +156,12 @@ const countColor = (n: number): string =>
   COUNT_COLOR_THRESHOLDS.find(([t]) => n >= t)?.[1] ?? "#bb3333";
 const countBg = (n: number): string =>
   COUNT_BG_THRESHOLDS.find(([t]) => n >= t)?.[1] ?? "#fff5f5";
+
+/** Unwrap paginated-or-array API responses (reduces component cognitive complexity) */
+function unwrapPaginated<T>(data: T[] | { data: T[]; total: number } | undefined): [T[], number] {
+  if (Array.isArray(data)) return [data, data.length];
+  return [data?.data ?? [], data?.total ?? 0];
+}
 
 /** Column definitions for the job postings table are built inside the component
  *  via useMemo so that render functions can close over handlers and state. */
@@ -193,22 +203,12 @@ const VendorDashboard: React.FC<Props> = ({
   ] = useSendPokeMutation();
   const [closeJobMutation] = useCloseJobMutation();
   const [reopenJobMutation] = useReopenJobMutation();
+  const [sendInterviewInvite, { isLoading: inviteSending }] = useSendInterviewInviteMutation();
+  const { data: invitesSentData, refetch: refetchInvites } = useGetInterviewInvitesSentQuery();
 
   // Derive flat arrays from paginated-or-array responses
-  const vendorJobs: Job[] = Array.isArray(jobsData)
-    ? jobsData
-    : jobsData?.data ?? [];
-  const vendorJobsTotal: number = Array.isArray(jobsData)
-    ? jobsData.length
-    : jobsData?.total ?? 0;
-  const vendorCandidateMatches: CandidateProfileMatch[] = Array.isArray(
-    matchesData,
-  )
-    ? matchesData
-    : matchesData?.data ?? [];
-  const vendorCandidateMatchesTotal: number = Array.isArray(matchesData)
-    ? matchesData.length
-    : matchesData?.total ?? 0;
+  const [vendorJobs, vendorJobsTotal] = unwrapPaginated<Job>(jobsData);
+  const [vendorCandidateMatches, vendorCandidateMatchesTotal] = unwrapPaginated<CandidateProfileMatch>(matchesData);
 
   const pokesSent: PokeRecord[] = pokesSentData;
   const pokesReceived: PokeRecord[] = pokesReceivedData;
@@ -297,6 +297,12 @@ const VendorDashboard: React.FC<Props> = ({
   const [pokeEmailSentSuccess, setPokeEmailSentSuccess] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(25);
+
+  // Interview invite modal state
+  const [inviteRow, setInviteRow] = useState<MatchRow | null>(null);
+  const [inviteProposedAt, setInviteProposedAt] = useState("");
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [inviteSentSuccess, setInviteSentSuccess] = useState(false);
 
   // Derive poke/email tracking from server-side pokesSent data
   const pokedRowIds = useMemo(
@@ -447,6 +453,7 @@ const VendorDashboard: React.FC<Props> = ({
       "pokes-received": pokesReceivedOnly.length,
       "mails-sent": mailsSentOnly.length,
       "mails-received": mailsReceivedOnly.length,
+      "interviews-sent": invitesSent.length,
     };
     const count = VIEW_COUNT[viewMode] ?? 0;
     const suffix = count === 1 ? "" : "s";
@@ -872,6 +879,42 @@ const VendorDashboard: React.FC<Props> = ({
     ? vendorJobs.find((j) => j.id === selectedJobId)?.title || "Job"
     : "All Openings";
 
+  // Set of candidate emails for which an invite has already been sent
+  const invitedRowIds = useMemo(
+    () => new Set((invitesSentData?.data ?? []).map((inv) => inv.candidateEmail)),
+    [invitesSentData],
+  );
+  const invitesSent: InterviewInvite[] = invitesSentData?.data ?? [];
+
+  const handleInvite = (row: MatchRow) => {
+    setInviteRow(row);
+    setInviteProposedAt("");
+    setInviteMessage("");
+    setInviteSentSuccess(false);
+  };
+
+  const handleInviteSend = async () => {
+    if (!inviteRow) return;
+    try {
+      await sendInterviewInvite({
+        candidateEmail: inviteRow.pokeTargetEmail,
+        candidateName: inviteRow.pokeTargetName,
+        jobId: selectedJobId || undefined,
+        jobTitle: selectedJobId ? selectedJobTitle : undefined,
+        proposedAt: inviteProposedAt || undefined,
+        message: inviteMessage,
+      }).unwrap();
+      setInviteSentSuccess(true);
+      refetchInvites();
+      setTimeout(() => {
+        setInviteRow(null);
+        setInviteSentSuccess(false);
+      }, 2000);
+    } catch {
+      // error surfaced via inviteSending state
+    }
+  };
+
   const handlePoke = (row: MatchRow) => {
     if (!row.pokeTargetEmail) return;
     if (Number.isFinite(pokeLimit) && pokeCount >= pokeLimit) return;
@@ -1115,6 +1158,19 @@ const VendorDashboard: React.FC<Props> = ({
         ],
       },
       {
+        label: `Interviews (${invitesSent.length})`,
+        icon: "",
+        items: [
+          {
+            id: "interviews-sent",
+            label: "Invites Sent",
+            count: invitesSent.length,
+            active: viewMode === "interviews-sent",
+            onClick: () => navigateToView("interviews-sent"),
+          },
+        ],
+      },
+      {
         label: "Actions",
         icon: "",
         items: [
@@ -1158,10 +1214,110 @@ const VendorDashboard: React.FC<Props> = ({
     "pokes-received": ["Vendor Portal", "Pokes", "Pokes Received"],
     "mails-sent": ["Vendor Portal", "Mails", "Mails Sent"],
     "mails-received": ["Vendor Portal", "Mails", "Mails Received"],
+    "interviews-sent": ["Vendor Portal", "Interviews", "Invites Sent"],
     candidates: ["Vendor Portal", selectedJobTitle],
     "active-openings": ["Vendor Portal", "Active Openings"],
     postings: ["Vendor Portal", "My Job Postings"],
   };
+
+  function renderInterviewsSentView() {
+    const fmtProposed = (iso: string | null) =>
+      iso
+        ? new Date(iso).toLocaleString("en-US", {
+            month: "short", day: "numeric", year: "numeric",
+            hour: "2-digit", minute: "2-digit",
+          })
+        : "TBD";
+
+    const statusColor: Record<string, string> = {
+      pending: "#1565c0",
+      accepted: "#2e7d32",
+      declined: "#c62828",
+      cancelled: "#888",
+    };
+
+    const columns: DataTableColumn<InterviewInvite>[] = [
+      {
+        key: "candidate",
+        header: "Candidate",
+        width: "16%",
+        skeletonWidth: 110,
+        render: (r) => <span title={r.candidateEmail}>{r.candidateName || r.candidateEmail}</span>,
+        tooltip: (r) => r.candidateEmail,
+      },
+      {
+        key: "job",
+        header: "Position",
+        width: "14%",
+        skeletonWidth: 100,
+        render: (r) => <>{r.jobTitle || "—"}</>,
+      },
+      {
+        key: "proposed",
+        header: "Proposed Time",
+        width: "14%",
+        skeletonWidth: 100,
+        render: (r) => <>{fmtProposed(r.proposedAt)}</>,
+      },
+      {
+        key: "meet",
+        header: "Meet Link",
+        width: "14%",
+        skeletonWidth: 110,
+        render: (r) => (
+          <a href={r.meetLink} target="_blank" rel="noopener noreferrer"
+            style={{ color: "#1a73e8", textDecoration: "none", fontSize: 12 }}
+          >
+            Join Meet
+          </a>
+        ),
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: "9%",
+        skeletonWidth: 70,
+        render: (r) => (
+          <span className="matchdb-type-pill"
+            style={{ color: statusColor[r.status] ?? "#555", textTransform: "capitalize" }}
+          >
+            {r.status}
+          </span>
+        ),
+      },
+      {
+        key: "note",
+        header: "Candidate Note",
+        width: "14%",
+        skeletonWidth: 90,
+        render: (r) => <>{r.candidateNote || "—"}</>,
+        tooltip: (r) => r.candidateNote || "",
+      },
+      {
+        key: "sent",
+        header: "Sent",
+        width: "9%",
+        skeletonWidth: 70,
+        render: (r) =>
+          new Date(r.createdAt).toLocaleDateString("en-US", {
+            month: "short", day: "numeric",
+          }),
+      },
+    ];
+
+    return (
+      <DataTable<InterviewInvite>
+        columns={columns}
+        data={invitesSent}
+        keyExtractor={(r) => r.id}
+        loading={false}
+        paginate
+        emptyMessage="No interview invites sent yet. Click 📞 on any matched candidate to send one."
+        title="Interview Invites Sent"
+        titleIcon="📞"
+      />
+    );
+  }
 
   function renderCandidatesView() {
     if (plan === "free") {
@@ -1268,6 +1424,8 @@ const VendorDashboard: React.FC<Props> = ({
         pokedAtMap={pokedAtMap}
         onPoke={handlePoke}
         onPokeEmail={handlePokeEmail}
+        onInvite={handleInvite}
+        invitedRowIds={invitedRowIds}
         onRowClick={(row) => setSelectedCandidate(row.rawData || null)}
         onDownload={handleDownloadCSV}
         downloadLabel="Download CSV"
@@ -1338,6 +1496,12 @@ const VendorDashboard: React.FC<Props> = ({
               value: mailsReceivedOnly.length,
               icon: "📬",
               view: "mails-received" as ViewMode,
+            },
+            {
+              label: "Interview Invites",
+              value: invitesSent.length,
+              icon: "📞",
+              view: "interviews-sent" as ViewMode,
             },
           ].map((card) => (
             <button
@@ -1608,6 +1772,9 @@ const VendorDashboard: React.FC<Props> = ({
             );
           })()}
 
+        {/* ── INTERVIEWS SENT VIEW ── */}
+        {viewMode === "interviews-sent" && renderInterviewsSentView()}
+
         {/* ── MATCHED CANDIDATES VIEW ── */}
         {viewMode === "candidates" && renderCandidatesView()}
       </div>
@@ -1629,6 +1796,116 @@ const VendorDashboard: React.FC<Props> = ({
         onClose_job={handleCloseJob}
         onReopen_job={handleReopenJob}
       />
+
+      {/* Interview Invite modal */}
+      {inviteRow && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+            zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <div
+            className="matchdb-panel"
+            style={{ width: 420, padding: 24, display: "flex", flexDirection: "column", gap: 14 }}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>📞 Send Interview Invite</span>
+              <button
+                type="button"
+                className="matchdb-btn"
+                style={{ padding: "2px 8px" }}
+                onClick={() => { setInviteRow(null); setInviteSentSuccess(false); }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {inviteSentSuccess ? (
+              <div style={{ textAlign: "center", padding: "20px 0", color: "#2e7d32", fontWeight: 600 }}>
+                ✓ Invite sent! A Google Meet link has been emailed to {inviteRow.pokeTargetName}.
+              </div>
+            ) : (
+              <>
+                {/* Candidate info */}
+                <div style={{ fontSize: 12, color: "#555" }}>
+                  <strong>To:</strong> {inviteRow.pokeTargetName}{" "}
+                  <span style={{ color: "#888" }}>({inviteRow.pokeTargetEmail})</span>
+                </div>
+
+                {/* Position (read-only, from current job filter) */}
+                {selectedJobTitle && selectedJobTitle !== "All Openings" && (
+                  <div style={{ fontSize: 12, color: "#555" }}>
+                    <strong>Position:</strong> {selectedJobTitle}
+                  </div>
+                )}
+
+                {/* Proposed date/time */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label htmlFor="invite-proposed-at" style={{ fontSize: 12, fontWeight: 600 }}>Proposed Date & Time</label>
+                  <input
+                    id="invite-proposed-at"
+                    type="datetime-local"
+                    value={inviteProposedAt}
+                    onChange={(e) => setInviteProposedAt(e.target.value)}
+                    style={{
+                      fontSize: 12, padding: "4px 6px",
+                      border: "1px solid var(--w97-border-dark)",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                  <span style={{ fontSize: 11, color: "#888" }}>Leave blank if TBD</span>
+                </div>
+
+                {/* Message */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label htmlFor="invite-message" style={{ fontSize: 12, fontWeight: 600 }}>Message (optional)</label>
+                  <textarea
+                    id="invite-message"
+                    rows={3}
+                    value={inviteMessage}
+                    onChange={(e) => setInviteMessage(e.target.value)}
+                    placeholder="e.g. Looking forward to connecting about the role…"
+                    style={{
+                      fontSize: 12, padding: "4px 6px", resize: "vertical",
+                      border: "1px solid var(--w97-border-dark)",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
+
+                {/* Meet link notice */}
+                <div style={{
+                  background: "#e8f0fe", border: "1px solid #c5d5f5",
+                  borderRadius: 2, padding: "8px 12px", fontSize: 12, color: "#1a3e7a",
+                }}>
+                  🔗 A unique Google Meet link will be auto-generated and included in the email.
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <Button
+                    size="sm"
+                    onClick={() => { setInviteRow(null); setInviteSentSuccess(false); }}
+                    disabled={inviteSending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={handleInviteSend}
+                    disabled={inviteSending}
+                  >
+                    {inviteSending ? "Sending…" : "Send Invite"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Mail Template modal */}
       <PokeEmailModal

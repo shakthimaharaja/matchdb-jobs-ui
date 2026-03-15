@@ -529,9 +529,92 @@ export interface CompanySearchResult {
   name: string;
 }
 
+// ─── Timesheet types ──────────────────────────────────────────────────────────
+
+export interface TimesheetEntry {
+  date: string;       // "YYYY-MM-DD"
+  day: string;        // "Monday" | "Tuesday" | ...
+  hoursWorked: number;
+  notes: string;
+}
+
+export interface Timesheet {
+  id: string;
+  candidateId: string;
+  candidateEmail: string;
+  candidateName: string;
+  marketerId: string;
+  marketerEmail: string;
+  companyId: string;
+  companyName: string;
+  weekStart: string;  // ISO
+  weekEnd: string;    // ISO
+  entries: TimesheetEntry[];
+  totalHours: number;
+  status: "draft" | "submitted" | "approved" | "rejected";
+  submittedAt: string | null;
+  approvedAt: string | null;
+  approverNotes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TimesheetListResponse {
+  data: Timesheet[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface UpsertTimesheetArgs {
+  weekStart: string;
+  entries: TimesheetEntry[];
+  candidateName?: string;
+}
+
+export interface MarketerTimesheetListResponse {
+  data: Timesheet[];
+  total: number;
+}
+
 export interface InviteVerifyResponse {
   status: "valid" | "already_accepted" | "expired";
   invite?: CompanyInviteInfo;
+}
+
+// ─── Interview Invite types ───────────────────────────────────────────────────
+
+export interface InterviewInvite {
+  id: string;
+  vendorId: string;
+  vendorEmail: string;
+  vendorName: string;
+  candidateEmail: string;
+  candidateName: string;
+  jobId: string;
+  jobTitle: string;
+  meetLink: string;
+  proposedAt: string | null;
+  message: string;
+  status: "pending" | "accepted" | "declined" | "cancelled";
+  respondedAt: string | null;
+  candidateNote: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InterviewInviteListResponse {
+  data: InterviewInvite[];
+  total: number;
+}
+
+export interface SendInterviewInviteArgs {
+  candidateEmail: string;
+  candidateName?: string;
+  jobId?: string;
+  jobTitle?: string;
+  proposedAt?: string;
+  message?: string;
 }
 
 export interface ForwardedOpeningItem {
@@ -587,6 +670,9 @@ export const jobsApi = createApi({
     "CompanyInvites",
     "ProjectFinancials",
     "CandidateMyDetail",
+    "Timesheets",
+    "MarketerTimesheets",
+    "InterviewInvites",
   ],
   endpoints: (builder) => ({
     // ── Jobs ──────────────────────────────────────────────────────────────────
@@ -904,6 +990,74 @@ export const jobsApi = createApi({
       }),
       invalidatesTags: ["ProjectFinancials", "MarketerCandidates"],
     }),
+
+    // ── Timesheets (candidate) ─────────────────────────────────────────────────
+
+    getTimesheets: builder.query<TimesheetListResponse, { page?: number; limit?: number }>({
+      query: (params) => ({ url: "api/jobs/timesheets", params }),
+      providesTags: ["Timesheets"],
+    }),
+
+    upsertTimesheet: builder.mutation<Timesheet, UpsertTimesheetArgs>({
+      query: (body) => ({ url: "api/jobs/timesheets", method: "POST", body }),
+      invalidatesTags: ["Timesheets"],
+    }),
+
+    submitTimesheet: builder.mutation<Timesheet, string>({
+      query: (id) => ({ url: `api/jobs/timesheets/${id}/submit`, method: "PATCH", body: {} }),
+      invalidatesTags: ["Timesheets"],
+    }),
+
+    // ── Timesheets (marketer) ──────────────────────────────────────────────────
+
+    getMarketerTimesheets: builder.query<MarketerTimesheetListResponse, { status?: string }>({
+      query: (params) => ({ url: "api/jobs/timesheets/pending", params }),
+      providesTags: ["MarketerTimesheets"],
+    }),
+
+    approveTimesheet: builder.mutation<Timesheet, { id: string; notes?: string }>({
+      query: ({ id, notes }) => ({
+        url: `api/jobs/timesheets/${id}/approve`,
+        method: "PATCH",
+        body: { notes },
+      }),
+      invalidatesTags: ["MarketerTimesheets"],
+    }),
+
+    rejectTimesheet: builder.mutation<Timesheet, { id: string; notes?: string }>({
+      query: ({ id, notes }) => ({
+        url: `api/jobs/timesheets/${id}/reject`,
+        method: "PATCH",
+        body: { notes },
+      }),
+      invalidatesTags: ["MarketerTimesheets"],
+    }),
+
+    // ── Interview Invites ─────────────────────────────────────────────────────
+
+    sendInterviewInvite: builder.mutation<InterviewInvite, SendInterviewInviteArgs>({
+      query: (body) => ({ url: "api/jobs/interviews", method: "POST", body }),
+      invalidatesTags: ["InterviewInvites"],
+    }),
+
+    getInterviewInvitesSent: builder.query<InterviewInviteListResponse, void>({
+      query: () => "api/jobs/interviews/sent",
+      providesTags: ["InterviewInvites"],
+    }),
+
+    getInterviewInvitesReceived: builder.query<InterviewInviteListResponse, void>({
+      query: () => "api/jobs/interviews/received",
+      providesTags: ["InterviewInvites"],
+    }),
+
+    respondToInterviewInvite: builder.mutation<InterviewInvite, { id: string; action: "accept" | "decline"; note?: string }>({
+      query: ({ id, action, note }) => ({
+        url: `api/jobs/interviews/${id}/respond`,
+        method: "PATCH",
+        body: { action, note },
+      }),
+      invalidatesTags: ["InterviewInvites"],
+    }),
   }),
 });
 
@@ -959,4 +1113,16 @@ export const {
   useGetFinancialSummaryQuery,
   useUpsertProjectFinancialMutation,
   useDeleteProjectFinancialMutation,
+  // Timesheets
+  useGetTimesheetsQuery,
+  useUpsertTimesheetMutation,
+  useSubmitTimesheetMutation,
+  useGetMarketerTimesheetsQuery,
+  useApproveTimesheetMutation,
+  useRejectTimesheetMutation,
+  // Interview Invites
+  useSendInterviewInviteMutation,
+  useGetInterviewInvitesSentQuery,
+  useGetInterviewInvitesReceivedQuery,
+  useRespondToInterviewInviteMutation,
 } = jobsApi;
