@@ -354,18 +354,29 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
               <div style={{ fontWeight: 600, fontSize: 12 }}>
                 📞 Schedule Screening Call
                 {selectedJobTitle && selectedJobTitle !== "All Openings" && (
-                  <span style={{ fontWeight: 400, color: "#555" }}> — {selectedJobTitle}</span>
+                  <span style={{ fontWeight: 400, color: "#555" }}>
+                    {" "}
+                    — {selectedJobTitle}
+                  </span>
                 )}
               </div>
 
               {callScheduled ? (
-                <div style={{ color: "#2e7d32", fontWeight: 600, fontSize: 12 }}>
-                  ✓ Screening call invite sent! A Google Meet link has been emailed.
+                <div
+                  style={{ color: "#2e7d32", fontWeight: 600, fontSize: 12 }}
+                >
+                  ✓ Screening call invite sent! A Google Meet link has been
+                  emailed.
                 </div>
               ) : (
                 <>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <label htmlFor="modal-invite-proposed-at" style={{ fontSize: 11, fontWeight: 600 }}>
+                  <div
+                    style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                  >
+                    <label
+                      htmlFor="modal-invite-proposed-at"
+                      style={{ fontSize: 11, fontWeight: 600 }}
+                    >
                       Proposed Date & Time
                     </label>
                     <input
@@ -380,11 +391,18 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
                         fontFamily: "inherit",
                       }}
                     />
-                    <span style={{ fontSize: 10, color: "#888" }}>Leave blank if TBD</span>
+                    <span style={{ fontSize: 10, color: "#888" }}>
+                      Leave blank if TBD
+                    </span>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <label htmlFor="modal-invite-message" style={{ fontSize: 11, fontWeight: 600 }}>
+                  <div
+                    style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                  >
+                    <label
+                      htmlFor="modal-invite-message"
+                      style={{ fontSize: 11, fontWeight: 600 }}
+                    >
                       Message (optional)
                     </label>
                     <textarea
@@ -413,7 +431,8 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
                       color: "#1a3e7a",
                     }}
                   >
-                    🔗 A unique Google Meet link will be auto-generated and included in the email.
+                    🔗 A unique Google Meet link will be auto-generated and
+                    included in the email.
                   </div>
                 </>
               )}
@@ -443,7 +462,8 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           </button>
 
           {/* Schedule Screening Call button (vendor-only) */}
-          {isVendor && onScheduleCall && (
+          {isVendor &&
+            onScheduleCall &&
             (() => {
               if (alreadyInvited) {
                 return (
@@ -495,8 +515,7 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
                   📞 Schedule Call
                 </button>
               );
-            })()
-          )}
+            })()}
 
           <button
             type="button"

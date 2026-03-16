@@ -60,7 +60,64 @@ type ActiveView =
   | "project-summary"
   | "job-positions-summary"
   | "immigration"
+  | "immigration-detail"
   | "timesheets";
+
+// ─── Immigration mock data types ──────────────────────────────────────────────
+
+interface ImmigrationDependant {
+  name: string;
+  relationship: string;
+  workAuthorization: string;
+  pendingApplications: string;
+}
+
+interface ImmigrationRecord {
+  candidateId: string;
+  candidateName: string;
+  candidateEmail: string;
+  immigrationStatus: string;
+  joinedDate: string;
+  workAuthorization: string;
+  pendingApplications: string;
+  dependants: ImmigrationDependant[];
+}
+
+const VISA_STATUSES = ["H-1B", "L-1A", "L-1B", "O-1", "OPT", "CPT", "H-4 EAD", "Green Card", "US Citizen", "TN"];
+const WORK_AUTH_STATUSES = ["Active", "Pending Renewal", "Expiring Soon", "Valid", "Under Review"];
+const PENDING_APPS = ["None", "I-140 Pending", "I-485 Pending", "PERM Filed", "H-1B Transfer", "None", "EAD Renewal"];
+const RELATIONSHIPS = ["Spouse", "Child", "Child"];
+const DEP_NAMES_POOL = ["Priya", "Arjun", "Meera", "Ravi", "Ananya", "Kiran", "Neha", "Sanjay", "Lakshmi", "Vikram", "Aisha", "Dev"];
+
+function buildImmigrationData(candidates: MarketerCandidateItem[]): ImmigrationRecord[] {
+  return candidates.map((c, idx) => {
+    const seed = idx + c.id.length;
+    const depCount = seed % 4; // 0–3 dependants
+    const dependants: ImmigrationDependant[] = Array.from({ length: depCount }, (_, di) => {
+      let wa = "N/A";
+      if (di === 0) wa = seed % 3 === 0 ? "H-4 EAD" : "H-4 (No EAD)";
+      return {
+        name: DEP_NAMES_POOL[(seed + di * 3) % DEP_NAMES_POOL.length] + " " + (c.candidate_name?.split(" ")[1] || ""),
+        relationship: RELATIONSHIPS[di % RELATIONSHIPS.length],
+        workAuthorization: wa,
+        pendingApplications: di === 0 && seed % 2 === 0 ? "EAD Renewal" : "None",
+      };
+    });
+    const joinedOffset = (seed % 48) + 1; // 1–48 months ago
+    const joinedDate = new Date();
+    joinedDate.setMonth(joinedDate.getMonth() - joinedOffset);
+    return {
+      candidateId: c.id,
+      candidateName: c.candidate_name || c.candidate_email,
+      candidateEmail: c.candidate_email,
+      immigrationStatus: VISA_STATUSES[seed % VISA_STATUSES.length],
+      joinedDate: joinedDate.toISOString(),
+      workAuthorization: WORK_AUTH_STATUSES[seed % WORK_AUTH_STATUSES.length],
+      pendingApplications: PENDING_APPS[seed % PENDING_APPS.length],
+      dependants,
+    };
+  });
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -539,6 +596,9 @@ const MarketerDashboard: React.FC<Props> = () => {
     useForwardOpeningWithEmailMutation();
   const [updateForwardedStatus] = useUpdateForwardedStatusMutation();
 
+  // ── Immigration state ───────────────────────────────────────────────────────
+  const [immigrationSearch, setImmigrationSearch] = useState("");
+
   // ── Timesheet hooks ─────────────────────────────────────────────────────────
   const [tsStatusFilter, setTsStatusFilter] = useState<string>("submitted");
   const [approveNotes, setApproveNotes] = useState("");
@@ -871,7 +931,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           {
             id: "immigration",
             label: "Immigration",
-            active: activeView === "immigration",
+            active: activeView === "immigration" || activeView === "immigration-detail",
             onClick: () => navigateTo("immigration"),
           },
           {
@@ -1022,6 +1082,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     "project-summary": ["Jobs", "Marketer", "Dashboard", "Project"],
     "job-positions-summary": ["Jobs", "Marketer", "Dashboard", "Positions"],
     immigration: ["Jobs", "Marketer", "Dashboard", "Immigration"],
+    "immigration-detail": ["Jobs", "Marketer", "Dashboard", "Immigration", "Detail"],
     timesheets: ["Jobs", "Marketer", "Dashboard", "Timesheets"],
   };
   const breadcrumb = BREADCRUMB_MAP[activeView] ?? ["Jobs", "Marketer"];
@@ -1759,6 +1820,8 @@ const MarketerDashboard: React.FC<Props> = () => {
     if (activeView === "job-positions-summary")
       return renderJobPositionsSummaryView();
     if (activeView === "immigration") return renderImmigrationView();
+    if (activeView === "immigration-detail" && selectedCandidateId)
+      return renderImmigrationDetailView();
     if (activeView === "timesheets") return renderTimesheetsView();
     return renderForwardedOpeningsView();
   }
@@ -3554,37 +3617,413 @@ const MarketerDashboard: React.FC<Props> = () => {
   // ── Immigration View ───────────────────────────────────────────────────────
 
   function renderImmigrationView() {
+    const immigrationData = buildImmigrationData(companyCandidates);
+    const filtered = immigrationSearch
+      ? immigrationData.filter(
+          (r) =>
+            r.candidateName.toLowerCase().includes(immigrationSearch.toLowerCase()) ||
+            r.candidateEmail.toLowerCase().includes(immigrationSearch.toLowerCase()) ||
+            r.immigrationStatus.toLowerCase().includes(immigrationSearch.toLowerCase()),
+        )
+      : immigrationData;
+
+    const columns: DataTableColumn<ImmigrationRecord>[] = [
+      {
+        key: "candidateName",
+        header: "Candidate",
+        width: "14%",
+        skeletonWidth: 100,
+        render: (r) => (
+          <button
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--w97-blue)",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: 12,
+              padding: 0,
+              textDecoration: "underline",
+            }}
+            onClick={() => {
+              setPrevView("immigration");
+              navParams({
+                view: "immigration-detail",
+                cid: r.candidateId,
+                tab: null,
+              });
+            }}
+          >
+            {r.candidateName}
+          </button>
+        ),
+        tooltip: (r) => r.candidateEmail,
+      },
+      {
+        key: "immigrationStatus",
+        header: "Immigration Status",
+        width: "12%",
+        skeletonWidth: 80,
+        render: (r) => (
+          <span
+            className="matchdb-type-pill"
+            style={{
+              color:
+                r.immigrationStatus === "Green Card" || r.immigrationStatus === "US Citizen"
+                  ? "var(--w97-green)"
+                  : "var(--w97-blue)",
+              fontWeight: 600,
+            }}
+          >
+            {r.immigrationStatus}
+          </span>
+        ),
+      },
+      {
+        key: "joinedDate",
+        header: "When Joined",
+        width: "10%",
+        skeletonWidth: 75,
+        render: (r) => <>{fmtDate(r.joinedDate)}</>,
+      },
+      {
+        key: "workAuthorization",
+        header: "Current Status",
+        width: "12%",
+        skeletonWidth: 80,
+        render: (r) => {
+          let color = "var(--w97-blue)";
+          if (r.workAuthorization === "Active" || r.workAuthorization === "Valid") color = "var(--w97-green)";
+          else if (r.workAuthorization === "Expiring Soon") color = "var(--w97-orange)";
+          return (
+            <span style={{ fontSize: 11, fontWeight: 600, color }}>{r.workAuthorization}</span>
+          );
+        },
+      },
+      {
+        key: "pendingApplications",
+        header: "Pending Applications",
+        width: "13%",
+        skeletonWidth: 90,
+        render: (r) => (
+          <span style={{ fontSize: 11, color: r.pendingApplications === "None" ? "#aaa" : "var(--w97-orange)" }}>
+            {r.pendingApplications}
+          </span>
+        ),
+      },
+      {
+        key: "dependants",
+        header: "Dependants",
+        width: "8%",
+        skeletonWidth: 50,
+        render: (r) => (
+          <span
+            style={{
+              fontWeight: 600,
+              fontSize: 12,
+              color: r.dependants.length > 0 ? "var(--w97-text)" : "#aaa",
+            }}
+          >
+            {r.dependants.length}
+          </span>
+        ),
+      },
+      {
+        key: "depPending",
+        header: "Dep. Pending Apps",
+        width: "13%",
+        skeletonWidth: 80,
+        render: (r) => {
+          const pending = r.dependants.filter((d) => d.pendingApplications !== "None");
+          return (
+            <span style={{ fontSize: 11, color: pending.length > 0 ? "var(--w97-orange)" : "#aaa" }}>
+              {pending.length > 0 ? pending.map((d) => d.pendingApplications).join(", ") : "None"}
+            </span>
+          );
+        },
+      },
+      {
+        key: "depWorkAuth",
+        header: "Dep. Work Auth",
+        width: "12%",
+        skeletonWidth: 80,
+        render: (r) => {
+          if (r.dependants.length === 0)
+            return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
+          return (
+            <span style={{ fontSize: 11 }}>
+              {r.dependants.map((d) => d.workAuthorization).join(", ")}
+            </span>
+          );
+        },
+      },
+    ];
+
     return (
-      <div>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        {/* Search toolbar */}
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            padding: "8px 0 4px",
+          }}
+        >
+          <Input
+            placeholder="Search by name, email, or visa status…"
+            value={immigrationSearch}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setImmigrationSearch(e.target.value)}
+            style={{ width: 280, fontSize: 11 }}
+          />
+          {immigrationSearch && (
+            <Button size="sm" onClick={() => setImmigrationSearch("")}>
+              Clear
+            </Button>
+          )}
+          <span style={{ fontSize: 11, color: "var(--w97-text-secondary)", marginLeft: "auto" }}>
+            {filtered.length} candidate{filtered.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        <DataTable<ImmigrationRecord>
+          columns={columns}
+          data={filtered}
+          keyExtractor={(r) => r.candidateId}
+          paginate
+          emptyMessage="No immigration records found."
+          title="Immigration Tracking"
+          titleIcon="🛂"
+        />
+      </div>
+    );
+  }
+
+  // ── Immigration Detail View ────────────────────────────────────────────────
+
+  function renderImmigrationDetailView() {
+    const immigrationData = buildImmigrationData(companyCandidates);
+    const record = immigrationData.find((r) => r.candidateId === selectedCandidateId);
+
+    if (!record) {
+      return (
+        <div style={{ textAlign: "center", padding: 60, color: "var(--w97-text-secondary)", fontSize: 13 }}>
+          Candidate not found.{" "}
+          <Button size="sm" onClick={() => navParams({ view: "immigration", cid: null })}>
+            ← Back
+          </Button>
+        </div>
+      );
+    }
+
+    const statusColor =
+      record.immigrationStatus === "Green Card" || record.immigrationStatus === "US Citizen"
+        ? "var(--w97-green)"
+        : "var(--w97-blue)";
+    let authColor = "var(--w97-blue)";
+    if (record.workAuthorization === "Active" || record.workAuthorization === "Valid") authColor = "var(--w97-green)";
+    else if (record.workAuthorization === "Expiring Soon") authColor = "var(--w97-orange)";
+
+    // Mock visa history timeline
+    const joinDate = new Date(record.joinedDate);
+    const visaHistory = [
+      {
+        date: fmtDate(joinDate.toISOString()),
+        event: `Joined — Initial ${record.immigrationStatus} approved`,
+        status: "completed" as const,
+      },
+      ...(record.immigrationStatus === "H-1B"
+        ? [
+            {
+              date: fmtDate(new Date(joinDate.getTime() + 365 * 24 * 3600000).toISOString()),
+              event: "H-1B Amendment — New worksite",
+              status: "completed" as const,
+            },
+            {
+              date: fmtDate(new Date(joinDate.getTime() + 730 * 24 * 3600000).toISOString()),
+              event: "PERM Labor Certification filed",
+              status: record.pendingApplications.includes("PERM") ? ("pending" as const) : ("completed" as const),
+            },
+          ]
+        : []),
+      ...(record.pendingApplications === "None"
+        ? []
+        : [
+            {
+              date: "Present",
+              event: record.pendingApplications,
+              status: "pending" as const,
+            },
+          ]),
+    ];
+
+    const depColumns: DataTableColumn<ImmigrationDependant>[] = [
+      {
+        key: "name",
+        header: "Name",
+        width: "25%",
+        skeletonWidth: 80,
+        render: (d) => <span style={{ fontWeight: 600, fontSize: 12 }}>{d.name}</span>,
+      },
+      {
+        key: "relationship",
+        header: "Relationship",
+        width: "18%",
+        skeletonWidth: 60,
+        render: (d) => <>{d.relationship}</>,
+      },
+      {
+        key: "workAuthorization",
+        header: "Work Authorization",
+        width: "22%",
+        skeletonWidth: 80,
+        render: (d) => {
+          let color = "var(--w97-orange)";
+          if (d.workAuthorization === "H-4 EAD") color = "var(--w97-green)";
+          else if (d.workAuthorization === "N/A") color = "#aaa";
+          return <span style={{ fontWeight: 600, color, fontSize: 11 }}>{d.workAuthorization}</span>;
+        },
+      },
+      {
+        key: "pendingApplications",
+        header: "Pending Applications",
+        width: "25%",
+        skeletonWidth: 80,
+        render: (d) => (
+          <span style={{ color: d.pendingApplications === "None" ? "#aaa" : "var(--w97-orange)", fontSize: 11 }}>
+            {d.pendingApplications}
+          </span>
+        ),
+      },
+    ];
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 16 }}>
+        {/* Top Bar */}
+        <Toolbar
+          left={
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Button
+                size="sm"
+                onClick={() =>
+                  navParams({ view: prevView ?? "immigration", cid: null, tab: null })
+                }
+              >
+                ← Back
+              </Button>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: 17,
+                  fontWeight: 700,
+                  color: "var(--w97-titlebar-from)",
+                }}
+              >
+                🛂 {record.candidateName}
+              </h2>
+            </div>
+          }
+          style={{ marginBottom: 0 }}
+        />
+
+        {/* Detail Cards Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {/* Immigration Status Card */}
+          <div
+            style={{
+              background: "var(--w97-window)",
+              border: "1px solid var(--w97-border)",
+              padding: 16,
+            }}
+          >
+            <h3 style={{ margin: "0 0 12px", fontSize: 13, color: "var(--w97-titlebar-from)" }}>
+              📋 Immigration Information
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "8px 12px", fontSize: 12 }}>
+              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>Email:</span>
+              <span>{record.candidateEmail}</span>
+              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>Visa Type:</span>
+              <span style={{ fontWeight: 700, color: statusColor }}>{record.immigrationStatus}</span>
+              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>When Joined:</span>
+              <span>{fmtDate(record.joinedDate)}</span>
+              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>Work Authorization:</span>
+              <span style={{ fontWeight: 700, color: authColor }}>{record.workAuthorization}</span>
+              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>Pending Applications:</span>
+              <span style={{ color: record.pendingApplications === "None" ? "#aaa" : "var(--w97-orange)", fontWeight: 600 }}>
+                {record.pendingApplications}
+              </span>
+              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>Dependants:</span>
+              <span>{record.dependants.length}</span>
+            </div>
+          </div>
+
+          {/* Visa Timeline Card */}
+          <div
+            style={{
+              background: "var(--w97-window)",
+              border: "1px solid var(--w97-border)",
+              padding: 16,
+            }}
+          >
+            <h3 style={{ margin: "0 0 12px", fontSize: 13, color: "var(--w97-titlebar-from)" }}>
+              📅 Visa History
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {visaHistory.map((entry) => (
+                <div
+                  key={`${entry.date}-${entry.event}`}
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "flex-start",
+                    fontSize: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      marginTop: 3,
+                      flexShrink: 0,
+                      background:
+                        entry.status === "completed" ? "var(--w97-green)" : "var(--w97-orange)",
+                    }}
+                  />
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{entry.date}</div>
+                    <div style={{ color: "var(--w97-text-secondary)" }}>{entry.event}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Dependants Table */}
         <div
           style={{
             background: "var(--w97-window)",
             border: "1px solid var(--w97-border)",
-            padding: 40,
-            textAlign: "center",
+            padding: 16,
           }}
         >
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🛂</div>
-          <h3
-            style={{
-              margin: "0 0 8px",
-              fontSize: 15,
-              color: "var(--w97-titlebar-from)",
-            }}
-          >
-            Immigration Tracking
+          <h3 style={{ margin: "0 0 12px", fontSize: 13, color: "var(--w97-titlebar-from)" }}>
+            👨‍👩‍👧‍👦 Dependants ({record.dependants.length})
           </h3>
-          <p
-            style={{
-              fontSize: 12,
-              color: "var(--w97-text-secondary)",
-              maxWidth: 400,
-              margin: "0 auto",
-            }}
-          >
-            Visa status, sponsorship details, and immigration documents for your
-            candidates will appear here. This section is under development.
-          </p>
+          {record.dependants.length === 0 ? (
+            <div style={{ fontSize: 12, color: "var(--w97-text-secondary)", padding: "12px 0" }}>
+              No dependants on record.
+            </div>
+          ) : (
+            <DataTable<ImmigrationDependant>
+              columns={depColumns}
+              data={record.dependants}
+              keyExtractor={(d) => d.name}
+              emptyMessage="No dependants."
+              title=""
+            />
+          )}
         </div>
       </div>
     );
@@ -3750,38 +4189,31 @@ const MarketerDashboard: React.FC<Props> = () => {
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Confirm dialog */}
         {isConfirmOpen && (
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.35)",
-              zIndex: 1200,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+          <dialog open className="matchdb-modal-overlay">
             <div
-              className="matchdb-panel"
-              style={{
-                width: 380,
-                padding: 20,
-                display: "flex",
-                flexDirection: "column",
-                gap: 12,
+              className="rm-backdrop"
+              role="none"
+              onClick={() => {
+                setTsActionId(null);
+                setTsActionType(null);
               }}
+            />
+            <div
+              className="matchdb-modal-window"
+              style={{ maxWidth: 400, padding: 20 }}
             >
-              <div style={{ fontWeight: 700, fontSize: 13 }}>
+              <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>
                 {tsActionType === "approve"
-                  ? "Approve Timesheet"
-                  : "Reject Timesheet"}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--w97-text-secondary)" }}>
+                  ? "✅ Approve Timesheet"
+                  : "❌ Reject Timesheet"}
+              </h3>
+              <div style={{ fontSize: 12, color: "var(--w97-text-secondary)", marginBottom: 10 }}>
                 {tsActionType === "approve"
                   ? "Optionally add a note, then confirm approval."
                   : "Provide a reason for rejection (required for the candidate)."}
               </div>
               <textarea
+                className="matchdb-input"
                 rows={3}
                 placeholder={
                   tsActionType === "approve"
@@ -3794,17 +4226,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                     ? setApproveNotes(e.target.value)
                     : setRejectNotes(e.target.value)
                 }
-                style={{
-                  width: "100%",
-                  fontSize: 12,
-                  padding: "4px 6px",
-                  border: "1px solid var(--w97-border-dark)",
-                  resize: "vertical",
-                  fontFamily: "inherit",
-                }}
+                style={{ width: "100%", resize: "vertical", fontSize: 12 }}
               />
               <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+                style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}
               >
                 <Button
                   size="sm"
@@ -3826,7 +4251,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 </Button>
               </div>
             </div>
-          </div>
+          </dialog>
         )}
 
         {/* Filter toolbar */}
@@ -5337,7 +5762,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               >
                 📊 Summary
               </button>
-              {yearTabs.map((yr, idx) => (
+              {yearTabs.map((yr) => (
                 <button
                   key={yr}
                   type="button"
