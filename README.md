@@ -278,11 +278,20 @@ NODE_SERVER_PORT=4001
 # 1. Install dependencies
 npm install
 
-# 2. Start both webpack dev server + proxy server concurrently
+# 2. Start the dev server (webpack + proxy concurrently)
 npm run dev
 ```
 
-The MFE dev server runs at **http://localhost:3001**. The remote entry is served at `http://localhost:3001/remoteEntry.js`.
+The MFE dev server runs at **http://localhost:3001**.
+
+> **First time?** Make sure you've seeded both backend databases before launching the UI:
+>
+> ```bash
+> cd ../matchdb-shell-services && npm run seed
+> cd ../matchdb-jobs-services  && npm run seed
+> ```
+>
+> See the [root README](../README.md) for full setup steps and test account credentials. The remote entry is served at `http://localhost:3001/remoteEntry.js`.
 
 When running standalone (not inside the shell), the app renders with its own `bootstrap.tsx` entry point.
 
@@ -304,9 +313,8 @@ When running standalone (not inside the shell), the app renders with its own `bo
 To run the entire MatchDB platform locally, start services in this order:
 
 ```
-0. PostgreSQL                    →  port 5432  (shared database)
-1. matchdb-shell-services        →  port 8000  (auth + payments API — owns migrations)
-2. matchdb-jobs-services         →  port 8001  (jobs + profiles API — generate-only)
+1. matchdb-shell-services        →  port 8000  (auth + payments API — MongoDB Atlas)
+2. matchdb-jobs-services         →  port 8001  (jobs + profiles API — MongoDB Atlas)
 3. matchdb-jobs-ui               →  port 3001  (remote MFE) + proxy 4001
 4. matchdb-shell-ui              →  port 3000  (host shell) + proxy 4000
 ```

@@ -6,7 +6,7 @@
  *
  * This fires in addition to the 30s polling in useAutoRefreshFlash, so
  * any upload via matchdb-data-collection-mono appears in dashboards within
- * ~1 second of being written to PostgreSQL.
+ * ~1 second of being written to MongoDB.
  *
  * Auto-reconnects on disconnect with exponential backoff (max 30 s).
  */

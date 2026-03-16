@@ -83,26 +83,73 @@ interface ImmigrationRecord {
   dependants: ImmigrationDependant[];
 }
 
-const VISA_STATUSES = ["H-1B", "L-1A", "L-1B", "O-1", "OPT", "CPT", "H-4 EAD", "Green Card", "US Citizen", "TN"];
-const WORK_AUTH_STATUSES = ["Active", "Pending Renewal", "Expiring Soon", "Valid", "Under Review"];
-const PENDING_APPS = ["None", "I-140 Pending", "I-485 Pending", "PERM Filed", "H-1B Transfer", "None", "EAD Renewal"];
+const VISA_STATUSES = [
+  "H-1B",
+  "L-1A",
+  "L-1B",
+  "O-1",
+  "OPT",
+  "CPT",
+  "H-4 EAD",
+  "Green Card",
+  "US Citizen",
+  "TN",
+];
+const WORK_AUTH_STATUSES = [
+  "Active",
+  "Pending Renewal",
+  "Expiring Soon",
+  "Valid",
+  "Under Review",
+];
+const PENDING_APPS = [
+  "None",
+  "I-140 Pending",
+  "I-485 Pending",
+  "PERM Filed",
+  "H-1B Transfer",
+  "None",
+  "EAD Renewal",
+];
 const RELATIONSHIPS = ["Spouse", "Child", "Child"];
-const DEP_NAMES_POOL = ["Priya", "Arjun", "Meera", "Ravi", "Ananya", "Kiran", "Neha", "Sanjay", "Lakshmi", "Vikram", "Aisha", "Dev"];
+const DEP_NAMES_POOL = [
+  "Priya",
+  "Arjun",
+  "Meera",
+  "Ravi",
+  "Ananya",
+  "Kiran",
+  "Neha",
+  "Sanjay",
+  "Lakshmi",
+  "Vikram",
+  "Aisha",
+  "Dev",
+];
 
-function buildImmigrationData(candidates: MarketerCandidateItem[]): ImmigrationRecord[] {
+function buildImmigrationData(
+  candidates: MarketerCandidateItem[],
+): ImmigrationRecord[] {
   return candidates.map((c, idx) => {
     const seed = idx + c.id.length;
     const depCount = seed % 4; // 0–3 dependants
-    const dependants: ImmigrationDependant[] = Array.from({ length: depCount }, (_, di) => {
-      let wa = "N/A";
-      if (di === 0) wa = seed % 3 === 0 ? "H-4 EAD" : "H-4 (No EAD)";
-      return {
-        name: DEP_NAMES_POOL[(seed + di * 3) % DEP_NAMES_POOL.length] + " " + (c.candidate_name?.split(" ")[1] || ""),
-        relationship: RELATIONSHIPS[di % RELATIONSHIPS.length],
-        workAuthorization: wa,
-        pendingApplications: di === 0 && seed % 2 === 0 ? "EAD Renewal" : "None",
-      };
-    });
+    const dependants: ImmigrationDependant[] = Array.from(
+      { length: depCount },
+      (_, di) => {
+        let wa = "N/A";
+        if (di === 0) wa = seed % 3 === 0 ? "H-4 EAD" : "H-4 (No EAD)";
+        return {
+          name:
+            DEP_NAMES_POOL[(seed + di * 3) % DEP_NAMES_POOL.length] +
+            " " +
+            (c.candidate_name?.split(" ")[1] || ""),
+          relationship: RELATIONSHIPS[di % RELATIONSHIPS.length],
+          workAuthorization: wa,
+          pendingApplications:
+            di === 0 && seed % 2 === 0 ? "EAD Renewal" : "None",
+        };
+      },
+    );
     const joinedOffset = (seed % 48) + 1; // 1–48 months ago
     const joinedDate = new Date();
     joinedDate.setMonth(joinedDate.getMonth() - joinedOffset);
@@ -931,7 +978,9 @@ const MarketerDashboard: React.FC<Props> = () => {
           {
             id: "immigration",
             label: "Immigration",
-            active: activeView === "immigration" || activeView === "immigration-detail",
+            active:
+              activeView === "immigration" ||
+              activeView === "immigration-detail",
             onClick: () => navigateTo("immigration"),
           },
           {
@@ -1082,7 +1131,13 @@ const MarketerDashboard: React.FC<Props> = () => {
     "project-summary": ["Jobs", "Marketer", "Dashboard", "Project"],
     "job-positions-summary": ["Jobs", "Marketer", "Dashboard", "Positions"],
     immigration: ["Jobs", "Marketer", "Dashboard", "Immigration"],
-    "immigration-detail": ["Jobs", "Marketer", "Dashboard", "Immigration", "Detail"],
+    "immigration-detail": [
+      "Jobs",
+      "Marketer",
+      "Dashboard",
+      "Immigration",
+      "Detail",
+    ],
     timesheets: ["Jobs", "Marketer", "Dashboard", "Timesheets"],
   };
   const breadcrumb = BREADCRUMB_MAP[activeView] ?? ["Jobs", "Marketer"];
@@ -3621,9 +3676,15 @@ const MarketerDashboard: React.FC<Props> = () => {
     const filtered = immigrationSearch
       ? immigrationData.filter(
           (r) =>
-            r.candidateName.toLowerCase().includes(immigrationSearch.toLowerCase()) ||
-            r.candidateEmail.toLowerCase().includes(immigrationSearch.toLowerCase()) ||
-            r.immigrationStatus.toLowerCase().includes(immigrationSearch.toLowerCase()),
+            r.candidateName
+              .toLowerCase()
+              .includes(immigrationSearch.toLowerCase()) ||
+            r.candidateEmail
+              .toLowerCase()
+              .includes(immigrationSearch.toLowerCase()) ||
+            r.immigrationStatus
+              .toLowerCase()
+              .includes(immigrationSearch.toLowerCase()),
         )
       : immigrationData;
 
@@ -3669,7 +3730,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             className="matchdb-type-pill"
             style={{
               color:
-                r.immigrationStatus === "Green Card" || r.immigrationStatus === "US Citizen"
+                r.immigrationStatus === "Green Card" ||
+                r.immigrationStatus === "US Citizen"
                   ? "var(--w97-green)"
                   : "var(--w97-blue)",
               fontWeight: 600,
@@ -3693,10 +3755,17 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 80,
         render: (r) => {
           let color = "var(--w97-blue)";
-          if (r.workAuthorization === "Active" || r.workAuthorization === "Valid") color = "var(--w97-green)";
-          else if (r.workAuthorization === "Expiring Soon") color = "var(--w97-orange)";
+          if (
+            r.workAuthorization === "Active" ||
+            r.workAuthorization === "Valid"
+          )
+            color = "var(--w97-green)";
+          else if (r.workAuthorization === "Expiring Soon")
+            color = "var(--w97-orange)";
           return (
-            <span style={{ fontSize: 11, fontWeight: 600, color }}>{r.workAuthorization}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color }}>
+              {r.workAuthorization}
+            </span>
           );
         },
       },
@@ -3706,7 +3775,13 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "13%",
         skeletonWidth: 90,
         render: (r) => (
-          <span style={{ fontSize: 11, color: r.pendingApplications === "None" ? "#aaa" : "var(--w97-orange)" }}>
+          <span
+            style={{
+              fontSize: 11,
+              color:
+                r.pendingApplications === "None" ? "#aaa" : "var(--w97-orange)",
+            }}
+          >
             {r.pendingApplications}
           </span>
         ),
@@ -3734,10 +3809,19 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "13%",
         skeletonWidth: 80,
         render: (r) => {
-          const pending = r.dependants.filter((d) => d.pendingApplications !== "None");
+          const pending = r.dependants.filter(
+            (d) => d.pendingApplications !== "None",
+          );
           return (
-            <span style={{ fontSize: 11, color: pending.length > 0 ? "var(--w97-orange)" : "#aaa" }}>
-              {pending.length > 0 ? pending.map((d) => d.pendingApplications).join(", ") : "None"}
+            <span
+              style={{
+                fontSize: 11,
+                color: pending.length > 0 ? "var(--w97-orange)" : "#aaa",
+              }}
+            >
+              {pending.length > 0
+                ? pending.map((d) => d.pendingApplications).join(", ")
+                : "None"}
             </span>
           );
         },
@@ -3773,7 +3857,9 @@ const MarketerDashboard: React.FC<Props> = () => {
           <Input
             placeholder="Search by name, email, or visa status…"
             value={immigrationSearch}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setImmigrationSearch(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setImmigrationSearch(e.target.value)
+            }
             style={{ width: 280, fontSize: 11 }}
           />
           {immigrationSearch && (
@@ -3781,7 +3867,13 @@ const MarketerDashboard: React.FC<Props> = () => {
               Clear
             </Button>
           )}
-          <span style={{ fontSize: 11, color: "var(--w97-text-secondary)", marginLeft: "auto" }}>
+          <span
+            style={{
+              fontSize: 11,
+              color: "var(--w97-text-secondary)",
+              marginLeft: "auto",
+            }}
+          >
             {filtered.length} candidate{filtered.length === 1 ? "" : "s"}
           </span>
         </div>
@@ -3803,13 +3895,25 @@ const MarketerDashboard: React.FC<Props> = () => {
 
   function renderImmigrationDetailView() {
     const immigrationData = buildImmigrationData(companyCandidates);
-    const record = immigrationData.find((r) => r.candidateId === selectedCandidateId);
+    const record = immigrationData.find(
+      (r) => r.candidateId === selectedCandidateId,
+    );
 
     if (!record) {
       return (
-        <div style={{ textAlign: "center", padding: 60, color: "var(--w97-text-secondary)", fontSize: 13 }}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: 60,
+            color: "var(--w97-text-secondary)",
+            fontSize: 13,
+          }}
+        >
           Candidate not found.{" "}
-          <Button size="sm" onClick={() => navParams({ view: "immigration", cid: null })}>
+          <Button
+            size="sm"
+            onClick={() => navParams({ view: "immigration", cid: null })}
+          >
             ← Back
           </Button>
         </div>
@@ -3817,12 +3921,18 @@ const MarketerDashboard: React.FC<Props> = () => {
     }
 
     const statusColor =
-      record.immigrationStatus === "Green Card" || record.immigrationStatus === "US Citizen"
+      record.immigrationStatus === "Green Card" ||
+      record.immigrationStatus === "US Citizen"
         ? "var(--w97-green)"
         : "var(--w97-blue)";
     let authColor = "var(--w97-blue)";
-    if (record.workAuthorization === "Active" || record.workAuthorization === "Valid") authColor = "var(--w97-green)";
-    else if (record.workAuthorization === "Expiring Soon") authColor = "var(--w97-orange)";
+    if (
+      record.workAuthorization === "Active" ||
+      record.workAuthorization === "Valid"
+    )
+      authColor = "var(--w97-green)";
+    else if (record.workAuthorization === "Expiring Soon")
+      authColor = "var(--w97-orange)";
 
     // Mock visa history timeline
     const joinDate = new Date(record.joinedDate);
@@ -3835,14 +3945,20 @@ const MarketerDashboard: React.FC<Props> = () => {
       ...(record.immigrationStatus === "H-1B"
         ? [
             {
-              date: fmtDate(new Date(joinDate.getTime() + 365 * 24 * 3600000).toISOString()),
+              date: fmtDate(
+                new Date(joinDate.getTime() + 365 * 24 * 3600000).toISOString(),
+              ),
               event: "H-1B Amendment — New worksite",
               status: "completed" as const,
             },
             {
-              date: fmtDate(new Date(joinDate.getTime() + 730 * 24 * 3600000).toISOString()),
+              date: fmtDate(
+                new Date(joinDate.getTime() + 730 * 24 * 3600000).toISOString(),
+              ),
               event: "PERM Labor Certification filed",
-              status: record.pendingApplications.includes("PERM") ? ("pending" as const) : ("completed" as const),
+              status: record.pendingApplications.includes("PERM")
+                ? ("pending" as const)
+                : ("completed" as const),
             },
           ]
         : []),
@@ -3863,7 +3979,9 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Name",
         width: "25%",
         skeletonWidth: 80,
-        render: (d) => <span style={{ fontWeight: 600, fontSize: 12 }}>{d.name}</span>,
+        render: (d) => (
+          <span style={{ fontWeight: 600, fontSize: 12 }}>{d.name}</span>
+        ),
       },
       {
         key: "relationship",
@@ -3881,7 +3999,11 @@ const MarketerDashboard: React.FC<Props> = () => {
           let color = "var(--w97-orange)";
           if (d.workAuthorization === "H-4 EAD") color = "var(--w97-green)";
           else if (d.workAuthorization === "N/A") color = "#aaa";
-          return <span style={{ fontWeight: 600, color, fontSize: 11 }}>{d.workAuthorization}</span>;
+          return (
+            <span style={{ fontWeight: 600, color, fontSize: 11 }}>
+              {d.workAuthorization}
+            </span>
+          );
         },
       },
       {
@@ -3890,7 +4012,13 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "25%",
         skeletonWidth: 80,
         render: (d) => (
-          <span style={{ color: d.pendingApplications === "None" ? "#aaa" : "var(--w97-orange)", fontSize: 11 }}>
+          <span
+            style={{
+              color:
+                d.pendingApplications === "None" ? "#aaa" : "var(--w97-orange)",
+              fontSize: 11,
+            }}
+          >
             {d.pendingApplications}
           </span>
         ),
@@ -3898,7 +4026,14 @@ const MarketerDashboard: React.FC<Props> = () => {
     ];
 
     return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          gap: 16,
+        }}
+      >
         {/* Top Bar */}
         <Toolbar
           left={
@@ -3906,7 +4041,11 @@ const MarketerDashboard: React.FC<Props> = () => {
               <Button
                 size="sm"
                 onClick={() =>
-                  navParams({ view: prevView ?? "immigration", cid: null, tab: null })
+                  navParams({
+                    view: prevView ?? "immigration",
+                    cid: null,
+                    tab: null,
+                  })
                 }
               >
                 ← Back
@@ -3927,7 +4066,9 @@ const MarketerDashboard: React.FC<Props> = () => {
         />
 
         {/* Detail Cards Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+        >
           {/* Immigration Status Card */}
           <div
             style={{
@@ -3936,23 +4077,72 @@ const MarketerDashboard: React.FC<Props> = () => {
               padding: 16,
             }}
           >
-            <h3 style={{ margin: "0 0 12px", fontSize: 13, color: "var(--w97-titlebar-from)" }}>
+            <h3
+              style={{
+                margin: "0 0 12px",
+                fontSize: 13,
+                color: "var(--w97-titlebar-from)",
+              }}
+            >
               📋 Immigration Information
             </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "8px 12px", fontSize: 12 }}>
-              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>Email:</span>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "140px 1fr",
+                gap: "8px 12px",
+                fontSize: 12,
+              }}
+            >
+              <span
+                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
+              >
+                Email:
+              </span>
               <span>{record.candidateEmail}</span>
-              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>Visa Type:</span>
-              <span style={{ fontWeight: 700, color: statusColor }}>{record.immigrationStatus}</span>
-              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>When Joined:</span>
+              <span
+                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
+              >
+                Visa Type:
+              </span>
+              <span style={{ fontWeight: 700, color: statusColor }}>
+                {record.immigrationStatus}
+              </span>
+              <span
+                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
+              >
+                When Joined:
+              </span>
               <span>{fmtDate(record.joinedDate)}</span>
-              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>Work Authorization:</span>
-              <span style={{ fontWeight: 700, color: authColor }}>{record.workAuthorization}</span>
-              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>Pending Applications:</span>
-              <span style={{ color: record.pendingApplications === "None" ? "#aaa" : "var(--w97-orange)", fontWeight: 600 }}>
+              <span
+                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
+              >
+                Work Authorization:
+              </span>
+              <span style={{ fontWeight: 700, color: authColor }}>
+                {record.workAuthorization}
+              </span>
+              <span
+                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
+              >
+                Pending Applications:
+              </span>
+              <span
+                style={{
+                  color:
+                    record.pendingApplications === "None"
+                      ? "#aaa"
+                      : "var(--w97-orange)",
+                  fontWeight: 600,
+                }}
+              >
                 {record.pendingApplications}
               </span>
-              <span style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}>Dependants:</span>
+              <span
+                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
+              >
+                Dependants:
+              </span>
               <span>{record.dependants.length}</span>
             </div>
           </div>
@@ -3965,7 +4155,13 @@ const MarketerDashboard: React.FC<Props> = () => {
               padding: 16,
             }}
           >
-            <h3 style={{ margin: "0 0 12px", fontSize: 13, color: "var(--w97-titlebar-from)" }}>
+            <h3
+              style={{
+                margin: "0 0 12px",
+                fontSize: 13,
+                color: "var(--w97-titlebar-from)",
+              }}
+            >
               📅 Visa History
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -3987,12 +4183,16 @@ const MarketerDashboard: React.FC<Props> = () => {
                       marginTop: 3,
                       flexShrink: 0,
                       background:
-                        entry.status === "completed" ? "var(--w97-green)" : "var(--w97-orange)",
+                        entry.status === "completed"
+                          ? "var(--w97-green)"
+                          : "var(--w97-orange)",
                     }}
                   />
                   <div>
                     <div style={{ fontWeight: 600 }}>{entry.date}</div>
-                    <div style={{ color: "var(--w97-text-secondary)" }}>{entry.event}</div>
+                    <div style={{ color: "var(--w97-text-secondary)" }}>
+                      {entry.event}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -4008,11 +4208,23 @@ const MarketerDashboard: React.FC<Props> = () => {
             padding: 16,
           }}
         >
-          <h3 style={{ margin: "0 0 12px", fontSize: 13, color: "var(--w97-titlebar-from)" }}>
+          <h3
+            style={{
+              margin: "0 0 12px",
+              fontSize: 13,
+              color: "var(--w97-titlebar-from)",
+            }}
+          >
             👨‍👩‍👧‍👦 Dependants ({record.dependants.length})
           </h3>
           {record.dependants.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--w97-text-secondary)", padding: "12px 0" }}>
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--w97-text-secondary)",
+                padding: "12px 0",
+              }}
+            >
               No dependants on record.
             </div>
           ) : (
@@ -4207,7 +4419,13 @@ const MarketerDashboard: React.FC<Props> = () => {
                   ? "✅ Approve Timesheet"
                   : "❌ Reject Timesheet"}
               </h3>
-              <div style={{ fontSize: 12, color: "var(--w97-text-secondary)", marginBottom: 10 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--w97-text-secondary)",
+                  marginBottom: 10,
+                }}
+              >
                 {tsActionType === "approve"
                   ? "Optionally add a note, then confirm approval."
                   : "Provide a reason for rejection (required for the candidate)."}
@@ -4229,7 +4447,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                 style={{ width: "100%", resize: "vertical", fontSize: 12 }}
               />
               <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  justifyContent: "flex-end",
+                  marginTop: 12,
+                }}
               >
                 <Button
                   size="sm"

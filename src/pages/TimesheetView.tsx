@@ -74,7 +74,7 @@ function fmtDate(iso: string): string {
 // ── Download helpers ───────────────────────────────────────────────────────────
 
 function downloadTimesheetCSV(ts: Timesheet): void {
-  const entries = ts.entries as TimesheetEntry[];
+  const entries = ts.entries;
   const header = ["Day", "Date", "Hours", "Notes"].join(",");
   const rows = entries.map((e) =>
     [
@@ -117,7 +117,7 @@ const STATUS_STYLE: Record<string, React.CSSProperties> = {
   rejected: { background: "#f8d7da", color: "#721c24" },
 };
 
-function StatusPill({ status }: { status: string }) {
+function StatusPill({ status }: Readonly<{ status: string }>) {
   return (
     <span
       className="matchdb-type-pill"
@@ -206,7 +206,7 @@ const TimesheetView: React.FC<Props> = ({
   useEffect(() => {
     if (existingDraft) {
       const map: Record<string, { hoursWorked: string; notes: string }> = {};
-      (existingDraft.entries as TimesheetEntry[]).forEach((e) => {
+      existingDraft.entries.forEach((e) => {
         map[e.date] = {
           hoursWorked: String(e.hoursWorked),
           notes: e.notes || "",
@@ -220,7 +220,7 @@ const TimesheetView: React.FC<Props> = ({
     return weekDates.map((wd) => ({
       date: wd.date,
       day: wd.day,
-      hoursWorked: parseFloat(entries[wd.date]?.hoursWorked || "0") || 0,
+      hoursWorked: Number.parseFloat(entries[wd.date]?.hoursWorked || "0") || 0,
       notes: entries[wd.date]?.notes || "",
     }));
   }
