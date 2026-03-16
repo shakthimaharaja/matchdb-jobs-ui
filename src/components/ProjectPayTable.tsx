@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { Button } from "matchdb-component-library";
+import { getApiErrorMessage } from "../utils";
 import {
   useGetStateTaxRatesQuery,
   useUpsertProjectFinancialMutation,
@@ -13,23 +14,7 @@ import {
   type ProjectFinancialData,
 } from "../api/jobsApi";
 import "./ProjectFinancialForm.css";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const MN = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
+import { MONTH_NAMES as MN } from "../constants";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -231,7 +216,6 @@ const ProjectPayTable: React.FC<Props> = ({
     [states, stateCode],
   );
 
-
   // ── Per-row computation ───────────────────────────────────────────────────
   const computeRow = useCallback(
     (period: PayPeriod) => {
@@ -308,8 +292,8 @@ const ProjectPayTable: React.FC<Props> = ({
       setEditingSettings(false);
       setEditingRows(false);
       onSaved?.();
-    } catch (e: any) {
-      alert(e?.data?.error || "Failed to save");
+    } catch (e: unknown) {
+      alert(getApiErrorMessage(e, "Failed to save"));
     }
   }, [
     upsert,
@@ -338,7 +322,9 @@ const ProjectPayTable: React.FC<Props> = ({
           {editingSettings ? (
             <>
               <div className="ppt-sfield">
-                <label htmlFor="ppt-bill-rate" className="ppt-slabel">Bill Rate ($/hr)</label>
+                <label htmlFor="ppt-bill-rate" className="ppt-slabel">
+                  Bill Rate ($/hr)
+                </label>
                 <input
                   id="ppt-bill-rate"
                   type="number"
@@ -351,7 +337,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 />
               </div>
               <div className="ppt-sfield">
-                <label htmlFor="ppt-pay-rate" className="ppt-slabel">Pay Rate ($/hr)</label>
+                <label htmlFor="ppt-pay-rate" className="ppt-slabel">
+                  Pay Rate ($/hr)
+                </label>
                 <input
                   id="ppt-pay-rate"
                   type="number"
@@ -364,7 +352,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 />
               </div>
               <div className="ppt-sfield ppt-sfield-wide">
-                <label htmlFor="ppt-state" className="ppt-slabel">State (Work Location)</label>
+                <label htmlFor="ppt-state" className="ppt-slabel">
+                  State (Work Location)
+                </label>
                 <select
                   id="ppt-state"
                   className="ppt-sinput"
@@ -380,7 +370,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 </select>
               </div>
               <div className="ppt-sfield">
-                <label htmlFor="ppt-withhold" className="ppt-slabel">Withholding %</label>
+                <label htmlFor="ppt-withhold" className="ppt-slabel">
+                  Withholding %
+                </label>
                 <input
                   id="ppt-withhold"
                   type="number"
@@ -394,7 +386,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 />
               </div>
               <div className="ppt-sfield">
-                <label htmlFor="ppt-proj-start" className="ppt-slabel">Project Start</label>
+                <label htmlFor="ppt-proj-start" className="ppt-slabel">
+                  Project Start
+                </label>
                 <input
                   id="ppt-proj-start"
                   type="date"
@@ -404,7 +398,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 />
               </div>
               <div className="ppt-sfield">
-                <label htmlFor="ppt-proj-end" className="ppt-slabel">Project End</label>
+                <label htmlFor="ppt-proj-end" className="ppt-slabel">
+                  Project End
+                </label>
                 <input
                   id="ppt-proj-end"
                   type="date"
@@ -513,7 +509,9 @@ const ProjectPayTable: React.FC<Props> = ({
       {/* ── Notes (only in edit mode) ─────────────────────────────────────── */}
       {editingSettings && (
         <div className="ppt-notes-bar">
-          <label htmlFor="ppt-notes" className="ppt-slabel">Notes</label>
+          <label htmlFor="ppt-notes" className="ppt-slabel">
+            Notes
+          </label>
           <input
             id="ppt-notes"
             type="text"
@@ -568,9 +566,7 @@ const ProjectPayTable: React.FC<Props> = ({
         <div className="ppt-ts-divider" />
         <div className="ppt-ts-tile">
           <span className="ppt-ts-label">Outstanding</span>
-          <span
-            className={`ppt-ts-value ${outstandingClass(totals.balance)}`}
-          >
+          <span className={`ppt-ts-value ${outstandingClass(totals.balance)}`}>
             {outstandingDisplay(totals.balance)}
           </span>
         </div>
@@ -693,7 +689,9 @@ const ProjectPayTable: React.FC<Props> = ({
 
                   {/* Balance */}
                   <td
-                    className={`ppt-td ppt-td-balance ${balanceClass(r.balance)}`}
+                    className={`ppt-td ppt-td-balance ${balanceClass(
+                      r.balance,
+                    )}`}
                   >
                     {balanceDisplay(r.balance)}
                   </td>
@@ -726,7 +724,9 @@ const ProjectPayTable: React.FC<Props> = ({
                 {fmt(totals.amountPaid)}
               </td>
               <td
-                className={`ppt-tf ppt-tf-balance ${balanceClass(totals.balance)}`}
+                className={`ppt-tf ppt-tf-balance ${balanceClass(
+                  totals.balance,
+                )}`}
               >
                 {totalBalanceDisplay(totals.balance)}
               </td>

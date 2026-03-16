@@ -114,6 +114,7 @@ export async function generateResumePDF(profile: CandidateProfile): Promise<stri
     }
 
     // Footer on each page
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const totalPages = (doc.internal as any).getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);

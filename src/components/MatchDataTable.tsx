@@ -30,9 +30,11 @@ type SortKey =
   | "location";
 type SortDir = "asc" | "desc";
 
-const MAIL_MATCH_THRESHOLD = 75;
-const POKE_MATCH_THRESHOLD = 25;
-const POKE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+import {
+  MAIL_MATCH_THRESHOLD,
+  POKE_MATCH_THRESHOLD,
+  POKE_COOLDOWN_MS,
+} from "../constants";
 
 export interface MatchDataTableProps {
   title: string;
@@ -102,7 +104,7 @@ function getMailTitle(
   if (alreadyEmailed) return `Already sent a mail template to ${targetName}`;
   if (pokeTooRecent)
     return `Mail unlocks 24 h after poking (poked at ${new Date(
-      pokeAt!,
+      pokeAt ?? "",
     ).toLocaleTimeString()})`;
   return `Compose mail template to ${targetName}`;
 }
@@ -467,6 +469,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         render: renderActions,
       },
     ];
+  // renderActions is defined in the same render scope — including it would bloat the array
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     sortKey,
     sortDir,

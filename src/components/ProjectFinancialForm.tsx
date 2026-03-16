@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "matchdb-component-library";
+import { getApiErrorMessage } from "../utils";
 import "./ProjectFinancialForm.css";
 import {
   useGetStateTaxRatesQuery,
@@ -224,8 +225,8 @@ const ProjectFinancialForm: React.FC<Props> = ({
       }).unwrap();
       setEditing(false);
       onSaved?.();
-    } catch (e: any) {
-      alert(e?.data?.error || "Failed to save financial data");
+    } catch (e: unknown) {
+      alert(getApiErrorMessage(e, "Failed to save financial data"));
     }
   }, [
     upsert,

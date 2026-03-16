@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Generic hook that tracks data diffs and produces flash-animation Sets.

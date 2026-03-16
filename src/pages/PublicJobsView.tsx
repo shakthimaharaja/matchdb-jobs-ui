@@ -27,8 +27,8 @@ import { useLocation } from "react-router-dom";
 import { DataTable } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import "./PublicJobsView.css";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+import { PAGE_SIZE, FLASH_DURATION_MS, WS_RECONNECT_MS } from "../constants";
+import { WS_COUNTS, WS_PUBLIC_DATA } from "../constants/endpoints";
 
 interface PublicJob {
   [key: string]: unknown;
@@ -84,11 +84,6 @@ interface PublicDataMessage {
   deletedProfiles: PublicProfile[];
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-const PAGE_SIZE = 25;
-const FLASH_DURATION_MS = 2500;
-const WS_RECONNECT_MS = 5000;
-
 // ── WebSocket helpers ─────────────────────────────────────────────────────────
 
 /** Build a ws:// or wss:// URL relative to the current page origin. */
@@ -109,7 +104,7 @@ function useLiveCount(field: "jobs" | "profiles"): number | null {
     let reconnectTimer: ReturnType<typeof setTimeout>;
 
     function connect() {
-      ws = new WebSocket(wsUrl("/ws/counts"));
+      ws = new WebSocket(wsUrl(WS_COUNTS));
       ws.onmessage = (ev) => {
         try {
           const data = JSON.parse(ev.data) as Record<string, number>;
@@ -355,7 +350,7 @@ const TwinView: React.FC<TwinProps> = ({
   jobs,
   profiles,
   loading,
-  openLogin,
+  openLogin: _openLogin,
   flashJobIds,
   flashProfileIds,
   deleteFlashJobIds,
@@ -657,7 +652,7 @@ const CandView: React.FC<CandViewProps> = ({
   profiles,
   loading,
   jobTypeFilter,
-  openLogin,
+  openLogin: _openLogin,
   flashJobIds,
   deleteFlashJobIds,
   wsConnected,
@@ -882,7 +877,7 @@ interface VendorViewProps {
 const VendorView: React.FC<VendorViewProps> = ({
   profiles,
   loading,
-  openLogin,
+  openLogin: _openLogin,
   flashProfileIds,
   deleteFlashProfileIds,
   wsConnected,
@@ -1101,23 +1096,29 @@ const PublicJobsView: React.FC = () => {
     setProfiles((prev) => prev.filter((p) => !ids.has(p.id)));
   }, []);
 
-  const scheduleDeleteFlashJobs = useCallback((ids: Set<string>) => {
-    clearTimeout(deleteFlashJobTimer.current);
-    setDeleteFlashJobIds(ids);
-    deleteFlashJobTimer.current = setTimeout(
-      () => removeDeletedJobs(ids),
-      FLASH_DURATION_MS,
-    );
-  }, [removeDeletedJobs]);
+  const scheduleDeleteFlashJobs = useCallback(
+    (ids: Set<string>) => {
+      clearTimeout(deleteFlashJobTimer.current);
+      setDeleteFlashJobIds(ids);
+      deleteFlashJobTimer.current = setTimeout(
+        () => removeDeletedJobs(ids),
+        FLASH_DURATION_MS,
+      );
+    },
+    [removeDeletedJobs],
+  );
 
-  const scheduleDeleteFlashProfiles = useCallback((ids: Set<string>) => {
-    clearTimeout(deleteFlashProfileTimer.current);
-    setDeleteFlashProfileIds(ids);
-    deleteFlashProfileTimer.current = setTimeout(
-      () => removeDeletedProfiles(ids),
-      FLASH_DURATION_MS,
-    );
-  }, [removeDeletedProfiles]);
+  const scheduleDeleteFlashProfiles = useCallback(
+    (ids: Set<string>) => {
+      clearTimeout(deleteFlashProfileTimer.current);
+      setDeleteFlashProfileIds(ids);
+      deleteFlashProfileTimer.current = setTimeout(
+        () => removeDeletedProfiles(ids),
+        FLASH_DURATION_MS,
+      );
+    },
+    [removeDeletedProfiles],
+  );
 
   const isVendorView =
     location.pathname === "/jobs/vendor" ||
@@ -1133,7 +1134,7 @@ const PublicJobsView: React.FC = () => {
     let isFirst = true;
 
     function connect() {
-      ws = new WebSocket(wsUrl("/ws/public-data"));
+      ws = new WebSocket(wsUrl(WS_PUBLIC_DATA));
 
       ws.onopen = () => {
         setWsConnected(true);
@@ -1150,13 +1151,13 @@ const PublicJobsView: React.FC = () => {
           if (Array.isArray(msg.jobs)) {
             const liveJobs = msg.jobs.slice(0, PAGE_SIZE);
             // Append deleted rows (from server's last-known cache) at the end
-            const deletedRows = (msg.deletedJobs ?? []);
+            const deletedRows = msg.deletedJobs ?? [];
             const combined = [...liveJobs, ...deletedRows].slice(0, PAGE_SIZE);
             setJobs(combined);
           }
           if (Array.isArray(msg.profiles)) {
             const liveProfiles = msg.profiles.slice(0, PAGE_SIZE);
-            const deletedRows = (msg.deletedProfiles ?? []);
+            const deletedRows = msg.deletedProfiles ?? [];
             const combined = [...liveProfiles, ...deletedRows].slice(
               0,
               PAGE_SIZE,
@@ -1207,6 +1208,8 @@ const PublicJobsView: React.FC = () => {
       clearTimeout(deleteFlashProfileTimer.current);
       ws?.close();
     };
+  // WebSocket setup runs once on mount — schedule callbacks are stable refs
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Listen for job-type filter events from the shell ──────────────────────
@@ -1215,7 +1218,8 @@ const PublicJobsView: React.FC = () => {
       setJobTypeFilter((e as CustomEvent).detail?.jobType || "");
     };
     globalThis.addEventListener("matchdb:jobTypeFilter", handler);
-    return () => globalThis.removeEventListener("matchdb:jobTypeFilter", handler);
+    return () =>
+      globalThis.removeEventListener("matchdb:jobTypeFilter", handler);
   }, []);
 
   const openLogin = useCallback(

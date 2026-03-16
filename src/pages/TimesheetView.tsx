@@ -9,6 +9,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { DataTable, Button } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
+import { getApiErrorMessage } from "../utils";
 import {
   useGetTimesheetsQuery,
   useUpsertTimesheetMutation,
@@ -19,7 +20,7 @@ import {
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] as const;
+import { WEEKDAYS as DAYS } from "../constants";
 
 /** Monday 00:00 UTC of the week containing `date` */
 function getWeekStart(date: Date = new Date()): Date {
@@ -180,7 +181,7 @@ const TimesheetView: React.FC<Props> = ({
   const [submitTimesheet, { isLoading: submitting }] =
     useSubmitTimesheetMutation();
 
-  const timesheets = timesheetsResp?.data ?? [];
+  const timesheets = useMemo(() => timesheetsResp?.data ?? [], [timesheetsResp]);
   const total = timesheetsResp?.total ?? 0;
 
   // Pre-fill form if a draft exists for the current week
@@ -214,6 +215,8 @@ const TimesheetView: React.FC<Props> = ({
       });
       setEntries((prev) => ({ ...prev, ...map }));
     }
+  // Only re-fill when a different draft is loaded
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingDraft?.id]);
 
   function buildEntries(): TimesheetEntry[] {
@@ -255,8 +258,8 @@ const TimesheetView: React.FC<Props> = ({
       setSaveMsg("Timesheet submitted successfully.");
       setSubmitConfirm(false);
       refetch();
-    } catch (err: any) {
-      setSaveErr(err?.data?.error || "Failed to submit timesheet.");
+    } catch (err: unknown) {
+      setSaveErr(getApiErrorMessage(err, "Failed to submit timesheet."));
       setSubmitConfirm(false);
     }
   }

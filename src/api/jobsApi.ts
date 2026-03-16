@@ -13,6 +13,7 @@
  */
 
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { CACHE_SHORT, CACHE_LONG } from "../constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -532,8 +533,8 @@ export interface CompanySearchResult {
 // ─── Timesheet types ──────────────────────────────────────────────────────────
 
 export interface TimesheetEntry {
-  date: string;       // "YYYY-MM-DD"
-  day: string;        // "Monday" | "Tuesday" | ...
+  date: string; // "YYYY-MM-DD"
+  day: string; // "Monday" | "Tuesday" | ...
   hoursWorked: number;
   notes: string;
 }
@@ -547,8 +548,8 @@ export interface Timesheet {
   marketerEmail: string;
   companyId: string;
   companyName: string;
-  weekStart: string;  // ISO
-  weekEnd: string;    // ISO
+  weekStart: string; // ISO
+  weekEnd: string; // ISO
   entries: TimesheetEntry[];
   totalHours: number;
   status: "draft" | "submitted" | "approved" | "rejected";
@@ -654,7 +655,7 @@ export const jobsApi = createApi({
       return headers;
     },
   }),
-  keepUnusedDataFor: 300, // 5 min cache — marketer data persists across navigations
+  keepUnusedDataFor: CACHE_SHORT, // 5 min cache — marketer data persists across navigations
   tagTypes: [
     "VendorJobs",
     "CandidateMatches",
@@ -730,7 +731,7 @@ export const jobsApi = createApi({
       query: () => "api/jobs/profile",
       providesTags: ["Profile"],
       transformErrorResponse: (response) => {
-        if ((response as any).status === 404) return null;
+        if ((response as { status: number }).status === 404) return null;
         return response;
       },
     }),
@@ -749,7 +750,7 @@ export const jobsApi = createApi({
 
     sendPoke: builder.mutation<string, SendPokeArgs>({
       query: (body) => ({ url: "api/jobs/poke", method: "POST", body }),
-      transformResponse: (res: any) => res?.message || "Sent",
+      transformResponse: (res: { message?: string }) => res?.message || "Sent",
       invalidatesTags: ["PokesSent"],
     }),
 
@@ -768,7 +769,7 @@ export const jobsApi = createApi({
     getMarketerStats: builder.query<MarketerStats, void>({
       query: () => "api/jobs/marketer/stats",
       providesTags: ["MarketerStats"],
-      keepUnusedDataFor: 600, // 10 min extra cache for stats
+      keepUnusedDataFor: CACHE_LONG, // 10 min extra cache for stats
     }),
 
     getMarketerJobs: builder.query<
@@ -776,7 +777,7 @@ export const jobsApi = createApi({
       MarketerQueryArgs
     >({
       query: (params) => ({ url: "api/jobs/marketer/jobs", params }),
-      keepUnusedDataFor: 300,
+      keepUnusedDataFor: CACHE_SHORT,
     }),
 
     getMarketerProfiles: builder.query<
@@ -784,7 +785,7 @@ export const jobsApi = createApi({
       MarketerQueryArgs
     >({
       query: (params) => ({ url: "api/jobs/marketer/profiles", params }),
-      keepUnusedDataFor: 300,
+      keepUnusedDataFor: CACHE_SHORT,
     }),
 
     // ── Marketer Company ──────────────────────────────────────────────────────
@@ -847,7 +848,7 @@ export const jobsApi = createApi({
     // ── Forward Openings ──────────────────────────────────────────────────────
 
     forwardOpening: builder.mutation<
-      any,
+      { ok: boolean },
       { candidateEmail: string; jobId: string; note?: string }
     >({
       query: (body) => ({
@@ -894,7 +895,7 @@ export const jobsApi = createApi({
     // ── Forward Opening with Email ────────────────────────────────────────────
 
     forwardOpeningWithEmail: builder.mutation<
-      any,
+      { ok: boolean },
       { candidateEmail: string; jobId: string; note?: string }
     >({
       query: (body) => ({
@@ -908,7 +909,7 @@ export const jobsApi = createApi({
     // ── Update Forwarded Opening Status ───────────────────────────────────────
 
     updateForwardedStatus: builder.mutation<
-      any,
+      { ok: boolean },
       { id: string; status: string }
     >({
       query: ({ id, status }) => ({
@@ -993,7 +994,10 @@ export const jobsApi = createApi({
 
     // ── Timesheets (candidate) ─────────────────────────────────────────────────
 
-    getTimesheets: builder.query<TimesheetListResponse, { page?: number; limit?: number }>({
+    getTimesheets: builder.query<
+      TimesheetListResponse,
+      { page?: number; limit?: number }
+    >({
       query: (params) => ({ url: "api/jobs/timesheets", params }),
       providesTags: ["Timesheets"],
     }),
@@ -1004,18 +1008,28 @@ export const jobsApi = createApi({
     }),
 
     submitTimesheet: builder.mutation<Timesheet, string>({
-      query: (id) => ({ url: `api/jobs/timesheets/${id}/submit`, method: "PATCH", body: {} }),
+      query: (id) => ({
+        url: `api/jobs/timesheets/${id}/submit`,
+        method: "PATCH",
+        body: {},
+      }),
       invalidatesTags: ["Timesheets"],
     }),
 
     // ── Timesheets (marketer) ──────────────────────────────────────────────────
 
-    getMarketerTimesheets: builder.query<MarketerTimesheetListResponse, { status?: string }>({
+    getMarketerTimesheets: builder.query<
+      MarketerTimesheetListResponse,
+      { status?: string }
+    >({
       query: (params) => ({ url: "api/jobs/timesheets/pending", params }),
       providesTags: ["MarketerTimesheets"],
     }),
 
-    approveTimesheet: builder.mutation<Timesheet, { id: string; notes?: string }>({
+    approveTimesheet: builder.mutation<
+      Timesheet,
+      { id: string; notes?: string }
+    >({
       query: ({ id, notes }) => ({
         url: `api/jobs/timesheets/${id}/approve`,
         method: "PATCH",
@@ -1024,7 +1038,10 @@ export const jobsApi = createApi({
       invalidatesTags: ["MarketerTimesheets"],
     }),
 
-    rejectTimesheet: builder.mutation<Timesheet, { id: string; notes?: string }>({
+    rejectTimesheet: builder.mutation<
+      Timesheet,
+      { id: string; notes?: string }
+    >({
       query: ({ id, notes }) => ({
         url: `api/jobs/timesheets/${id}/reject`,
         method: "PATCH",
@@ -1035,7 +1052,10 @@ export const jobsApi = createApi({
 
     // ── Interview Invites ─────────────────────────────────────────────────────
 
-    sendInterviewInvite: builder.mutation<InterviewInvite, SendInterviewInviteArgs>({
+    sendInterviewInvite: builder.mutation<
+      InterviewInvite,
+      SendInterviewInviteArgs
+    >({
       query: (body) => ({ url: "api/jobs/interviews", method: "POST", body }),
       invalidatesTags: ["InterviewInvites"],
     }),
@@ -1045,12 +1065,18 @@ export const jobsApi = createApi({
       providesTags: ["InterviewInvites"],
     }),
 
-    getInterviewInvitesReceived: builder.query<InterviewInviteListResponse, void>({
+    getInterviewInvitesReceived: builder.query<
+      InterviewInviteListResponse,
+      void
+    >({
       query: () => "api/jobs/interviews/received",
       providesTags: ["InterviewInvites"],
     }),
 
-    respondToInterviewInvite: builder.mutation<InterviewInvite, { id: string; action: "accept" | "decline"; note?: string }>({
+    respondToInterviewInvite: builder.mutation<
+      InterviewInvite,
+      { id: string; action: "accept" | "decline"; note?: string }
+    >({
       query: ({ id, action, note }) => ({
         url: `api/jobs/interviews/${id}/respond`,
         method: "PATCH",

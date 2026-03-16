@@ -4,6 +4,7 @@ import {
   useGetProfileQuery,
   useUpsertProfileMutation,
 } from "../api/jobsApi";
+import { getApiErrorMessage } from "../utils";
 import { Button, Input } from "matchdb-component-library";
 import "./ResumeModal.css";
 
@@ -28,7 +29,7 @@ const EMPTY: Partial<IProfile> = {
   bio: "",
 };
 
-const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
+const ResumeModal: React.FC<Props> = ({ open, onClose, token: _token, userEmail }) => {
   const {
     data: profile,
     isLoading: profileFetching,
@@ -39,9 +40,7 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
 
   const profileLoading = profileFetching || isSaving;
   const profileError = profileQueryError
-    ? String(
-        (profileQueryError as any)?.data?.message || "Failed to load profile",
-      )
+    ? getApiErrorMessage(profileQueryError, "Failed to load profile")
     : null;
 
   const [form, setForm] = useState<Partial<IProfile>>(EMPTY);
@@ -79,8 +78,8 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token, userEmail }) => {
     try {
       await doUpsert(form as IProfile).unwrap();
       setSaveSuccess(true);
-    } catch (err: any) {
-      setSaveError(err?.data?.message || "Failed to save profile");
+    } catch (err: unknown) {
+      setSaveError(getApiErrorMessage(err, "Failed to save profile"));
     }
   };
 

@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 import { MatchRow } from "../components/MatchDataTable";
+import { getApiErrorMessage } from "../utils";
 import {
   DataTable,
   Button,
@@ -14,6 +15,7 @@ import {
   Select,
   Tabs,
   Panel,
+  ICONS,
 } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import DBLayout, { NavGroup } from "../components/DBLayout";
@@ -39,242 +41,36 @@ import {
   type ForwardedOpeningItem,
   type InterviewInvite,
 } from "../api/jobsApi";
-
-interface Props {
-  token: string | null;
-  userEmail: string | undefined;
-  username: string | undefined;
-  plan?: string;
-  membershipConfig?: Record<string, string[]> | null;
-  hasPurchasedVisibility?: boolean;
-}
-
-type ActiveView =
-  | "matches"
-  | "pokes-sent"
-  | "pokes-received"
-  | "mails-sent"
-  | "mails-received"
-  | "forwarded"
-  | "my-detail"
-  | "vendor-openings"
-  | "employer-openings"
-  | "employer-finance"
-  | "employer-immigration"
-  | "timesheets"
-  | "interviews";
-
-type MyDetailTab =
-  | "overview"
-  | "projects"
-  | "marketer-activity"
-  | "forwarded-openings";
-
-const formatRate = (value?: number | null) =>
-  value ? `$${Number(value).toFixed(0)}` : "-";
-const formatExperience = (value?: number | null) => `${Number(value || 0)} yrs`;
-
-// ── Sorting helpers ──
-type SortKey =
-  | "name"
-  | "company"
-  | "role"
-  | "type"
-  | "matchPercentage"
-  | "location";
-type SortDir = "asc" | "desc";
-
-const MAIL_MATCH_THRESHOLD = 75;
-const POKE_MATCH_THRESHOLD = 25;
-const POKE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
-const formatType = (value: string) => value.replaceAll("_", " ");
-
-const getMeterClass = (pct: number) => {
-  if (pct >= 75) return "matchdb-meter-fill matchdb-meter-fill-high";
-  if (pct >= 45) return "matchdb-meter-fill matchdb-meter-fill-mid";
-  return "matchdb-meter-fill matchdb-meter-fill-low";
-};
-
-const sortValue = (row: MatchRow, key: SortKey): string | number => {
-  if (key === "matchPercentage") return row.matchPercentage;
-  return (row[key] || "").toLowerCase();
-};
-
-/** Color badge for count thresholds — red when < 10 */
-const countColor = (n: number): string => {
-  if (n >= 50) return "#2e7d32";
-  if (n >= 25) return "#b8860b";
-  if (n >= 10) return "#d4600a";
-  return "#bb3333";
-};
-const fmtC = (v: number) =>
-  `$${Math.abs(v).toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
-
-/** Build the array of cell display values for a single financial row */
-const finCellValues = (fin: {
-  billRate: number;
-  payRate: number;
-  hoursWorked: number;
-  totalBilled: number;
-  totalPay: number;
-  taxAmount: number;
-  cashAmount: number;
-  netPayable: number;
-  amountPaid: number;
-  amountPending: number;
-  projectStart: string | null;
-  projectEnd: string | null;
-}): string[] => [
-  `$${fin.billRate}/hr`,
-  `$${fin.payRate}/hr`,
-  `${fin.hoursWorked}h`,
-  `$${fin.totalBilled.toLocaleString()}`,
-  `$${fin.totalPay.toLocaleString()}`,
-  `$${fin.taxAmount.toLocaleString()}`,
-  `$${fin.cashAmount.toLocaleString()}`,
-  `$${fin.netPayable.toLocaleString()}`,
-  `$${fin.amountPaid.toLocaleString()}`,
-  fin.amountPending > 0 ? `$${fin.amountPending.toLocaleString()}` : "—",
-  [
-    fin.projectStart
-      ? new Date(fin.projectStart).toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        })
-      : "—",
-    fin.projectEnd
-      ? new Date(fin.projectEnd).toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        })
-      : "now",
-  ].join(" – "),
-];
-
-/** Extracted to keep JSX nesting below 4 levels */
-const FinancialRow: React.FC<{
-  fin: Parameters<typeof finCellValues>[0] & { id: string };
-}> = ({ fin }) => (
-  <tr style={{ borderBottom: "1px solid var(--w97-border-light)" }}>
-    {finCellValues(fin).map((v, i) => (
-      <td
-        key={`col-${i}-${v}`}
-        style={{
-          textAlign: "right",
-          padding: "5px 8px",
-          fontFamily: "monospace",
-        }}
-      >
-        {v}
-      </td>
-    ))}
-  </tr>
-);
-
-const countBg = (n: number): string => {
-  if (n >= 50) return "#e8f5e9";
-  if (n >= 25) return "#fffde6";
-  if (n >= 10) return "#fff3e0";
-  return "#fff5f5";
-};
-
-const companyFromEmail = (email?: string) => {
-  if (!email) return "-";
-  const domain = email.split("@")[1] || "";
-  return domain
-    ? domain
-        .split(".")[0]
-        .replaceAll(/[^a-zA-Z0-9]/g, " ")
-        .trim() || "-"
-    : "-";
-};
-
-const JOB_TYPES = [
-  { value: "full_time", label: "Full Time" },
-  { value: "part_time", label: "Part Time" },
-  { value: "contract", label: "Contract" },
-];
-
-const WORK_MODES = [
-  { value: "remote", label: "Remote" },
-  { value: "onsite", label: "On-Site" },
-  { value: "hybrid", label: "Hybrid" },
-];
-
-const CONTRACT_SUB_TYPES = [
-  { value: "c2c", label: "C2C" },
-  { value: "c2h", label: "C2H" },
-  { value: "w2", label: "W2" },
-  { value: "1099", label: "1099" },
-];
-
-const FULL_TIME_SUB_TYPES = [
-  { value: "c2h", label: "C2H" },
-  { value: "w2", label: "W2" },
-  { value: "direct_hire", label: "Direct Hire" },
-  { value: "salary", label: "Salary" },
-];
-
-const POKE_LIMIT: Record<string, number> = {
-  free: 5,
-  basic: 25,
-  pro: 50,
-  pro_plus: Infinity,
-  enterprise: Infinity,
-};
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  US: "🇺🇸",
-  IN: "🇮🇳",
-  GB: "🇬🇧",
-  CA: "🇨🇦",
-  AU: "🇦🇺",
-  DE: "🇩🇪",
-  SG: "🇸🇬",
-  AE: "🇦🇪",
-  JP: "🇯🇵",
-  NL: "🇳🇱",
-  FR: "🇫🇷",
-  BR: "🇧🇷",
-  MX: "🇲🇽",
-  PH: "🇵🇭",
-  IL: "🇮🇱",
-  IE: "🇮🇪",
-  PL: "🇵🇱",
-  SE: "🇸🇪",
-  CH: "🇨🇭",
-  KR: "🇰🇷",
-};
-
-const COUNTRY_NAMES: Record<string, string> = {
-  US: "United States",
-  IN: "India",
-  GB: "United Kingdom",
-  CA: "Canada",
-  AU: "Australia",
-  DE: "Germany",
-  SG: "Singapore",
-  AE: "UAE",
-  JP: "Japan",
-  NL: "Netherlands",
-  FR: "France",
-  BR: "Brazil",
-  MX: "Mexico",
-  PH: "Philippines",
-  IL: "Israel",
-  IE: "Ireland",
-  PL: "Poland",
-  SE: "Sweden",
-  CH: "Switzerland",
-  KR: "South Korea",
-};
+import {
+  type CandidateDashboardProps as Props,
+  type ActiveView,
+  type MyDetailTab,
+  type SortKey,
+  type SortDir,
+  MAIL_MATCH_THRESHOLD,
+  POKE_MATCH_THRESHOLD,
+  POKE_COOLDOWN_MS,
+  JOB_TYPES,
+  WORK_MODES,
+  CONTRACT_SUB_TYPES,
+  FULL_TIME_SUB_TYPES,
+  POKE_LIMIT,
+  COUNTRY_FLAGS,
+  COUNTRY_NAMES,
+  formatRate,
+  formatExperience,
+  formatType,
+  getMeterClass,
+  sortValue,
+  countColor,
+  countBg,
+  fmtC,
+  companyFromEmail,
+  FinancialRow,
+} from "./candidate/candidateHelpers";
 
 const CandidateDashboard: React.FC<Props> = ({
-  token,
+  token: _token,
   userEmail,
   username,
   plan = "free",
@@ -437,9 +233,7 @@ const CandidateDashboard: React.FC<Props> = ({
       ? {}
       : matchesData?.subTypeCounts ?? {};
     const err: string | null = matchesError
-      ? (matchesError as any)?.data?.message ||
-        (matchesError as any)?.error ||
-        "Failed to load matches"
+      ? getApiErrorMessage(matchesError, "Failed to load matches")
       : null;
     return { matches, total, typeCounts, subTypeCounts, err };
   }
@@ -583,6 +377,8 @@ const CandidateDashboard: React.FC<Props> = ({
       );
     }, 350);
     return () => clearTimeout(t);
+  // Debounce reacts only to text changes, not setSearchParams
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchText]);
 
   // Helper: build the filter payload for RTK Query matchFilters
@@ -625,6 +421,8 @@ const CandidateDashboard: React.FC<Props> = ({
     if (hasPurchasedVisibility && profile === null) {
       setProfileOpen(true);
     }
+  // Only run once when profile data resolves; hasPurchasedVisibility is stable
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileLoading, profile]);
 
   // Send profile location to shell for the subscription-location display
@@ -643,7 +441,7 @@ const CandidateDashboard: React.FC<Props> = ({
     const parts: string[] = [];
 
     // Show subscription country with flag
-    const country = (profile as any)?.profile_country;
+    const country = profile?.profile_country;
     if (country) {
       const flag = COUNTRY_FLAGS[country] || "";
       const name = COUNTRY_NAMES[country] || country;
@@ -675,7 +473,7 @@ const CandidateDashboard: React.FC<Props> = ({
         new CustomEvent("matchdb:visibleIn", { detail: { text: "" } }),
       );
     };
-  }, [membershipConfig, (profile as any)?.profile_country]);
+  }, [membershipConfig, profile?.profile_country]);
 
   // Emit footer info for shell to display
   useEffect(() => {
@@ -701,6 +499,8 @@ const CandidateDashboard: React.FC<Props> = ({
         new CustomEvent("matchdb:footerInfo", { detail: { text: "" } }),
       );
     };
+  // Footer row-count display tracks active view and relevant totals
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activeView,
     candidateMatchesTotal,
@@ -735,6 +535,8 @@ const CandidateDashboard: React.FC<Props> = ({
     return () => {
       clearPokeState();
     };
+  // Cleanup on unmount only
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Auto-refresh + flash animations (30 s cycle) ── */
@@ -1089,7 +891,7 @@ const CandidateDashboard: React.FC<Props> = ({
           }
 
           return (
-            <div style={{ display: "flex", gap: 2 }}>
+            <div className="u-flex u-gap-2">
               <Button
                 variant="poke"
                 disabled={pokeDisabled}
@@ -1663,7 +1465,6 @@ const CandidateDashboard: React.FC<Props> = ({
   function renderOverviewTab() {
     if (!myDetail) return null;
     const allFins = myDetail.projects.flatMap((p) => p.financials);
-    const _totalBilled = allFins.reduce((a, f) => a + f.totalBilled, 0);
     const totalPay = allFins.reduce((a, f) => a + f.totalPay, 0);
     const totalNet = allFins.reduce((a, f) => a + f.netPayable, 0);
     const totalPaid = allFins.reduce((a, f) => a + f.amountPaid, 0);
@@ -1674,7 +1475,7 @@ const CandidateDashboard: React.FC<Props> = ({
     const totalHours = allFins.reduce((a, f) => a + f.hoursWorked, 0);
 
     return (
-      <div style={{ display: "flex", flexDirection: "column" }}>
+      <div className="u-flex-col">
         {/* ── Single-line profile strip ── */}
         <div
           style={{
@@ -2091,8 +1892,9 @@ const CandidateDashboard: React.FC<Props> = ({
     const vendorMap = new Map<string, ForwardedOpeningItem[]>();
     for (const f of filtered) {
       const key = f.vendor_email || "Unknown Vendor";
-      if (!vendorMap.has(key)) vendorMap.set(key, []);
-      vendorMap.get(key)!.push(f);
+      const arr = vendorMap.get(key) ?? [];
+      if (!vendorMap.has(key)) vendorMap.set(key, arr);
+      arr.push(f);
     }
 
     const subLabel = filterSubType
@@ -3055,7 +2857,7 @@ const CandidateDashboard: React.FC<Props> = ({
           if (r.status !== "pending")
             return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
           return (
-            <div style={{ display: "flex", gap: 4 }}>
+            <div className="matchdb-action-row">
               <Button
                 size="sm"
                 variant="primary"
@@ -3202,46 +3004,48 @@ const CandidateDashboard: React.FC<Props> = ({
             {
               label: "Matched Jobs",
               value: grandTotal,
-              icon: "📌",
+              icon: ICONS.PIN,
               view: "matches" as ActiveView,
             },
             {
               label: "Pokes Sent",
               value: pokesSentOnly.length,
-              icon: "👋",
+              icon: ICONS.WAVE,
               view: "pokes-sent" as ActiveView,
             },
             {
               label: "Pokes In",
               value: pokesReceivedOnly.length,
-              icon: "📥",
+              icon: ICONS.INBOX,
               view: "pokes-received" as ActiveView,
             },
             {
               label: "Mails Sent",
               value: mailsSentOnly.length,
-              icon: "📤",
+              icon: ICONS.OUTBOX,
               view: "mails-sent" as ActiveView,
             },
             {
               label: "Mails In",
               value: mailsReceivedOnly.length,
-              icon: "📬",
+              icon: ICONS.MAILBOX,
               view: "mails-received" as ActiveView,
             },
             {
               label: "Interviews",
               value: interviewInvites.length,
-              icon: "📞",
+              icon: ICONS.PHONE,
               view: "interviews" as ActiveView,
             },
             {
               label: "Visibility",
               value: hasPurchasedVisibility ? 1 : 0,
-              icon: hasPurchasedVisibility ? "🟢" : "🔴",
+              icon: hasPurchasedVisibility
+                ? ICONS.GREEN_CIRCLE
+                : ICONS.RED_CIRCLE,
               customLabel: hasPurchasedVisibility ? "Active" : "Off",
             },
-          ].map((card: any) => (
+          ].map((card: { label: string; value: number; icon?: string; view?: ActiveView; customLabel?: string }) => (
             <button
               key={card.label}
               type="button"

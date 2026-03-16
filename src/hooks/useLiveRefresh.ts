@@ -11,6 +11,7 @@
  * Auto-reconnects on disconnect with exponential backoff (max 30 s).
  */
 import { useEffect, useRef } from "react";
+import { SSE_EVENTS } from "../constants/endpoints";
 
 interface UseLiveRefreshOpts {
   /** Called immediately on every data_changed SSE event */
@@ -19,7 +20,7 @@ interface UseLiveRefreshOpts {
   enabled?: boolean;
 }
 
-const SSE_URL = "/api/jobs/events";
+const SSE_URL = SSE_EVENTS;
 const BACKOFF_BASE_MS = 2_000;
 const BACKOFF_MAX_MS = 30_000;
 

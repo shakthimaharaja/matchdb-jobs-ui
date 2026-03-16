@@ -17,6 +17,7 @@ interface DetailModalProps {
   open: boolean;
   onClose: () => void;
   type: "job" | "candidate";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any> | null;
   matchPercentage?: number;
   /** Company roster candidates (for job modals — pick candidate to forward) */
@@ -40,11 +41,13 @@ interface DetailModalProps {
 
 const fmtList = (arr?: string[]) => (arr?.length ? arr.join(", ") : "—");
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fmtVal = (v: any) =>
   v !== undefined && v !== null && v !== "" ? String(v) : "—";
 
 function openPdfPreview(
   type: "job" | "candidate",
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: Record<string, any>,
   matchPercentage?: number,
 ) {
@@ -329,7 +332,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
           <Button
             variant="download"
             className="detail-btn detail-btn-pdf"
-            onClick={() => openPdfPreview(type, data!, matchPercentage)}
+            onClick={() => data && openPdfPreview(type, data, matchPercentage)}
           >
             ⬇ Download PDF
           </Button>

@@ -101,6 +101,7 @@ function logStartup() {
 }
 
 if (config.useHttps) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { getSSLOptions } = require("./ssl");
   const sslOptions = getSSLOptions();
   https.createServer(sslOptions, app).listen(config.port, logStartup);

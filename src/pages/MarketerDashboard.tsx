@@ -8,9 +8,11 @@ import {
   Select,
   Tabs,
   Toolbar,
+  ICONS,
 } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import DetailModal from "../components/DetailModal";
+import { getApiErrorMessage } from "../utils";
 import "../components/ProjectFinancialForm.css";
 import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
@@ -41,428 +43,34 @@ import {
   useRejectTimesheetMutation,
   type Timesheet,
 } from "../api/jobsApi";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface Props {
-  token: string | null;
-  userId: string | undefined;
-  userEmail: string | undefined;
-}
-
-type ActiveView =
-  | "vendor-posted"
-  | "candidate-created"
-  | "company-candidates"
-  | "candidate-detail"
-  | "forwarded-openings"
-  | "financial-summary"
-  | "project-summary"
-  | "job-positions-summary"
-  | "immigration"
-  | "immigration-detail"
-  | "timesheets";
-
-// ─── Immigration mock data types ──────────────────────────────────────────────
-
-interface ImmigrationDependant {
-  name: string;
-  relationship: string;
-  workAuthorization: string;
-  pendingApplications: string;
-}
-
-interface ImmigrationRecord {
-  candidateId: string;
-  candidateName: string;
-  candidateEmail: string;
-  immigrationStatus: string;
-  joinedDate: string;
-  workAuthorization: string;
-  pendingApplications: string;
-  dependants: ImmigrationDependant[];
-}
-
-const VISA_STATUSES = [
-  "H-1B",
-  "L-1A",
-  "L-1B",
-  "O-1",
-  "OPT",
-  "CPT",
-  "H-4 EAD",
-  "Green Card",
-  "US Citizen",
-  "TN",
-];
-const WORK_AUTH_STATUSES = [
-  "Active",
-  "Pending Renewal",
-  "Expiring Soon",
-  "Valid",
-  "Under Review",
-];
-const PENDING_APPS = [
-  "None",
-  "I-140 Pending",
-  "I-485 Pending",
-  "PERM Filed",
-  "H-1B Transfer",
-  "None",
-  "EAD Renewal",
-];
-const RELATIONSHIPS = ["Spouse", "Child", "Child"];
-const DEP_NAMES_POOL = [
-  "Priya",
-  "Arjun",
-  "Meera",
-  "Ravi",
-  "Ananya",
-  "Kiran",
-  "Neha",
-  "Sanjay",
-  "Lakshmi",
-  "Vikram",
-  "Aisha",
-  "Dev",
-];
-
-function buildImmigrationData(
-  candidates: MarketerCandidateItem[],
-): ImmigrationRecord[] {
-  return candidates.map((c, idx) => {
-    const seed = idx + c.id.length;
-    const depCount = seed % 4; // 0–3 dependants
-    const dependants: ImmigrationDependant[] = Array.from(
-      { length: depCount },
-      (_, di) => {
-        let wa = "N/A";
-        if (di === 0) wa = seed % 3 === 0 ? "H-4 EAD" : "H-4 (No EAD)";
-        return {
-          name:
-            DEP_NAMES_POOL[(seed + di * 3) % DEP_NAMES_POOL.length] +
-            " " +
-            (c.candidate_name?.split(" ")[1] || ""),
-          relationship: RELATIONSHIPS[di % RELATIONSHIPS.length],
-          workAuthorization: wa,
-          pendingApplications:
-            di === 0 && seed % 2 === 0 ? "EAD Renewal" : "None",
-        };
-      },
-    );
-    const joinedOffset = (seed % 48) + 1; // 1–48 months ago
-    const joinedDate = new Date();
-    joinedDate.setMonth(joinedDate.getMonth() - joinedOffset);
-    return {
-      candidateId: c.id,
-      candidateName: c.candidate_name || c.candidate_email,
-      candidateEmail: c.candidate_email,
-      immigrationStatus: VISA_STATUSES[seed % VISA_STATUSES.length],
-      joinedDate: joinedDate.toISOString(),
-      workAuthorization: WORK_AUTH_STATUSES[seed % WORK_AUTH_STATUSES.length],
-      pendingApplications: PENDING_APPS[seed % PENDING_APPS.length],
-      dependants,
-    };
-  });
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const fmtDate = (iso: string) => {
-  try {
-    return new Date(iso).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return iso;
-  }
-};
-
-const fmtRate = (v: number | null) => (v ? `$${Number(v).toFixed(0)}/hr` : "—");
-const fmtSalary = (min: number | null, max: number | null) => {
-  if (!min && !max) return "—";
-  if (min && max)
-    return `$${(min / 1000).toFixed(0)}k–$${(max / 1000).toFixed(0)}k`;
-  return `$${((min || max)! / 1000).toFixed(0)}k`;
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  full_time: "Full Time",
-  part_time: "Part Time",
-  contract: "Contract",
-  internship: "Internship",
-};
-const SUB_LABELS: Record<string, string> = {
-  c2c: "C2C",
-  c2h: "C2H",
-  w2: "W2",
-  "1099": "1099",
-  direct_hire: "Direct",
-  salary: "Salary",
-};
-
-const fmtC = (v: number) =>
-  `$${Math.abs(v).toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
-const fmtF = (v: number) =>
-  v < 0
-    ? `-$${Math.abs(v).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`
-    : `$${v.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
-
-const countColor = (n: number) => {
-  if (n >= 50) return "var(--w97-green)";
-  if (n >= 25) return "var(--w97-yellow)";
-  if (n >= 10) return "var(--w97-orange)";
-  return "var(--w97-red)";
-};
-const countBg = (n: number) => {
-  if (n >= 50) return "#e8f5e9";
-  if (n >= 25) return "#fffde6";
-  if (n >= 10) return "#fff3e0";
-  return "#fff5f5";
-};
-
-// ─── CSV / Excel download helpers ─────────────────────────────────────────────
-
-function downloadCSV(rows: Record<string, string>[], filename: string) {
-  if (!rows.length) return;
-  const headers = Object.keys(rows[0]);
-  const csvContent = [
-    headers.join(","),
-    ...rows.map((r) =>
-      headers
-        .map((h) => `"${String(r[h] ?? "").replaceAll('"', '""')}"`)
-        .join(","),
-    ),
-  ].join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function downloadExcel(rows: Record<string, string>[], filename: string) {
-  if (!rows.length) return;
-  const headers = Object.keys(rows[0]);
-  const tableRows = rows.map(
-    (r) =>
-      `<tr>${headers
-        .map((h) => `<td>${String(r[h] ?? "").replaceAll("<", "&lt;")}</td>`)
-        .join("")}</tr>`,
-  );
-  const html = `<html><head><meta charset="UTF-8"></head><body>
-    <table><thead><tr>${headers
-      .map((h) => `<th>${h}</th>`)
-      .join("")}</tr></thead>
-    <tbody>${tableRows.join("")}</tbody></table></body></html>`;
-  const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function downloadResumePDF(p: MarketerProfile) {
-  const win = window.open("", "_blank");
-  if (!win) return;
-  const sections = [
-    ["Name", p.name],
-    ["Email", p.email],
-    ["Phone", p.phone],
-    ["Location", p.location],
-    ["Current Role", p.current_role],
-    ["Company", p.current_company],
-    ["Experience", `${p.experience_years} yrs`],
-    [
-      "Expected Rate",
-      p.expected_hourly_rate ? `$${p.expected_hourly_rate}/hr` : "—",
-    ],
-    ["Skills", (p.skills || []).join(", ")],
-    ["Summary", p.resume_summary],
-    ["Work Experience", p.resume_experience],
-    ["Education", p.resume_education],
-    ["Achievements", p.resume_achievements],
-    ["Bio", p.bio],
-  ].filter(([, v]) => v);
-
-  const tableRows = sections
-    .map(
-      ([label, value]) => `<tr>
-        <td style="font-weight:bold;padding:5px 10px;border:1px solid #ccc;background:#f5f5f5;width:180px;vertical-align:top;">${label}</td>
-        <td style="padding:5px 10px;border:1px solid #ccc;white-space:pre-wrap;">${value}</td>
-      </tr>`,
-    )
-    .join("");
-
-  const html = `<!DOCTYPE html><html><head><title>Resume — ${p.name}</title>
-<style>body{font-family:Arial,sans-serif;font-size:12px;margin:20px;}h1{font-size:16px;color:#235a81;border-bottom:2px solid #235a81;padding-bottom:6px;}table{border-collapse:collapse;width:100%;}@media print{button{display:none;}}</style>
-</head><body><h1>Resume — ${p.name}</h1><table>${tableRows}</table><br/>
-<button onclick="window.print()" style="padding:6px 14px;background:#235a81;color:#fff;border:none;cursor:pointer;font-size:12px;">Print / Save as PDF</button>
-</body></html>`;
-  win.document.open();
-  win.document.close();
-  win.document.documentElement.innerHTML = html;
-}
-
-function footerRowClass(margin: number): string {
-  if (margin > 0.01) return "ov-foot-profit";
-  if (margin < -0.01) return "ov-foot-loss";
-  return "ov-foot-neutral";
-}
-
-function balanceClass(val: number): string {
-  if (val > 0.01) return "ov-val-orange";
-  if (val < -0.01) return "ov-val-red";
-  return "ov-val-green";
-}
-
-function balanceLabel(val: number, fmt: (v: number) => string): string {
-  if (Math.abs(val) < 0.01) return "\u2713";
-  if (val > 0) return fmt(val);
-  return `+${fmt(Math.abs(val))}`;
-}
-
-function settledOrAmount(val: number, fmt: (v: number) => string): string {
-  if (Math.abs(val) < 0.01) return "\u2713 Settled";
-  if (val > 0) return fmt(val);
-  return `Overpaid ${fmt(Math.abs(val))}`;
-}
-
-function subtabStyle(active: boolean, first = true): React.CSSProperties {
-  return {
-    padding: "5px 14px",
-    fontSize: 11.5,
-    fontWeight: active ? 700 : 500,
-    background: active ? "var(--w97-titlebar-from)" : "var(--w97-btn-face)",
-    color: active ? "#fff" : "var(--w97-text)",
-    border: "1px solid var(--w97-btn-shadow)",
-    borderBottom: active ? "none" : "1px solid var(--w97-btn-shadow)",
-    borderRadius: "4px 4px 0 0",
-    cursor: "pointer",
-    ...(!first && { marginLeft: -1 }),
-  };
-}
-
-type MonthRow = {
-  label: string;
-  hours: number;
-  billed: number;
-  gross: number;
-  net: number;
-  paid: number;
-  balance: number;
-};
-
-const OV_MN = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-const OV_VAR = [1, 0.92, 1.08, 1.02, 0.94, 1.06, 1, 0.92, 1.08, 1, 0.94, 1.04];
-
-function buildMonthlyRows(
-  allFins: {
-    fin: {
-      projectStart: string | null;
-      hoursWorked: number;
-      amountPaid: number;
-      billRate: number;
-      payRate: number;
-      stateTaxPct: number;
-      cashPct: number;
-    };
-  }[],
-): MonthRow[] {
-  const monthMap: Record<string, MonthRow> = {};
-
-  allFins.forEach(({ fin }) => {
-    const now = new Date();
-    const start = fin.projectStart
-      ? new Date(fin.projectStart)
-      : new Date(now.getFullYear() - 1, now.getMonth(), 1);
-    const rawH = fin.hoursWorked > 0 ? fin.hoursWorked / 12 : 80;
-    const periods = Array.from({ length: 12 }, (_, i) => {
-      const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
-      return {
-        label: `${OV_MN[d.getMonth()]} ${d.getFullYear()}`,
-        hours: Math.round(rawH * OV_VAR[i] * 2) / 2,
-      };
-    });
-    if (fin.hoursWorked > 0) {
-      const sumH = periods.reduce((a, p) => a + p.hours, 0);
-      const scale = fin.hoursWorked / sumH;
-      periods.forEach((p) => {
-        p.hours = Math.round(p.hours * scale * 2) / 2;
-      });
-    }
-    const paidArr: number[] = new Array(12).fill(0);
-    if (fin.amountPaid > 0) {
-      const sumH = periods.reduce((a, p) => a + p.hours, 0);
-      let alloc = 0;
-      periods.forEach((p, i) => {
-        if (i < 11) {
-          const s = Math.round((p.hours / sumH) * fin.amountPaid * 100) / 100;
-          paidArr[i] = s;
-          alloc += s;
-        } else {
-          paidArr[i] = Math.round((fin.amountPaid - alloc) * 100) / 100;
-        }
-      });
-    }
-    periods.forEach((p, i) => {
-      const billed = fin.billRate * p.hours;
-      const gross = fin.payRate * p.hours;
-      const tax = (gross * fin.stateTaxPct) / 100;
-      const withhold = (gross * fin.cashPct) / 100;
-      const net = gross - tax - withhold;
-      const paid = paidArr[i];
-      if (!monthMap[p.label])
-        monthMap[p.label] = {
-          label: p.label,
-          hours: 0,
-          billed: 0,
-          gross: 0,
-          net: 0,
-          paid: 0,
-          balance: 0,
-        };
-      monthMap[p.label].hours += p.hours;
-      monthMap[p.label].billed += billed;
-      monthMap[p.label].gross += gross;
-      monthMap[p.label].net += net;
-      monthMap[p.label].paid += paid;
-      monthMap[p.label].balance += net - paid;
-    });
-  });
-
-  return Object.values(monthMap).sort(
-    (a, b) => new Date(a.label).getTime() - new Date(b.label).getTime(),
-  );
-}
+import {
+  type MarketerDashboardProps as Props,
+  type ActiveView,
+  type ReportContext,
+  type ImmigrationRecord,
+  type ImmigrationDependant,
+  type MonthRow,
+  fmtDate,
+  fmtRate,
+  fmtSalary,
+  fmtC,
+  fmtF,
+  TYPE_LABELS,
+  SUB_LABELS,
+  countColor,
+  countBg,
+  downloadCSV,
+  downloadExcel,
+  downloadResumePDF,
+  footerRowClass,
+  balanceClass,
+  balanceLabel,
+  settledOrAmount,
+  subtabStyle,
+  buildImmigrationData,
+  buildMonthlyRows,
+  getBreadcrumb,
+} from "./marketer/marketerHelpers";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -527,6 +135,7 @@ const MarketerDashboard: React.FC<Props> = () => {
   // Detail modal state
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailType, setDetailType] = useState<"job" | "candidate">("job");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [detailData, setDetailData] = useState<Record<string, any> | null>(
     null,
   );
@@ -552,7 +161,6 @@ const MarketerDashboard: React.FC<Props> = () => {
     email: string;
     name: string;
   } | null>(null);
-  type ReportContext = "finance" | "project" | "positions";
 
   const [sendJobId, setSendJobId] = useState("");
   const [sendJobNote, setSendJobNote] = useState("");
@@ -629,7 +237,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     data: candidateDetail,
     isFetching: detailLoading,
     isError: detailError,
-  } = useGetMarketerCandidateDetailQuery(selectedCandidateId!, {
+  } = useGetMarketerCandidateDetailQuery(selectedCandidateId ?? "", {
     skip: !selectedCandidateId,
   });
   const [addCandidate] = useAddMarketerCandidateMutation();
@@ -666,10 +274,19 @@ const MarketerDashboard: React.FC<Props> = () => {
     useApproveTimesheetMutation();
   const [rejectTimesheet, { isLoading: rejectingTs }] =
     useRejectTimesheetMutation();
-  const marketerTimesheets: Timesheet[] = marketerTimesheetsData?.data ?? [];
+  const marketerTimesheets: Timesheet[] = useMemo(
+    () => marketerTimesheetsData?.data ?? [],
+    [marketerTimesheetsData],
+  );
 
-  const jobs: MarketerJob[] = jobsData?.data ?? [];
-  const profiles: MarketerProfile[] = profilesData?.data ?? [];
+  const jobs: MarketerJob[] = useMemo(
+    () => jobsData?.data ?? [],
+    [jobsData],
+  );
+  const profiles: MarketerProfile[] = useMemo(
+    () => profilesData?.data ?? [],
+    [profilesData],
+  );
   const jobsTotal = jobsData?.total ?? 0;
   const profilesTotal = profilesData?.total ?? 0;
 
@@ -736,12 +353,14 @@ const MarketerDashboard: React.FC<Props> = () => {
 
   const openJobDetail = (j: MarketerJob) => {
     setDetailType("job");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setDetailData(j as unknown as Record<string, any>);
     setDetailOpen(true);
   };
 
   const openProfileDetail = (p: MarketerProfile) => {
     setDetailType("candidate");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setDetailData(p as unknown as Record<string, any>);
     setDetailOpen(true);
   };
@@ -814,8 +433,8 @@ const MarketerDashboard: React.FC<Props> = () => {
     try {
       await registerCompany({ name: companyName.trim() }).unwrap();
       setCompanyName("");
-    } catch (e: any) {
-      alert(e?.data?.error || "Failed to register company");
+    } catch (e: unknown) {
+      alert(getApiErrorMessage(e, "Failed to register company"));
     }
   };
 
@@ -828,8 +447,8 @@ const MarketerDashboard: React.FC<Props> = () => {
       }).unwrap();
       setNewCandName("");
       setNewCandEmail("");
-    } catch (e: any) {
-      alert(e?.data?.error || "Failed to add candidate");
+    } catch (e: unknown) {
+      alert(getApiErrorMessage(e, "Failed to add candidate"));
     }
   };
 
@@ -852,8 +471,8 @@ const MarketerDashboard: React.FC<Props> = () => {
       await forwardOpening({ candidateEmail, jobId, note }).unwrap();
       alert("Candidate forwarded to vendor successfully!");
       setDetailOpen(false);
-    } catch (e: any) {
-      alert(e?.data?.error || "Failed to forward candidate");
+    } catch (e: unknown) {
+      alert(getApiErrorMessage(e, "Failed to forward candidate"));
     }
   };
 
@@ -875,8 +494,8 @@ const MarketerDashboard: React.FC<Props> = () => {
       alert(`Invite sent to ${inviteTarget.candidate_email}!`);
       setInviteModalOpen(false);
       setInviteTarget(null);
-    } catch (e: any) {
-      alert(e?.data?.error || "Failed to send invite");
+    } catch (e: unknown) {
+      alert(getApiErrorMessage(e, "Failed to send invite"));
     }
   };
 
@@ -900,8 +519,8 @@ const MarketerDashboard: React.FC<Props> = () => {
       alert(`Job opening sent to ${sendJobCandidate.email} via email!`);
       setSendJobModalOpen(false);
       setSendJobCandidate(null);
-    } catch (e: any) {
-      alert(e?.data?.error || "Failed to send job opening email");
+    } catch (e: unknown) {
+      alert(getApiErrorMessage(e, "Failed to send job opening email"));
     }
   };
 
@@ -910,8 +529,8 @@ const MarketerDashboard: React.FC<Props> = () => {
   const handleUpdateForwardedStatus = async (id: string, status: string) => {
     try {
       await updateForwardedStatus({ id, status }).unwrap();
-    } catch (e: any) {
-      alert(e?.data?.error || "Failed to update status");
+    } catch (e: unknown) {
+      alert(getApiErrorMessage(e, "Failed to update status"));
     }
   };
 
@@ -934,7 +553,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     () => [
       {
         label: companyLabel,
-        icon: "🏢",
+        icon: ICONS.OFFICE,
         items: [
           {
             id: "company-candidates",
@@ -955,7 +574,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       },
       {
         label: "Dashboard",
-        icon: "📊",
+        icon: ICONS.CHART,
         items: [
           {
             id: "financial-summary",
@@ -993,7 +612,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       },
       {
         label: "Job Openings",
-        icon: "💼",
+        icon: ICONS.BRIEFCASE,
         items: [
           {
             id: "vendor-posted",
@@ -1046,7 +665,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       },
       {
         label: "Candidate Profiles",
-        icon: "👤",
+        icon: ICONS.PERSON,
         items: [
           {
             id: "candidate-created",
@@ -1095,7 +714,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       },
       {
         label: "Active Sessions",
-        icon: "🟢",
+        icon: ICONS.GREEN_CIRCLE,
         items: [
           { id: "session-1", label: "Profile 1 — Local" },
           { id: "session-2", label: "Profile 2 — (available)" },
@@ -1116,31 +735,11 @@ const MarketerDashboard: React.FC<Props> = () => {
     ],
   );
 
-  const BREADCRUMB_MAP: Record<string, string[]> = {
-    "vendor-posted": ["Jobs", "Marketer", "Job Openings"],
-    "candidate-created": ["Jobs", "Marketer", "Candidate Profiles"],
-    "candidate-detail": [
-      "Jobs",
-      "Marketer",
-      companyLabel,
-      candidateDetail?.roster?.candidate_name ?? "Candidate",
-    ],
-    "company-candidates": ["Jobs", "Marketer", companyLabel],
-    "forwarded-openings": ["Jobs", "Marketer", "Job Openings", "Sent Openings"],
-    "financial-summary": ["Jobs", "Marketer", "Dashboard", "Finance"],
-    "project-summary": ["Jobs", "Marketer", "Dashboard", "Project"],
-    "job-positions-summary": ["Jobs", "Marketer", "Dashboard", "Positions"],
-    immigration: ["Jobs", "Marketer", "Dashboard", "Immigration"],
-    "immigration-detail": [
-      "Jobs",
-      "Marketer",
-      "Dashboard",
-      "Immigration",
-      "Detail",
-    ],
-    timesheets: ["Jobs", "Marketer", "Dashboard", "Timesheets"],
-  };
-  const breadcrumb = BREADCRUMB_MAP[activeView] ?? ["Jobs", "Marketer"];
+  const breadcrumb = getBreadcrumb(
+    activeView,
+    companyLabel,
+    candidateDetail?.roster?.candidate_name,
+  );
 
   // ── Jobs table columns ──────────────────────────────────────────────────────
 
@@ -1239,7 +838,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "16%",
         skeletonWidth: 140,
         render: (j) => (
-          <div style={{ display: "flex", gap: 2, overflow: "hidden" }}>
+          <div className="matchdb-skill-row">
             {(j.skills_required || []).slice(0, 3).map((s) => (
               <span key={s} className="matchdb-skill-pill">
                 {s}
@@ -1443,7 +1042,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "15%",
         skeletonWidth: 140,
         render: (p) => (
-          <div style={{ display: "flex", gap: 2, overflow: "hidden" }}>
+          <div className="matchdb-skill-row">
             {(p.skills || []).slice(0, 3).map((s) => (
               <span key={s} className="matchdb-skill-pill">
                 {s}
@@ -1682,7 +1281,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "",
         width: "14%",
         render: (c) => (
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="matchdb-action-row">
             {(c.invite_status || "none") !== "accepted" && (
               <Button
                 variant="email"
@@ -1840,27 +1439,31 @@ const MarketerDashboard: React.FC<Props> = () => {
     {
       label: "Candidate Records",
       value: stats?.total_profiles ?? profilesTotal,
-      icon: "👤",
+      icon: ICONS.PERSON,
       view: "candidate-created" as ActiveView,
     },
     {
       label: "Job Openings",
       value: stats?.total_jobs ?? jobsTotal,
-      icon: "💼",
+      icon: ICONS.BRIEFCASE,
       view: "vendor-posted" as ActiveView,
     },
     {
       label: "Open Openings",
       value: stats?.total_open_jobs ?? 0,
-      icon: "📂",
+      icon: ICONS.OPEN_FOLDER,
       view: "vendor-posted" as ActiveView,
     },
     {
       label: "Closed Openings",
       value: stats?.total_closed_jobs ?? 0,
-      icon: "🔒",
+      icon: ICONS.LOCK,
     },
-    { label: "Candidates Placed", value: stats?.total_placed ?? 0, icon: "✅" },
+    {
+      label: "Candidates Placed",
+      value: stats?.total_placed ?? 0,
+      icon: ICONS.CHECK_MARK,
+    },
   ];
 
   function renderActiveView() {
@@ -1938,7 +1541,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             </Button>
             {Boolean(jobsFlash.lastSync) && (
               <span className="matchdb-title-sync">
-                synced {new Date(jobsFlash.lastSync!).toLocaleTimeString()}
+                synced {new Date(jobsFlash.lastSync ?? 0).toLocaleTimeString()}
               </span>
             )}
           </div>
@@ -2004,7 +1607,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             </Button>
             {Boolean(profilesFlash.lastSync) && (
               <span className="matchdb-title-sync">
-                synced {new Date(profilesFlash.lastSync!).toLocaleTimeString()}
+                synced{" "}
+                {new Date(profilesFlash.lastSync ?? 0).toLocaleTimeString()}
               </span>
             )}
           </div>
@@ -2933,7 +2537,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     </text>
                   </svg>
                   <div style={{ fontSize: 11, marginTop: 6 }}>
-                    <span style={{ color: "var(--w97-green)" }}>■</span> Paid:{" "}
+                    <span className="matchdb-legend-green">■</span> Paid:{" "}
                     {fmtC(totals.amountPaid)} &nbsp;
                     <span style={{ color: "var(--w97-border-light)" }}>
                       ■
@@ -2997,8 +2601,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                           </text>
                         </svg>
                         <div style={{ fontSize: 11, marginTop: 6 }}>
-                          <span style={{ color: "var(--w97-teal)" }}>■</span>{" "}
-                          Margin: {fmtC(grandMargin)} &nbsp;
+                          <span className="matchdb-legend-teal">■</span> Margin:{" "}
+                          {fmtC(grandMargin)} &nbsp;
                           <span style={{ color: "#e0f2f1" }}>■</span> Pay:{" "}
                           {fmtC(totals.totalPay)}
                         </div>
@@ -3632,7 +3236,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   <h3 style={{ margin: "0 0 10px", fontSize: 13 }}>
                     🎯 Top Skills in Roster
                   </h3>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  <div className="u-flex-wrap u-gap-4">
                     {topSkills.map((s) => (
                       <span
                         key={s.skill}
@@ -4094,37 +3698,19 @@ const MarketerDashboard: React.FC<Props> = () => {
                 fontSize: 12,
               }}
             >
-              <span
-                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
-              >
-                Email:
-              </span>
+              <span className="matchdb-detail-label">Email:</span>
               <span>{record.candidateEmail}</span>
-              <span
-                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
-              >
-                Visa Type:
-              </span>
+              <span className="matchdb-detail-label">Visa Type:</span>
               <span style={{ fontWeight: 700, color: statusColor }}>
                 {record.immigrationStatus}
               </span>
-              <span
-                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
-              >
-                When Joined:
-              </span>
+              <span className="matchdb-detail-label">When Joined:</span>
               <span>{fmtDate(record.joinedDate)}</span>
-              <span
-                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
-              >
-                Work Authorization:
-              </span>
+              <span className="matchdb-detail-label">Work Authorization:</span>
               <span style={{ fontWeight: 700, color: authColor }}>
                 {record.workAuthorization}
               </span>
-              <span
-                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
-              >
+              <span className="matchdb-detail-label">
                 Pending Applications:
               </span>
               <span
@@ -4588,27 +4174,24 @@ const MarketerDashboard: React.FC<Props> = () => {
                 <Button
                   variant="download"
                   size="xs"
-                  onClick={() =>
+                  onClick={() => {
+                    const p = candidateDetail?.profile;
+                    if (!p) return;
                     downloadResumePDF({
-                      name: candidateDetail.profile!.name,
-                      email: candidateDetail.profile!.email,
-                      phone: candidateDetail.profile!.phone,
-                      skills: candidateDetail.profile!.skills,
-                      experience_years:
-                        candidateDetail.profile!.experience_years,
-                      current_role: candidateDetail.profile!.current_role,
-                      current_company:
-                        candidateDetail.profile!.current_company ?? "",
-                      location: candidateDetail.profile!.location,
-                      resume_summary: candidateDetail.profile!.resume_summary,
-                      resume_experience:
-                        candidateDetail.profile!.resume_experience,
-                      resume_education:
-                        candidateDetail.profile!.resume_education,
-                      resume_achievements:
-                        candidateDetail.profile!.resume_achievements,
-                    } as MarketerProfile)
-                  }
+                      name: p.name,
+                      email: p.email,
+                      phone: p.phone,
+                      skills: p.skills,
+                      experience_years: p.experience_years,
+                      current_role: p.current_role,
+                      current_company: p.current_company ?? "",
+                      location: p.location,
+                      resume_summary: p.resume_summary,
+                      resume_experience: p.resume_experience,
+                      resume_education: p.resume_education,
+                      resume_achievements: p.resume_achievements,
+                    } as MarketerProfile);
+                  }}
                 >
                   📥 Resume
                 </Button>
@@ -4726,9 +4309,9 @@ const MarketerDashboard: React.FC<Props> = () => {
 
   function renderOverviewTab() {
     if (!candidateDetail) return null;
-    const allFins = candidateDetail.projects
-      .filter((p) => p.financials != null)
-      .map((p) => ({ project: p, fin: p.financials! }));
+    const allFins = candidateDetail.projects.flatMap((p) =>
+      p.financials ? [{ project: p, fin: p.financials }] : [],
+    );
 
     const totalBilled = allFins.reduce((a, x) => a + x.fin.totalBilled, 0);
     const totalMargin = allFins.reduce(
@@ -4896,7 +4479,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               >
                 Skills
               </span>
-              {candidateDetail.profile!.skills.map((s) => (
+              {(candidateDetail.profile?.skills ?? []).map((s) => (
                 <span
                   key={s}
                   style={{

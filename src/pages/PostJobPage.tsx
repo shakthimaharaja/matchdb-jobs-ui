@@ -1,68 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { usePostJobMutation } from "../api/jobsApi";
 import useDraftCache from "../hooks/useDraftCache";
+import { getApiErrorMessage } from "../utils";
 import { Button } from "matchdb-component-library";
+import {
+  JOB_TYPES,
+  WORK_MODES_WITH_EMPTY as WORK_MODES,
+  CONTRACT_SUB_TYPES_WITH_EMPTY as CONTRACT_SUB_TYPES,
+  FULL_TIME_SUB_TYPES_WITH_EMPTY as FULL_TIME_SUB_TYPES,
+  COUNTRIES,
+} from "../constants";
 import "../components/ResumeModal.css";
 import "./PostJobPage.css";
 
-/* ── Constants ──────────────────────────────────────────────── */
-
-const JOB_TYPES = [
-  { value: "full_time", label: "Full Time" },
-  { value: "part_time", label: "Part Time" },
-  { value: "contract", label: "Contract" },
-];
-
-const WORK_MODES = [
-  { value: "", label: "— Not Specified —" },
-  { value: "remote", label: "Remote" },
-  { value: "onsite", label: "On-Site" },
-  { value: "hybrid", label: "Hybrid" },
-];
-
-const CONTRACT_SUB_TYPES = [
-  { value: "", label: "— None —" },
-  { value: "c2c", label: "C2C (Corp-to-Corp)" },
-  { value: "c2h", label: "C2H (Contract-to-Hire)" },
-  { value: "w2", label: "W2" },
-  { value: "1099", label: "1099" },
-];
-
-const FULL_TIME_SUB_TYPES = [
-  { value: "", label: "— None —" },
-  { value: "c2h", label: "C2H (Contract-to-Hire)" },
-  { value: "w2", label: "W2" },
-  { value: "direct_hire", label: "Direct Hire" },
-  { value: "salary", label: "Salary" },
-];
-
-/* ── Country list with flags ───────────────────────────────── */
-const COUNTRIES = [
-  { value: "", label: "— Select Country —", flag: "" },
-  { value: "US", label: "🇺🇸 United States", flag: "🇺🇸" },
-  { value: "IN", label: "🇮🇳 India", flag: "🇮🇳" },
-  { value: "GB", label: "🇬🇧 United Kingdom", flag: "🇬🇧" },
-  { value: "CA", label: "🇨🇦 Canada", flag: "🇨🇦" },
-  { value: "AU", label: "🇦🇺 Australia", flag: "🇦🇺" },
-  { value: "DE", label: "🇩🇪 Germany", flag: "🇩🇪" },
-  { value: "SG", label: "🇸🇬 Singapore", flag: "🇸🇬" },
-  { value: "AE", label: "🇦🇪 UAE", flag: "🇦🇪" },
-  { value: "JP", label: "🇯🇵 Japan", flag: "🇯🇵" },
-  { value: "NL", label: "🇳🇱 Netherlands", flag: "🇳🇱" },
-  { value: "FR", label: "🇫🇷 France", flag: "🇫🇷" },
-  { value: "BR", label: "🇧🇷 Brazil", flag: "🇧🇷" },
-  { value: "MX", label: "🇲🇽 Mexico", flag: "🇲🇽" },
-  { value: "PH", label: "🇵🇭 Philippines", flag: "🇵🇭" },
-  { value: "IL", label: "🇮🇱 Israel", flag: "🇮🇱" },
-  { value: "IE", label: "🇮🇪 Ireland", flag: "🇮🇪" },
-  { value: "PL", label: "🇵🇱 Poland", flag: "🇵🇱" },
-  { value: "SE", label: "🇸🇪 Sweden", flag: "🇸🇪" },
-  { value: "CH", label: "🇨🇭 Switzerland", flag: "🇨🇭" },
-  { value: "KR", label: "🇰🇷 South Korea", flag: "🇰🇷" },
-];
-
 /* ── Known skills dictionary for extraction ─────────────────── */
-const SKILL_DICT = [
+const KNOWN_SKILLS = [
   "Java",
   "Spring Boot",
   "Spring",
@@ -246,7 +198,7 @@ function parseExperience(text: string): number | undefined {
 
 function parseSkills(text: string): string[] {
   const skills: string[] = [];
-  for (const skill of SKILL_DICT) {
+  for (const skill of KNOWN_SKILLS) {
     const escaped = skill.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
     const re = skill.includes(" ")
       ? new RegExp(escaped, "i")
@@ -349,7 +301,7 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
   const [postJob, { isLoading: loading, error: rawError }] =
     usePostJobMutation();
   const error = rawError
-    ? (rawError as any).data?.error ?? "Failed to post job."
+    ? getApiErrorMessage(rawError, "Failed to post job.")
     : null;
   const { saveDraft, getDraft, clearDraft, hasDraft } =
     useDraftCache<FormState>("matchdb_draft_post_job");
@@ -360,11 +312,15 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
   // Show restore banner on mount if a draft exists
   useEffect(() => {
     if (hasDraft()) setShowDraftBanner(true);
+  // Run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save draft as user fills in the form
   useEffect(() => {
     if (form.title || form.description) saveDraft(form);
+  // saveDraft is stable (from useDraftCache)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   // Smart-paste state

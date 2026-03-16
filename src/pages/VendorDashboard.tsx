@@ -6,7 +6,13 @@ import DetailModal from "../components/DetailModal";
 import JobPostingModal from "../components/JobPostingModal";
 import PokeEmailModal from "../components/PokeEmailModal";
 import { PokesTable } from "../shared";
-import { DataTable, Button, Input, Select } from "matchdb-component-library";
+import {
+  DataTable,
+  Button,
+  Input,
+  Select,
+  ICONS,
+} from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
@@ -169,7 +175,7 @@ function unwrapPaginated<T>(
  *  via useMemo so that render functions can close over handlers and state. */
 
 const VendorDashboard: React.FC<Props> = ({
-  token,
+  token: _token,
   userEmail,
   plan = "free",
   onPostJob,
@@ -288,10 +294,12 @@ const VendorDashboard: React.FC<Props> = ({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [searchText, setSearchText] = useState("");
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const [selectedCandidate, setSelectedCandidate] = useState<Record<
     string,
     any
   > | null>(null);
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   const [selectedJobPosting, setSelectedJobPosting] = useState<Job | null>(
     null,
   );
@@ -445,7 +453,7 @@ const VendorDashboard: React.FC<Props> = ({
         new CustomEvent("matchdb:visibleIn", { detail: { text: "" } }),
       );
     };
-  }, [vendorJobs]);
+  }, [vendorJobs, activeJobs.length]);
 
   // Emit footer info for shell to display
   useEffect(() => {
@@ -473,6 +481,8 @@ const VendorDashboard: React.FC<Props> = ({
         new CustomEvent("matchdb:footerInfo", { detail: { text: "" } }),
       );
     };
+  // invitesSent is declared later in the component (hook ordering constraint)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     viewMode,
     vendorJobs.length,
@@ -493,12 +503,16 @@ const VendorDashboard: React.FC<Props> = ({
         limit: currentPageSize,
       });
     }
+  // currentPageSize is only used when switching to candidates view
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedJobId, viewMode]);
 
   useEffect(() => {
     return () => {
       clearPokeState();
     };
+  // Cleanup on unmount only
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Auto-refresh + flash animations (30 s cycle) ── */
@@ -844,6 +858,8 @@ const VendorDashboard: React.FC<Props> = ({
           ),
       },
     ],
+    // navigateToViewJob changes identity only when nav state changes — safe to omit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       pokesPerJob,
       mailsPerJob,
@@ -1461,54 +1477,54 @@ const VendorDashboard: React.FC<Props> = ({
             {
               label: "Active Openings",
               value: activeJobCount,
-              icon: "💼",
+              icon: ICONS.BRIEFCASE,
               view: "active-openings" as ViewMode,
             },
             {
               label: "Total Postings",
               value: vendorJobs.length,
-              icon: "📋",
+              icon: ICONS.DOCUMENT,
               view: "postings" as ViewMode,
             },
             {
               label: "Closed",
               value: vendorJobs.length - activeJobCount,
-              icon: "🔒",
+              icon: ICONS.LOCK,
             },
             {
               label: "Matched Candidates",
               value: vendorCandidateMatchesTotal,
-              icon: "👥",
+              icon: ICONS.PERSONS,
               view: "candidates" as ViewMode,
             },
             {
               label: "Pokes Sent",
               value: pokesSentOnly.length,
-              icon: "👋",
+              icon: ICONS.WAVE,
               view: "pokes-sent" as ViewMode,
             },
             {
               label: "Pokes In",
               value: pokesReceivedOnly.length,
-              icon: "📥",
+              icon: ICONS.INBOX,
               view: "pokes-received" as ViewMode,
             },
             {
               label: "Mails Sent",
               value: mailsSentOnly.length,
-              icon: "📤",
+              icon: ICONS.OUTBOX,
               view: "mails-sent" as ViewMode,
             },
             {
               label: "Mails In",
               value: mailsReceivedOnly.length,
-              icon: "📬",
+              icon: ICONS.MAILBOX,
               view: "mails-received" as ViewMode,
             },
             {
               label: "Interview Invites",
               value: invitesSent.length,
-              icon: "📞",
+              icon: ICONS.PHONE,
               view: "interviews-sent" as ViewMode,
             },
           ].map((card) => (

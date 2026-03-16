@@ -178,6 +178,8 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
       setShowCallPanel(false);
       onInviteStateReset?.();
     }
+  // Only rebuild template when the modal opens with a new row
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, row]);
 
   if (!open || !row) return null;

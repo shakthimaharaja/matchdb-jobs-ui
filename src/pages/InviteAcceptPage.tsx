@@ -14,6 +14,7 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useVerifyInviteQuery, useAcceptInviteMutation } from "../api/jobsApi";
+import { getApiErrorMessage } from "../utils";
 import { Button } from "matchdb-component-library";
 
 const STATUS_LABELS: Record<
@@ -74,8 +75,8 @@ const InviteAcceptPage: React.FC = () => {
     try {
       await acceptInvite({ token }).unwrap();
       setAccepted(true);
-    } catch (e: any) {
-      alert(e?.data?.error || "Failed to accept invite");
+    } catch (e: unknown) {
+      alert(getApiErrorMessage(e, "Failed to accept invite"));
     }
   };
 

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import useDraftCache from "../hooks/useDraftCache";
 import axios from "axios";
-import { Button as MDBButton } from "matchdb-component-library";
+import { getApiErrorMessage } from "../utils";
+import { Button as MDBButton, PI } from "matchdb-component-library";
 import { Button } from "primereact/button";
 import { Dropdown } from "primereact/dropdown";
 import {
@@ -20,65 +21,11 @@ import {
 } from "../api/jobsApi";
 import "./LegacyForms.css";
 import "../components/ResumeModal.css";
-
-const JOB_TYPES = [
-  { value: "full_time", label: "Full Time" },
-  { value: "part_time", label: "Part Time" },
-  { value: "contract", label: "Contract" },
-  { value: "remote", label: "Remote" },
-];
-
-const VISIBILITY_TYPES = [
-  {
-    key: "contract",
-    label: "Contract",
-    subTypes: [
-      { value: "c2c", label: "C2C" },
-      { value: "c2h", label: "C2H" },
-      { value: "w2", label: "W2" },
-      { value: "1099", label: "1099" },
-    ],
-  },
-  {
-    key: "full_time",
-    label: "Full Time",
-    subTypes: [
-      { value: "c2h", label: "C2H" },
-      { value: "w2", label: "W2" },
-      { value: "direct_hire", label: "Direct Hire" },
-      { value: "salary", label: "Salary" },
-    ],
-  },
-  {
-    key: "part_time",
-    label: "Part Time",
-    subTypes: [],
-  },
-];
-
-const COUNTRIES = [
-  { value: "", label: "— Select Country —" },
-  { value: "US", label: "🇺🇸 United States" },
-  { value: "IN", label: "🇮🇳 India" },
-  { value: "GB", label: "🇬🇧 United Kingdom" },
-  { value: "CA", label: "🇨🇦 Canada" },
-  { value: "AU", label: "🇦🇺 Australia" },
-  { value: "DE", label: "🇩🇪 Germany" },
-  { value: "SG", label: "🇸🇬 Singapore" },
-  { value: "AE", label: "🇦🇪 UAE" },
-  { value: "JP", label: "🇯🇵 Japan" },
-  { value: "NL", label: "🇳🇱 Netherlands" },
-  { value: "FR", label: "🇫🇷 France" },
-  { value: "BR", label: "🇧🇷 Brazil" },
-  { value: "MX", label: "🇲🇽 Mexico" },
-  { value: "PH", label: "🇵🇭 Philippines" },
-  { value: "IL", label: "🇮🇱 Israel" },
-  { value: "IE", label: "🇮🇪 Ireland" },
-  { value: "PL", label: "🇵🇱 Poland" },
-  { value: "SE", label: "🇸🇪 Sweden" },
-  { value: "CH", label: "🇨🇭 Switzerland" },
-  { value: "KR", label: "🇰🇷 South Korea" },
-];
+import {
+  JOB_TYPES_EXTENDED as JOB_TYPES,
+  VISIBILITY_TYPES,
+  COUNTRIES,
+} from "../constants";
 
 const EMPTY: IProfile = {
   name: "",
@@ -101,19 +48,34 @@ const EMPTY: IProfile = {
   profile_locked: false,
 };
 
-const NUMBER_FIELD_DEFAULTS: Record<"expected_hourly_rate" | "experience_years", number | null> = {
+const NUMBER_FIELD_DEFAULTS: Record<
+  "expected_hourly_rate" | "experience_years",
+  number | null
+> = {
   expected_hourly_rate: null,
   experience_years: 0,
 };
 
-function profileMetaLabel(isLocked: boolean, premiumUnlocked: boolean, editIntent: boolean): string {
-  if (isLocked && premiumUnlocked) return "🔓 Premium unlocked — all fields fully editable";
-  if (isLocked && editIntent) return "✏ Editing unlocked — proceed to billing to save changes";
+function profileMetaLabel(
+  isLocked: boolean,
+  premiumUnlocked: boolean,
+  editIntent: boolean,
+): string {
+  if (isLocked && premiumUnlocked)
+    return "🔓 Premium unlocked — all fields fully editable";
+  if (isLocked && editIntent)
+    return "✏ Editing unlocked — proceed to billing to save changes";
   if (isLocked) return "🔒 Some fields locked — see notice below";
   return "New profile — fill in details, skills auto-extracted on save";
 }
 
-function saveButtonLabel(profileLoading: boolean, premiumLocked: boolean, editIntent: boolean, isLocked: boolean, premiumUnlocked: boolean): string {
+function saveButtonLabel(
+  profileLoading: boolean,
+  premiumLocked: boolean,
+  editIntent: boolean,
+  isLocked: boolean,
+  premiumUnlocked: boolean,
+): string {
   if (profileLoading) return "⏳ Saving...";
   if (premiumLocked && editIntent) return "✏ Update Profile → Billing";
   if (isLocked && premiumUnlocked) return "💾 Save All Changes";
@@ -161,7 +123,11 @@ function applyToggleSub(
   return next;
 }
 
-function prepareSaveData(form: IProfile, premiumLocked: boolean, summaryAddition: string): IProfile {
+function prepareSaveData(
+  form: IProfile,
+  premiumLocked: boolean,
+  summaryAddition: string,
+): IProfile {
   const extra = premiumLocked && summaryAddition.trim();
   if (!extra) return { ...form };
   return {
@@ -204,8 +170,7 @@ const CandidateProfile: React.FC<Props> = ({
     isLoading: profileLoading,
     error: profileError,
   } = useGetProfileQuery();
-  const [upsertProfile, { reset: resetUpsert }] =
-    useUpsertProfileMutation();
+  const [upsertProfile, { reset: resetUpsert }] = useUpsertProfileMutation();
   const [deleteProfile] = useDeleteProfileMutation();
 
   const { saveDraft, getDraft, clearDraft, hasDraft } = useDraftCache<IProfile>(
@@ -256,14 +221,19 @@ const CandidateProfile: React.FC<Props> = ({
     } else if (userEmail && !form.email) {
       setForm((f) => ({ ...f, email: userEmail }));
     }
+  // Intentionally excludes clearDraft, form.email, hasDraft — they are stable or cause re-trigger loops
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, profileLoading, userEmail]);
 
   // Auto-save form to localStorage while filling in (only when no confirmed server profile)
   useEffect(() => {
-    const hasDraftableContent = form.name || form.resume_summary || form.resume_experience || form.bio;
+    const hasDraftableContent =
+      form.name || form.resume_summary || form.resume_experience || form.bio;
     if (!profile && hasDraftableContent) {
       saveDraft(form);
     }
+  // saveDraft is stable (from useDraftCache)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, profile]);
 
   const restoreFromDraft = () => {
@@ -294,7 +264,8 @@ const CandidateProfile: React.FC<Props> = ({
 
   const handleCompanyInputChange = (value: string) => {
     setField("current_company", value);
-    if (companySearchTimerRef.current != null) clearTimeout(companySearchTimerRef.current);
+    if (companySearchTimerRef.current != null)
+      clearTimeout(companySearchTimerRef.current);
     if (value.trim().length < 2) {
       clearCompanySuggestions();
       return;
@@ -326,7 +297,11 @@ const CandidateProfile: React.FC<Props> = ({
     setSaveSuccess(false);
     resetUpsert();
     // For locked profiles, merge appended text into the resume fields
-    const saveData = prepareSaveData(form, premiumLocked, additions.resume_summary);
+    const saveData = prepareSaveData(
+      form,
+      premiumLocked,
+      additions.resume_summary,
+    );
     await upsertProfile(saveData)
       .unwrap()
       .then(() => {
@@ -376,10 +351,16 @@ const CandidateProfile: React.FC<Props> = ({
       localStorage.removeItem("matchdb_user");
       setShowDeleteAccountModal(false);
       globalThis.location.href = "/";
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const axiosMsg =
+        err && typeof err === "object" && "response" in err
+          ? getApiErrorMessage(
+              (err as { response?: unknown }).response,
+              "",
+            )
+          : "";
       setDeleteAccountError(
-        err.response?.data?.error ||
-          "Failed to delete account. Please try again.",
+        axiosMsg || "Failed to delete account. Please try again.",
       );
     } finally {
       setDeleteAccountLoading(false);
@@ -409,7 +390,7 @@ const CandidateProfile: React.FC<Props> = ({
               color: "#7a2222",
             }}
           >
-            ✕ {(profileError as any)?.data?.error ?? "An error occurred"}
+            ✕ {getApiErrorMessage(profileError, "An error occurred")}
           </div>
         )}
         {saveSuccess && (
@@ -583,7 +564,7 @@ const CandidateProfile: React.FC<Props> = ({
                   style={{ width: "100%", padding: "6px 8px", fontSize: 13 }}
                   value={form.profile_country || ""}
                   onChange={(e) =>
-                    setField("profile_country" as any, e.target.value)
+                    setField("profile_country", e.target.value)
                   }
                 >
                   {COUNTRIES.map((c) => (
@@ -745,11 +726,17 @@ const CandidateProfile: React.FC<Props> = ({
               );
 
               const toggleType = (checked: boolean) => {
-                setField("visibility_config", applyToggleType(vis, vt.key, vt.subTypes, checked));
+                setField(
+                  "visibility_config",
+                  applyToggleType(vis, vt.key, vt.subTypes, checked),
+                );
               };
 
               const toggleSub = (subValue: string, checked: boolean) => {
-                setField("visibility_config", applyToggleSub(vis, vt.key, subValue, checked, lockedType));
+                setField(
+                  "visibility_config",
+                  applyToggleSub(vis, vt.key, subValue, checked, lockedType),
+                );
               };
 
               return (
@@ -827,16 +814,32 @@ const CandidateProfile: React.FC<Props> = ({
             <legend>
               Resume
               {(() => {
-                if (effectivelyLocked) return (
-                  <span style={{ marginLeft: 8, fontSize: 11, color: "#888", fontWeight: 400 }}>
-                    🔒 Experience/education/bio locked · summary append below
-                  </span>
-                );
-                if (isLocked) return (
-                  <span style={{ marginLeft: 8, fontSize: 11, color: "#888", fontWeight: 400 }}>
-                    🔓 Editing unlocked — all fields fully editable
-                  </span>
-                );
+                if (effectivelyLocked)
+                  return (
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        fontSize: 11,
+                        color: "#888",
+                        fontWeight: 400,
+                      }}
+                    >
+                      🔒 Experience/education/bio locked · summary append below
+                    </span>
+                  );
+                if (isLocked)
+                  return (
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        fontSize: 11,
+                        color: "#888",
+                        fontWeight: 400,
+                      }}
+                    >
+                      🔓 Editing unlocked — all fields fully editable
+                    </span>
+                  );
                 return null;
               })()}
             </legend>
@@ -1025,7 +1028,7 @@ const CandidateProfile: React.FC<Props> = ({
               <Button
                 type="button"
                 label="Delete Account"
-                icon="pi pi-ban"
+                icon={PI.BAN}
                 className="legacy-btn legacy-prime-btn"
                 style={{
                   color: "#fff",
@@ -1067,7 +1070,13 @@ const CandidateProfile: React.FC<Props> = ({
               !form.profile_country
             }
           >
-            {saveButtonLabel(profileLoading, premiumLocked, editIntent, isLocked, premiumUnlocked)}
+            {saveButtonLabel(
+              profileLoading,
+              premiumLocked,
+              editIntent,
+              isLocked,
+              premiumUnlocked,
+            )}
           </button>
           {!isLocked && (
             <span
@@ -1111,15 +1120,13 @@ const CandidateProfile: React.FC<Props> = ({
 
       {/* ── Delete Account Confirmation Modal (W97 style) ── */}
       {showDeleteAccountModal && (
-        <dialog
-          open
-          className="rm-overlay"
-        >
-          <div className="rm-backdrop" role="none" onClick={() => setShowDeleteAccountModal(false)} />
+        <dialog open className="rm-overlay">
           <div
-            className="rm-window"
-            style={{ width: 520 }}
-          >
+            className="rm-backdrop"
+            role="none"
+            onClick={() => setShowDeleteAccountModal(false)}
+          />
+          <div className="rm-window" style={{ width: 520 }}>
             {/* Title bar */}
             <div
               className="rm-titlebar"
@@ -1234,7 +1241,9 @@ const CandidateProfile: React.FC<Props> = ({
             {/* Footer */}
             <div className="rm-footer">
               <MDBButton
-                style={isDeleteConfirmed ? deleteConfirmedStyle : deleteDisabledStyle}
+                style={
+                  isDeleteConfirmed ? deleteConfirmedStyle : deleteDisabledStyle
+                }
                 onClick={handleDeleteAccount}
                 disabled={!isDeleteConfirmed || deleteAccountLoading}
               >
@@ -1256,11 +1265,12 @@ const CandidateProfile: React.FC<Props> = ({
       {/* ── Delete Profile Confirmation Modal (W97 style) ── */}
       {showDeleteModal && (
         <dialog open className="rm-overlay">
-          <div className="rm-backdrop" role="none" onClick={() => setShowDeleteModal(false)} />
           <div
-            className="rm-window"
-            style={{ width: 480 }}
-          >
+            className="rm-backdrop"
+            role="none"
+            onClick={() => setShowDeleteModal(false)}
+          />
+          <div className="rm-window" style={{ width: 480 }}>
             {/* Title bar */}
             <div
               className="rm-titlebar"
@@ -1329,7 +1339,7 @@ const CandidateProfile: React.FC<Props> = ({
 
               {profileError && (
                 <div className="rm-alert rm-alert-error">
-                  ✕ {(profileError as any)?.data?.error ?? "An error occurred"}
+                  ✕ {getApiErrorMessage(profileError, "An error occurred")}
                 </div>
               )}
             </div>
