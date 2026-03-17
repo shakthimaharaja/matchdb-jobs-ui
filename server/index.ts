@@ -91,7 +91,9 @@ app.get("*", (_req, res) => {
 function logStartup() {
   const proto = config.useHttps ? "https" : "http";
   console.log(
-    `[matchdb-jobs-ui] ${proto.toUpperCase()} server on port ${config.port} (${config.env})`,
+    `[matchdb-jobs-ui] ${proto.toUpperCase()} server on port ${config.port} (${
+      config.env
+    })`,
   );
   console.log(`[matchdb-jobs-ui] /api/jobs → ${config.jobsServicesUrl}`);
   console.log(`[matchdb-jobs-ui] Static: ${distPath}`);

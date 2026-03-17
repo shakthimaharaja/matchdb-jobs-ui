@@ -18,7 +18,7 @@ dialog[open].detail-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 9000;
+  z-index: 1300;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -201,7 +201,7 @@ dialog[open].detail-modal-overlay {
 }
 
 .detail-btn {
-  height: 26px;
+  min-height: 28px;
   font-size: 12px;
   font-weight: 700;
   border-top: 1px solid var(--w97-btn-highlight, #fff);

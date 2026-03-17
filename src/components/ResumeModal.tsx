@@ -29,7 +29,12 @@ const EMPTY: Partial<IProfile> = {
   bio: "",
 };
 
-const ResumeModal: React.FC<Props> = ({ open, onClose, token: _token, userEmail }) => {
+const ResumeModal: React.FC<Props> = ({
+  open,
+  onClose,
+  token: _token,
+  userEmail,
+}) => {
   const {
     data: profile,
     isLoading: profileFetching,
@@ -206,7 +211,9 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token: _token, userEmail 
             </legend>
 
             <div className="rm-field">
-              <label htmlFor="rm-summary">Professional Summary / Objective</label>
+              <label htmlFor="rm-summary">
+                Professional Summary / Objective
+              </label>
               {isLocked ? (
                 <div className="rm-readonly">{form.resume_summary || "—"}</div>
               ) : (
@@ -258,7 +265,9 @@ const ResumeModal: React.FC<Props> = ({ open, onClose, token: _token, userEmail 
             </div>
 
             <div className="rm-field rm-field-mt">
-              <label htmlFor="rm-achievements">Certifications &amp; Achievements</label>
+              <label htmlFor="rm-achievements">
+                Certifications &amp; Achievements
+              </label>
               {isLocked ? (
                 <div className="rm-readonly">
                   {form.resume_achievements || "—"}

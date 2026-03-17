@@ -128,6 +128,11 @@ const MarketerDashboard: React.FC<Props> = () => {
     null,
   );
 
+  // Clear selected project when view changes to avoid stale selection
+  useEffect(() => {
+    setSelectedProjectId(null);
+  }, [activeView]);
+
   // Track new-entry badge counts from WebSocket-driven flash
   const [newJobsBadge, setNewJobsBadge] = useState(0);
   const [newProfilesBadge, setNewProfilesBadge] = useState(0);
@@ -279,10 +284,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [marketerTimesheetsData],
   );
 
-  const jobs: MarketerJob[] = useMemo(
-    () => jobsData?.data ?? [],
-    [jobsData],
-  );
+  const jobs: MarketerJob[] = useMemo(() => jobsData?.data ?? [], [jobsData]);
   const profiles: MarketerProfile[] = useMemo(
     () => profilesData?.data ?? [],
     [profilesData],

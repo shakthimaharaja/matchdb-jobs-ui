@@ -221,8 +221,8 @@ const CandidateProfile: React.FC<Props> = ({
     } else if (userEmail && !form.email) {
       setForm((f) => ({ ...f, email: userEmail }));
     }
-  // Intentionally excludes clearDraft, form.email, hasDraft — they are stable or cause re-trigger loops
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Intentionally excludes clearDraft, form.email, hasDraft — they are stable or cause re-trigger loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, profileLoading, userEmail]);
 
   // Auto-save form to localStorage while filling in (only when no confirmed server profile)
@@ -232,8 +232,8 @@ const CandidateProfile: React.FC<Props> = ({
     if (!profile && hasDraftableContent) {
       saveDraft(form);
     }
-  // saveDraft is stable (from useDraftCache)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // saveDraft is stable (from useDraftCache)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, profile]);
 
   const restoreFromDraft = () => {
@@ -354,10 +354,7 @@ const CandidateProfile: React.FC<Props> = ({
     } catch (err: unknown) {
       const axiosMsg =
         err && typeof err === "object" && "response" in err
-          ? getApiErrorMessage(
-              (err as { response?: unknown }).response,
-              "",
-            )
+          ? getApiErrorMessage((err as { response?: unknown }).response, "")
           : "";
       setDeleteAccountError(
         axiosMsg || "Failed to delete account. Please try again.",
@@ -563,9 +560,7 @@ const CandidateProfile: React.FC<Props> = ({
                   className="p-inputtext"
                   style={{ width: "100%", padding: "6px 8px", fontSize: 13 }}
                   value={form.profile_country || ""}
-                  onChange={(e) =>
-                    setField("profile_country", e.target.value)
-                  }
+                  onChange={(e) => setField("profile_country", e.target.value)}
                 >
                   {COUNTRIES.map((c) => (
                     <option key={c.value} value={c.value}>

@@ -312,15 +312,15 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
   // Show restore banner on mount if a draft exists
   useEffect(() => {
     if (hasDraft()) setShowDraftBanner(true);
-  // Run once on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save draft as user fills in the form
   useEffect(() => {
     if (form.title || form.description) saveDraft(form);
-  // saveDraft is stable (from useDraftCache)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // saveDraft is stable (from useDraftCache)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   // Smart-paste state

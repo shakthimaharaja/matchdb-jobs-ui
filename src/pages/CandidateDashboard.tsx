@@ -377,8 +377,8 @@ const CandidateDashboard: React.FC<Props> = ({
       );
     }, 350);
     return () => clearTimeout(t);
-  // Debounce reacts only to text changes, not setSearchParams
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Debounce reacts only to text changes, not setSearchParams
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchText]);
 
   // Helper: build the filter payload for RTK Query matchFilters
@@ -412,17 +412,18 @@ const CandidateDashboard: React.FC<Props> = ({
     debouncedSearch,
     currentPage,
     currentPageSize,
+    membershipConfig,
   ]);
 
   useEffect(() => {
     if (profileChecked.current) return;
     if (profileLoading) return;
-    profileChecked.current = true;
     if (hasPurchasedVisibility && profile === null) {
       setProfileOpen(true);
     }
-  // Only run once when profile data resolves; hasPurchasedVisibility is stable
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    profileChecked.current = true;
+    // Only run once when profile data resolves; hasPurchasedVisibility is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileLoading, profile]);
 
   // Send profile location to shell for the subscription-location display
@@ -499,8 +500,8 @@ const CandidateDashboard: React.FC<Props> = ({
         new CustomEvent("matchdb:footerInfo", { detail: { text: "" } }),
       );
     };
-  // Footer row-count display tracks active view and relevant totals
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Footer row-count display tracks active view and relevant totals
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activeView,
     candidateMatchesTotal,
@@ -535,8 +536,8 @@ const CandidateDashboard: React.FC<Props> = ({
     return () => {
       clearPokeState();
     };
-  // Cleanup on unmount only
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Cleanup on unmount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Auto-refresh + flash animations (30 s cycle) ── */
@@ -3045,43 +3046,51 @@ const CandidateDashboard: React.FC<Props> = ({
                 : ICONS.RED_CIRCLE,
               customLabel: hasPurchasedVisibility ? "Active" : "Off",
             },
-          ].map((card: { label: string; value: number; icon?: string; view?: ActiveView; customLabel?: string }) => (
-            <button
-              key={card.label}
-              type="button"
-              className={`matchdb-stat-rect${
-                card.view && activeView === card.view
-                  ? " matchdb-stat-rect-active"
-                  : ""
-              }`}
-              onClick={() => {
-                if (card.view) {
-                  if (card.view === "matches") {
-                    navParams({ view: "matches", type: null, sub: null });
-                  } else {
-                    navParams({ view: card.view });
+          ].map(
+            (card: {
+              label: string;
+              value: number;
+              icon?: string;
+              view?: ActiveView;
+              customLabel?: string;
+            }) => (
+              <button
+                key={card.label}
+                type="button"
+                className={`matchdb-stat-rect${
+                  card.view && activeView === card.view
+                    ? " matchdb-stat-rect-active"
+                    : ""
+                }`}
+                onClick={() => {
+                  if (card.view) {
+                    if (card.view === "matches") {
+                      navParams({ view: "matches", type: null, sub: null });
+                    } else {
+                      navParams({ view: card.view });
+                    }
                   }
-                }
-              }}
-              title={card.view ? `View ${card.label}` : card.label}
-            >
-              {card.icon && (
-                <span className="matchdb-stat-icon">{card.icon}</span>
-              )}
-              <span>
-                <span
-                  className="matchdb-stat-value"
-                  style={{
-                    color: countColor(card.value),
-                    background: countBg(card.value),
-                  }}
-                >
-                  {card.customLabel ?? card.value}
+                }}
+                title={card.view ? `View ${card.label}` : card.label}
+              >
+                {card.icon && (
+                  <span className="matchdb-stat-icon">{card.icon}</span>
+                )}
+                <span>
+                  <span
+                    className="matchdb-stat-value"
+                    style={{
+                      color: countColor(card.value),
+                      background: countBg(card.value),
+                    }}
+                  >
+                    {card.customLabel ?? card.value}
+                  </span>
+                  <span className="matchdb-stat-label">{card.label}</span>
                 </span>
-                <span className="matchdb-stat-label">{card.label}</span>
-              </span>
-            </button>
-          ))}
+              </button>
+            ),
+          )}
         </div>
 
         {/* Pokes Sent view */}
@@ -3239,7 +3248,13 @@ const CandidateDashboard: React.FC<Props> = ({
         {/* My Dashboard view — 4 tabs */}
         {activeView === "my-detail" && (
           <div
-            style={{ display: "flex", flexDirection: "column", height: "100%" }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+            }}
           >
             {renderMyDashboard()}
           </div>
@@ -3252,10 +3267,18 @@ const CandidateDashboard: React.FC<Props> = ({
         {activeView === "employer-openings" && renderEmployerOpenings()}
 
         {/* Employer Finance (read-only) */}
-        {activeView === "employer-finance" && renderEmployerFinance()}
+        {activeView === "employer-finance" && (
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+            {renderEmployerFinance()}
+          </div>
+        )}
 
         {/* Employer Immigration (read-only) */}
-        {activeView === "employer-immigration" && renderEmployerImmigration()}
+        {activeView === "employer-immigration" && (
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+            {renderEmployerImmigration()}
+          </div>
+        )}
 
         {/* Timesheets */}
         {activeView === "timesheets" && (

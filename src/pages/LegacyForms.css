@@ -131,7 +131,7 @@
 .legacy-row .p-inputtextarea:focus,
 .legacy-row .p-inputnumber-input:focus {
   outline: 1px dotted var(--w97-navy, #235a81);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 .legacy-row input:disabled,
@@ -280,7 +280,7 @@
 
 /* ── Button: matches .matchdb-btn exactly ── */
 .legacy-btn {
-  height: 22px;
+  min-height: 28px;
   border-top: 1px solid var(--w97-btn-highlight, #fff);
   border-left: 1px solid var(--w97-btn-highlight, #fff);
   border-right: 1px solid var(--w97-btn-dark, #404040);

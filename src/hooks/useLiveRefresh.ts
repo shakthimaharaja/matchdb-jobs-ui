@@ -53,7 +53,8 @@ export function useLiveRefresh({
         retries = 0;
       });
 
-      es.addEventListener("error", () => {
+      es.addEventListener("error", (event) => {
+        console.warn("[useLiveRefresh] SSE error:", event);
         es?.close();
         es = null;
         if (destroyed) return;

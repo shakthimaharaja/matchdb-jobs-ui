@@ -469,8 +469,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         render: renderActions,
       },
     ];
-  // renderActions is defined in the same render scope — including it would bloat the array
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // renderActions is defined in the same render scope — including it would bloat the array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     sortKey,
     sortDir,

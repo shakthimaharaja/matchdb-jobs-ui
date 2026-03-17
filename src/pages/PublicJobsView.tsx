@@ -1208,8 +1208,8 @@ const PublicJobsView: React.FC = () => {
       clearTimeout(deleteFlashProfileTimer.current);
       ws?.close();
     };
-  // WebSocket setup runs once on mount — schedule callbacks are stable refs
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // WebSocket setup runs once on mount — schedule callbacks are stable refs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Listen for job-type filter events from the shell ──────────────────────

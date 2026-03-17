@@ -481,8 +481,8 @@ const VendorDashboard: React.FC<Props> = ({
         new CustomEvent("matchdb:footerInfo", { detail: { text: "" } }),
       );
     };
-  // invitesSent is declared later in the component (hook ordering constraint)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // invitesSent is declared later in the component (hook ordering constraint)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     viewMode,
     vendorJobs.length,
@@ -503,16 +503,16 @@ const VendorDashboard: React.FC<Props> = ({
         limit: currentPageSize,
       });
     }
-  // currentPageSize is only used when switching to candidates view
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // currentPageSize is only used when switching to candidates view
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedJobId, viewMode]);
 
   useEffect(() => {
     return () => {
       clearPokeState();
     };
-  // Cleanup on unmount only
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Cleanup on unmount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Auto-refresh + flash animations (30 s cycle) ── */
@@ -597,6 +597,7 @@ const VendorDashboard: React.FC<Props> = ({
     setSelectedJobPosting((prev) =>
       prev?.id === jobId ? { ...prev, is_active: false } : prev,
     );
+    refetchMatches();
   };
 
   const handleReopenJob = async (jobId: string) => {
@@ -606,6 +607,7 @@ const VendorDashboard: React.FC<Props> = ({
     setSelectedJobPosting((prev) =>
       prev?.id === jobId ? { ...prev, is_active: true } : prev,
     );
+    refetchMatches();
   };
 
   /* ── Job postings table columns (with render functions) ── */

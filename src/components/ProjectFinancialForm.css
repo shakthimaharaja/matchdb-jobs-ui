@@ -75,6 +75,11 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+@media (max-width: 768px) {
+  .pf-summary-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 
 .pf-summary-tile {
   background: var(--pf-card);
@@ -172,6 +177,7 @@
 .pf-card-header-left {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -191,6 +197,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .pf-card-meta {
@@ -1808,3 +1815,8 @@
 }
 
 /* Footer value colours — use the standard ov-val-* classes as-is */
+
+@media (max-width: 600px) {
+  .ppt-table { font-size: 10px; }
+  .ppt-th { font-size: 9px; }
+}

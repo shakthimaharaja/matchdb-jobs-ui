@@ -181,7 +181,10 @@ const TimesheetView: React.FC<Props> = ({
   const [submitTimesheet, { isLoading: submitting }] =
     useSubmitTimesheetMutation();
 
-  const timesheets = useMemo(() => timesheetsResp?.data ?? [], [timesheetsResp]);
+  const timesheets = useMemo(
+    () => timesheetsResp?.data ?? [],
+    [timesheetsResp],
+  );
   const total = timesheetsResp?.total ?? 0;
 
   // Pre-fill form if a draft exists for the current week
@@ -215,8 +218,8 @@ const TimesheetView: React.FC<Props> = ({
       });
       setEntries((prev) => ({ ...prev, ...map }));
     }
-  // Only re-fill when a different draft is loaded
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Only re-fill when a different draft is loaded
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingDraft?.id]);
 
   function buildEntries(): TimesheetEntry[] {
