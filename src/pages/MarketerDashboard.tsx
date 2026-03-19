@@ -1,5 +1,13 @@
 ﻿import { useSearchParams } from "react-router-dom";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import DBLayout, { NavGroup } from "../components/DBLayout";
 import {
   DataTable,
@@ -32,6 +40,8 @@ import {
   useForwardOpeningWithEmailMutation,
   useUpdateForwardedStatusMutation,
   useGetCompanySummaryQuery,
+  useGetClientCompaniesQuery,
+  useGetVendorCompaniesQuery,
   type MarketerJob,
   type MarketerProfile,
   type MarketerCandidateItem,
@@ -71,6 +81,86 @@ import {
   buildMonthlyRows,
   getBreadcrumb,
 } from "./marketer/marketerHelpers";
+
+// ── Click-to-open Popover (used in client table columns) ──────────────────────
+function ClickPopover({
+  label,
+  children,
+}: Readonly<{
+  label: React.ReactNode;
+  children: React.ReactNode;
+}>) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  // Recalculate position when opened
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 2, left: rect.left });
+  }, [open]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen(!open)}
+        style={{
+          cursor: "pointer",
+          background: "none",
+          border: "none",
+          padding: 0,
+          font: "inherit",
+          color: "var(--w97-blue)",
+          textDecoration: "underline dotted",
+          fontSize: 11,
+        }}
+      >
+        {label}
+      </button>
+      {open &&
+        createPortal(
+          <div
+            ref={popRef}
+            style={{
+              position: "fixed",
+              zIndex: 9999,
+              background: "var(--w97-surface, #fff)",
+              border: "1px solid var(--w97-border)",
+              borderRadius: 4,
+              padding: "8px 12px",
+              boxShadow: "0 4px 12px rgba(0,0,0,.15)",
+              minWidth: 180,
+              maxWidth: 320,
+              fontSize: 11,
+              lineHeight: "1.6",
+              whiteSpace: "nowrap",
+              top: pos.top,
+              left: pos.left,
+            }}
+          >
+            {children}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -178,6 +268,13 @@ const MarketerDashboard: React.FC<Props> = () => {
   const [finStatusFilter, setFinStatusFilter] = useState<
     "all" | "billed" | "unbilled"
   >("all");
+  const [vendorSearch, setVendorSearch] = useState("");
+  const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
+  const [clientSearch, setClientSearch] = useState("");
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  const [clientDetailTab, setClientDetailTab] = useState<
+    "candidates" | "vendors" | "openings" | "financials"
+  >("candidates");
 
   // Email modal state
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -238,6 +335,13 @@ const MarketerDashboard: React.FC<Props> = () => {
   const { data: companyCandidates = [] } = useGetMarketerCandidatesQuery();
   const { data: companySummary, isFetching: summaryLoading } =
     useGetCompanySummaryQuery();
+  const { data: clientCompanies = [] } = useGetClientCompaniesQuery();
+  const { data: vendorCompaniesLookup = [] } = useGetVendorCompaniesQuery();
+  const ccIdByName: Record<string, string> = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const c of clientCompanies) m[c.name] = c.id;
+    return m;
+  }, [clientCompanies]);
   const {
     data: candidateDetail,
     isFetching: detailLoading,
@@ -610,6 +714,20 @@ const MarketerDashboard: React.FC<Props> = () => {
             active: activeView === "timesheets",
             onClick: () => navigateTo("timesheets"),
           },
+          {
+            id: "vendor-summary",
+            label: "Vendors",
+            active:
+              activeView === "vendor-summary" || activeView === "vendor-detail",
+            onClick: () => navigateTo("vendor-summary"),
+          },
+          {
+            id: "client-summary",
+            label: "Clients",
+            active:
+              activeView === "client-summary" || activeView === "client-detail",
+            onClick: () => navigateTo("client-summary"),
+          },
         ],
       },
       {
@@ -771,6 +889,18 @@ const MarketerDashboard: React.FC<Props> = () => {
           </button>
         ),
         tooltip: (j) => j.title,
+      },
+      {
+        key: "client",
+        header: "Client",
+        width: "8%",
+        skeletonWidth: 70,
+        render: (j) => (
+          <span style={{ fontWeight: 600 }}>
+            {j.client_company_name || "—"}
+          </span>
+        ),
+        tooltip: (j) => j.client_company_name || "—",
       },
       {
         key: "vendor",
@@ -1483,6 +1613,12 @@ const MarketerDashboard: React.FC<Props> = () => {
     if (activeView === "immigration-detail" && selectedCandidateId)
       return renderImmigrationDetailView();
     if (activeView === "timesheets") return renderTimesheetsView();
+    if (activeView === "vendor-summary") return renderVendorSummaryView();
+    if (activeView === "vendor-detail" && selectedVendor)
+      return renderVendorDetailView();
+    if (activeView === "client-summary") return renderClientSummaryView();
+    if (activeView === "client-detail" && selectedClient)
+      return renderClientDetailView();
     return renderForwardedOpeningsView();
   }
 
@@ -1524,7 +1660,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               className="matchdb-title-search"
               value={jobSearch}
               onChange={(e) => setJobSearch(e.target.value)}
-              placeholder="Search title, skills, location…"
+              placeholder="Search title, skills, location, client…"
             />
             <Button
               size="xs"
@@ -2716,7 +2852,14 @@ const MarketerDashboard: React.FC<Props> = () => {
         : "—";
 
     return (
-      <div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
         {summaryLoading && (
           <div
             style={{
@@ -2734,7 +2877,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           <DataTable<CompanySummaryProject>
             title="Project Summary — All Candidates"
             titleIcon="📋"
-            className="matchdb-auto-height"
+            rnColWidth="2%"
             titleExtra={
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <span style={{ fontSize: 10, opacity: 0.7 }}>
@@ -3829,6 +3972,2098 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
+  // ── Vendor Summary & Detail Views ──────────────────────────────────────────
+
+  interface VendorRow {
+    vendor: string;
+    companyName: string;
+    candidateCount: number;
+    revenue: number;
+    credited: number;
+    pending: number;
+    hours: number;
+    clients: string[];
+    candidates: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      client: string;
+      totalBilled: number;
+      amountPaid: number;
+      amountPending: number;
+      hoursWorked: number;
+    }[];
+  }
+
+  function buildVendorRows(): VendorRow[] {
+    const projects = companySummary?.projects ?? [];
+    const cands = companySummary?.candidates ?? [];
+    const candMap = new Map(cands.map((c) => [c.candidateEmail, c]));
+
+    const map = new Map<string, VendorRow>();
+    for (const p of projects) {
+      const v = p.vendorEmail || "Unknown Vendor";
+      if (!map.has(v)) {
+        map.set(v, {
+          vendor: v,
+          companyName: p.vendorCompanyName || "",
+          candidateCount: 0,
+          revenue: 0,
+          credited: 0,
+          pending: 0,
+          hours: 0,
+          clients: [],
+          candidates: [],
+        });
+      }
+      const row = map.get(v)!;
+      if (!row.companyName && p.vendorCompanyName) {
+        row.companyName = p.vendorCompanyName;
+      }
+      const clientLabel = p.clientName || "Unknown Client";
+      if (!row.clients.includes(clientLabel)) {
+        row.clients.push(clientLabel);
+      }
+      const fin = p.financials;
+      if (fin) {
+        row.revenue += fin.totalBilled;
+        row.credited += fin.amountPaid;
+        row.pending += fin.amountPending;
+        row.hours += fin.hoursWorked;
+      }
+      // Add candidate if not already tracked for this vendor
+      if (!row.candidates.some((c) => c.email === p.candidateEmail)) {
+        const cd = candMap.get(p.candidateEmail);
+        row.candidates.push({
+          id: cd?.id ?? p.candidateId,
+          name: p.candidateName,
+          email: p.candidateEmail,
+          role: cd?.currentRole ?? p.jobTitle,
+          client: clientLabel,
+          totalBilled: cd?.totalBilled ?? 0,
+          amountPaid: cd?.amountPaid ?? 0,
+          amountPending: cd?.amountPending ?? 0,
+          hoursWorked: cd?.hoursWorked ?? 0,
+        });
+      }
+    }
+    // Update candidate counts
+    for (const row of map.values()) {
+      row.candidateCount = row.candidates.length;
+    }
+    return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+  }
+
+  function renderVendorSummaryView() {
+    const fmtC = (v: number) =>
+      `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+    const vendorRows = buildVendorRows();
+    const q = vendorSearch.toLowerCase();
+    const filtered = q
+      ? vendorRows.filter(
+          (r) =>
+            r.vendor.toLowerCase().includes(q) ||
+            r.companyName.toLowerCase().includes(q) ||
+            r.clients.some((c) => c.toLowerCase().includes(q)),
+        )
+      : vendorRows;
+
+    const grandRevenue = vendorRows.reduce((s, r) => s + r.revenue, 0);
+    const grandCredited = vendorRows.reduce((s, r) => s + r.credited, 0);
+    const grandPending = vendorRows.reduce((s, r) => s + r.pending, 0);
+    const grandHours = vendorRows.reduce((s, r) => s + r.hours, 0);
+    const totalCandidates = vendorRows.reduce(
+      (s, r) => s + r.candidateCount,
+      0,
+    );
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        {summaryLoading && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: 40,
+              fontSize: 13,
+              color: "var(--w97-text-secondary)",
+            }}
+          >
+            Loading vendor summary…
+          </div>
+        )}
+
+        {!summaryLoading && (
+          <>
+            {/* KPI strip */}
+            <div className="ov-kpi-strip" style={{ margin: "0 0 14px" }}>
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Total Vendors</span>
+                <span className="ov-kpi-value ov-kv-blue">
+                  {vendorRows.length}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Total Candidates</span>
+                <span className="ov-kpi-value ov-kv-teal">
+                  {totalCandidates}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Revenue Generated</span>
+                <span className="ov-kpi-value ov-kv-green">
+                  {fmtC(grandRevenue)}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Amount Credited</span>
+                <span className="ov-kpi-value ov-kv-green">
+                  {fmtC(grandCredited)}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Amount Pending</span>
+                <span
+                  className={`ov-kpi-value ${
+                    grandPending > 0 ? "ov-kv-orange" : "ov-kv-green"
+                  }`}
+                >
+                  {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Total Hours</span>
+                <span className="ov-kpi-value ov-kv-blue">
+                  {grandHours.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Table */}
+            <DataTable<VendorRow>
+              title={`Vendors — ${vendorRows.length} total`}
+              titleIcon="🏢"
+              className="matchdb-auto-height"
+              titleExtra={
+                <input
+                  type="text"
+                  placeholder="🔍 Search vendor…"
+                  value={vendorSearch}
+                  onChange={(e) => setVendorSearch(e.target.value)}
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: 11,
+                    border: "1px solid var(--w97-border)",
+                    borderRadius: 3,
+                    width: 180,
+                  }}
+                />
+              }
+              columns={
+                [
+                  {
+                    key: "vendor",
+                    header: "Vendor",
+                    width: "24%",
+                    render: (r) => (
+                      <button
+                        type="button"
+                        style={{
+                          cursor: "pointer",
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          textAlign: "left",
+                          font: "inherit",
+                        }}
+                        onClick={() => {
+                          setSelectedVendor(r.vendor);
+                          setPrevView("vendor-summary");
+                          navParams({ view: "vendor-detail" });
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            color: "var(--w97-blue)",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          {r.companyName ||
+                            (r.vendor.includes("@")
+                              ? r.vendor.split("@")[1]?.split(".")[0] ||
+                                r.vendor
+                              : r.vendor)}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "var(--w97-text-secondary)",
+                          }}
+                        >
+                          {r.vendor}
+                        </div>
+                      </button>
+                    ),
+                  },
+                  {
+                    key: "candidates",
+                    header: "Candidates",
+                    align: "center" as const,
+                    render: (r) => (
+                      <span
+                        style={{ fontWeight: 600, color: "var(--w97-teal)" }}
+                      >
+                        {r.candidateCount}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "clients",
+                    header: "Clients",
+                    align: "center" as const,
+                    render: (r) => (
+                      <span
+                        style={{ fontWeight: 600, color: "var(--w97-blue)" }}
+                        title={r.clients.join(", ")}
+                      >
+                        {r.clients.length}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "revenue",
+                    header: "Revenue Generated",
+                    align: "right" as const,
+                    render: (r) => (
+                      <span className="ov-mono ov-val-green">
+                        {fmtC(r.revenue)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "credited",
+                    header: "Amount Credited",
+                    align: "right" as const,
+                    render: (r) => (
+                      <span className="ov-mono ov-val-green">
+                        {fmtC(r.credited)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "pending",
+                    header: "Amount Pending",
+                    align: "right" as const,
+                    render: (r) => (
+                      <span
+                        className={`ov-mono ${
+                          r.pending > 0 ? "ov-val-orange" : "ov-val-green"
+                        }`}
+                      >
+                        {r.pending > 0 ? fmtC(r.pending) : "✓ Settled"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "hours",
+                    header: "Hours",
+                    align: "right" as const,
+                    render: (r) => (
+                      <span className="ov-mono">
+                        {r.hours.toLocaleString()}
+                      </span>
+                    ),
+                  },
+                ] as DataTableColumn<VendorRow>[]
+              }
+              data={filtered}
+              keyExtractor={(r) => r.vendor}
+              emptyMessage="No vendor data available."
+              footerRow={
+                vendorRows.length > 1 ? (
+                  <tr className="ov-pt-foot">
+                    <td className="ov-pt-tf" colSpan={3}>
+                      TOTAL — {vendorRows.length} vendors · {totalCandidates}{" "}
+                      candidates
+                    </td>
+                    <td
+                      className="ov-pt-tf ov-mono ov-val-green"
+                      style={{ textAlign: "right" }}
+                    >
+                      {fmtC(grandRevenue)}
+                    </td>
+                    <td
+                      className="ov-pt-tf ov-mono ov-val-green"
+                      style={{ textAlign: "right" }}
+                    >
+                      {fmtC(grandCredited)}
+                    </td>
+                    <td
+                      className={`ov-pt-tf ov-mono ${
+                        grandPending > 0 ? "ov-val-orange" : "ov-val-green"
+                      }`}
+                      style={{ textAlign: "right" }}
+                    >
+                      {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
+                    </td>
+                    <td
+                      className="ov-pt-tf ov-mono"
+                      style={{ textAlign: "right" }}
+                    >
+                      {grandHours.toLocaleString()}
+                    </td>
+                  </tr>
+                ) : undefined
+              }
+            />
+          </>
+        )}
+      </div>
+    );
+  }
+
+  function renderVendorDetailView() {
+    const fmtC = (v: number) =>
+      `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+    const vendorRows = buildVendorRows();
+    const row = vendorRows.find((r) => r.vendor === selectedVendor);
+
+    if (!row) {
+      return (
+        <div style={{ padding: 40, textAlign: "center", fontSize: 13 }}>
+          Vendor not found.{" "}
+          <button
+            type="button"
+            style={{
+              color: "var(--w97-blue)",
+              background: "none",
+              border: "none",
+              textDecoration: "underline",
+              cursor: "pointer",
+              font: "inherit",
+            }}
+            onClick={() => navigateTo("vendor-summary")}
+          >
+            ← Back to Vendors
+          </button>
+        </div>
+      );
+    }
+
+    const vendorLabel =
+      row.companyName ||
+      (row.vendor.includes("@")
+        ? row.vendor.split("@")[1]?.split(".")[0] || row.vendor
+        : row.vendor);
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 14,
+          }}
+        >
+          <button
+            type="button"
+            style={{
+              background: "none",
+              border: "1px solid var(--w97-border)",
+              borderRadius: 3,
+              padding: "3px 10px",
+              cursor: "pointer",
+              fontSize: 12,
+              font: "inherit",
+            }}
+            onClick={() => navigateTo("vendor-summary")}
+          >
+            ← Back
+          </button>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{vendorLabel}</div>
+            <div style={{ fontSize: 11, color: "var(--w97-text-secondary)" }}>
+              {row.vendor}
+            </div>
+          </div>
+        </div>
+
+        {/* KPI strip */}
+        <div className="ov-kpi-strip" style={{ margin: "0 0 14px" }}>
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Candidates</span>
+            <span className="ov-kpi-value ov-kv-blue">
+              {row.candidateCount}
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Clients</span>
+            <span className="ov-kpi-value ov-kv-teal">
+              {row.clients.length}
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Revenue Generated</span>
+            <span className="ov-kpi-value ov-kv-green">
+              {fmtC(row.revenue)}
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Amount Credited</span>
+            <span className="ov-kpi-value ov-kv-green">
+              {fmtC(row.credited)}
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Amount Pending</span>
+            <span
+              className={`ov-kpi-value ${
+                row.pending > 0 ? "ov-kv-orange" : "ov-kv-green"
+              }`}
+            >
+              {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Total Hours</span>
+            <span className="ov-kpi-value ov-kv-blue">
+              {row.hours.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* Candidates table */}
+        <DataTable<(typeof row.candidates)[number]>
+          title={`Candidates with ${vendorLabel} — ${row.candidateCount} total`}
+          titleIcon="👤"
+          className="matchdb-auto-height"
+          columns={
+            [
+              {
+                key: "name",
+                header: "Candidate",
+                width: "22%",
+                render: (c) => (
+                  <button
+                    type="button"
+                    style={{
+                      cursor: "pointer",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      textAlign: "left",
+                      font: "inherit",
+                    }}
+                    onClick={() => {
+                      setPrevView("vendor-detail");
+                      navParams({
+                        view: "candidate-detail",
+                        cid: c.id,
+                        tab: "overview",
+                      });
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: "var(--w97-blue)",
+                        textDecoration: "underline",
+                      }}
+                    >
+                      {c.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: "var(--w97-text-secondary)",
+                      }}
+                    >
+                      {c.role}
+                    </div>
+                  </button>
+                ),
+              },
+              {
+                key: "email",
+                header: "Email",
+                render: (c) => <span style={{ fontSize: 11 }}>{c.email}</span>,
+              },
+              {
+                key: "client",
+                header: "Client",
+                render: (c) => <span style={{ fontSize: 11 }}>{c.client}</span>,
+              },
+              {
+                key: "hours",
+                header: "Hours",
+                align: "right" as const,
+                render: (c) => (
+                  <span className="ov-mono">
+                    {c.hoursWorked.toLocaleString()}
+                  </span>
+                ),
+              },
+              {
+                key: "billed",
+                header: "Revenue",
+                align: "right" as const,
+                render: (c) => (
+                  <span className="ov-mono ov-val-green">
+                    {fmtC(c.totalBilled)}
+                  </span>
+                ),
+              },
+              {
+                key: "credited",
+                header: "Amount Credited",
+                align: "right" as const,
+                render: (c) => (
+                  <span className="ov-mono ov-val-green">
+                    {fmtC(c.amountPaid)}
+                  </span>
+                ),
+              },
+              {
+                key: "pending",
+                header: "Amount Pending",
+                align: "right" as const,
+                render: (c) => (
+                  <span
+                    className={`ov-mono ${
+                      c.amountPending > 0 ? "ov-val-orange" : "ov-val-green"
+                    }`}
+                  >
+                    {c.amountPending > 0 ? fmtC(c.amountPending) : "✓ Settled"}
+                  </span>
+                ),
+              },
+            ] as DataTableColumn<(typeof row.candidates)[number]>[]
+          }
+          data={row.candidates}
+          keyExtractor={(c) => c.email}
+          emptyMessage="No candidates found for this vendor."
+          footerRow={
+            row.candidates.length > 1 ? (
+              <tr className="ov-pt-foot">
+                <td className="ov-pt-tf" colSpan={3}>
+                  TOTAL — {row.candidateCount} candidates
+                </td>
+                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>
+                  {row.hours.toLocaleString()}
+                </td>
+                <td
+                  className="ov-pt-tf ov-mono ov-val-green"
+                  style={{ textAlign: "right" }}
+                >
+                  {fmtC(row.revenue)}
+                </td>
+                <td
+                  className="ov-pt-tf ov-mono ov-val-green"
+                  style={{ textAlign: "right" }}
+                >
+                  {fmtC(row.credited)}
+                </td>
+                <td
+                  className={`ov-pt-tf ov-mono ${
+                    row.pending > 0 ? "ov-val-orange" : "ov-val-green"
+                  }`}
+                  style={{ textAlign: "right" }}
+                >
+                  {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+                </td>
+              </tr>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  }
+
+  // ── Client Summary & Detail Views ──────────────────────────────────────────
+
+  interface ClientRow {
+    client: string;
+    candidateCount: number;
+    revenue: number;
+    credited: number;
+    pending: number;
+    hours: number;
+    vendors: string[];
+    locations: string[];
+    implementationPartners: string[];
+    pocContacts: { name: string; email: string }[];
+    activeOpenings: number;
+    closedOpenings: number;
+    candidates: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      vendor: string;
+      implementationPartner: string;
+      totalBilled: number;
+      amountPaid: number;
+      amountPending: number;
+      hoursWorked: number;
+    }[];
+  }
+
+  function buildClientRows(): ClientRow[] {
+    const projects = companySummary?.projects ?? [];
+    const cands = companySummary?.candidates ?? [];
+    const candMap = new Map(cands.map((c) => [c.candidateEmail, c]));
+
+    const map = new Map<string, ClientRow>();
+    for (const p of projects) {
+      const client = p.clientName || "Unknown Client";
+      if (!map.has(client)) {
+        map.set(client, {
+          client,
+          candidateCount: 0,
+          revenue: 0,
+          credited: 0,
+          pending: 0,
+          hours: 0,
+          vendors: [],
+          locations: [],
+          implementationPartners: [],
+          pocContacts: [],
+          activeOpenings: 0,
+          closedOpenings: 0,
+          candidates: [],
+        });
+      }
+      const row = map.get(client)!;
+      const fin = p.financials;
+      if (fin) {
+        row.revenue += fin.totalBilled;
+        row.credited += fin.amountPaid;
+        row.pending += fin.amountPending;
+        row.hours += fin.hoursWorked;
+      }
+      const vendor = p.vendorCompanyName || p.vendorEmail || "Direct";
+      if (!row.vendors.includes(vendor)) {
+        row.vendors.push(vendor);
+      }
+      if (p.location && !row.locations.includes(p.location)) {
+        row.locations.push(p.location);
+      }
+      const ip = p.implementationPartner;
+      if (ip && !row.implementationPartners.includes(ip)) {
+        row.implementationPartners.push(ip);
+      }
+      if (
+        p.pocEmail &&
+        !row.pocContacts.some((pc) => pc.email === p.pocEmail)
+      ) {
+        row.pocContacts.push({ name: p.pocName, email: p.pocEmail });
+      }
+      if (p.isActive) {
+        row.activeOpenings++;
+      } else {
+        row.closedOpenings++;
+      }
+      if (!row.candidates.some((c) => c.email === p.candidateEmail)) {
+        const cd = candMap.get(p.candidateEmail);
+        row.candidates.push({
+          id: cd?.id ?? p.candidateId,
+          name: p.candidateName,
+          email: p.candidateEmail,
+          role: cd?.currentRole ?? p.jobTitle,
+          vendor,
+          implementationPartner: ip || "",
+          totalBilled: cd?.totalBilled ?? 0,
+          amountPaid: cd?.amountPaid ?? 0,
+          amountPending: cd?.amountPending ?? 0,
+          hoursWorked: cd?.hoursWorked ?? 0,
+        });
+      }
+    }
+    for (const row of map.values()) {
+      row.candidateCount = row.candidates.length;
+    }
+    return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+  }
+
+  function renderClientSummaryView() {
+    const fmtC = (v: number) =>
+      `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+    const clientRows = buildClientRows();
+    const q = clientSearch.toLowerCase();
+    const filtered = q
+      ? clientRows.filter((r) => r.client.toLowerCase().includes(q))
+      : clientRows;
+
+    const grandRevenue = clientRows.reduce((s, r) => s + r.revenue, 0);
+    const grandCredited = clientRows.reduce((s, r) => s + r.credited, 0);
+    const grandPending = clientRows.reduce((s, r) => s + r.pending, 0);
+    const grandHours = clientRows.reduce((s, r) => s + r.hours, 0);
+    const totalCandidates = clientRows.reduce(
+      (s, r) => s + r.candidateCount,
+      0,
+    );
+
+    const goClientTab = (
+      client: string,
+      tab: "candidates" | "vendors" | "openings" | "financials",
+    ) => {
+      setSelectedClient(client);
+      setClientDetailTab(tab);
+      setPrevView("client-summary");
+      navParams({ view: "client-detail" });
+    };
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        {summaryLoading && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: 40,
+              fontSize: 13,
+              color: "var(--w97-text-secondary)",
+            }}
+          >
+            Loading client summary…
+          </div>
+        )}
+
+        {!summaryLoading && (
+          <>
+            {/* KPI strip */}
+            <div className="ov-kpi-strip" style={{ margin: "0 0 14px" }}>
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Total Clients</span>
+                <span className="ov-kpi-value ov-kv-blue">
+                  {clientRows.length}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Total Candidates</span>
+                <span className="ov-kpi-value ov-kv-teal">
+                  {totalCandidates}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Revenue Generated</span>
+                <span className="ov-kpi-value ov-kv-green">
+                  {fmtC(grandRevenue)}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Amount Credited</span>
+                <span className="ov-kpi-value ov-kv-green">
+                  {fmtC(grandCredited)}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Amount Pending</span>
+                <span
+                  className={`ov-kpi-value ${
+                    grandPending > 0 ? "ov-kv-orange" : "ov-kv-green"
+                  }`}
+                >
+                  {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
+                </span>
+              </div>
+              <div className="ov-kpi-div" />
+              <div className="ov-kpi">
+                <span className="ov-kpi-label">Total Hours</span>
+                <span className="ov-kpi-value ov-kv-blue">
+                  {grandHours.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Table */}
+            <DataTable<ClientRow>
+              title={`Clients — ${clientRows.length} total`}
+              titleIcon="🏛️"
+              titleExtra={
+                <input
+                  type="text"
+                  placeholder="🔍 Search client…"
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: 11,
+                    border: "1px solid var(--w97-border)",
+                    borderRadius: 3,
+                    width: 180,
+                  }}
+                />
+              }
+              columns={
+                [
+                  {
+                    key: "client",
+                    header: "Client",
+                    width: "20%",
+                    render: (r) => (
+                      <button
+                        type="button"
+                        style={{
+                          cursor: "pointer",
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          textAlign: "left",
+                          font: "inherit",
+                        }}
+                        onClick={() => goClientTab(r.client, "candidates")}
+                      >
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            color: "var(--w97-blue)",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          {r.client}
+                        </div>
+                      </button>
+                    ),
+                  },
+                  {
+                    key: "candidates",
+                    header: "Candidates",
+                    align: "center" as const,
+                    render: (r) => (
+                      <span
+                        style={{ fontWeight: 600, color: "var(--w97-teal)" }}
+                      >
+                        {r.candidateCount}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "vendorCount",
+                    header: "Vendors",
+                    align: "center" as const,
+                    render: (r) => (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVendorSearch(r.client);
+                          navigateTo("vendor-summary");
+                        }}
+                        title={r.vendors.join(", ")}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          font: "inherit",
+                          fontWeight: 600,
+                          color: "var(--w97-blue)",
+                          textDecoration: "underline dotted",
+                        }}
+                      >
+                        {r.vendors.length}
+                      </button>
+                    ),
+                  },
+                  {
+                    key: "implPartner",
+                    header: "Impl. Partner",
+                    render: (r) => {
+                      if (!r.implementationPartners.length) {
+                        return (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "var(--w97-text-secondary)",
+                            }}
+                          >
+                            —
+                          </span>
+                        );
+                      }
+                      const vRows = buildVendorRows();
+                      return (
+                        <span style={{ fontSize: 11 }}>
+                          {r.implementationPartners.map((ip, i) => {
+                            const match = vRows.find(
+                              (vr) => vr.companyName === ip,
+                            );
+                            return (
+                              <span key={ip}>
+                                {i > 0 && ", "}
+                                {match ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedVendor(match.vendor);
+                                      setPrevView("client-summary");
+                                      navParams({ view: "vendor-detail" });
+                                    }}
+                                    style={{
+                                      background: "none",
+                                      border: "none",
+                                      padding: 0,
+                                      cursor: "pointer",
+                                      font: "inherit",
+                                      color: "var(--w97-blue)",
+                                      textDecoration: "underline dotted",
+                                      fontSize: 11,
+                                    }}
+                                  >
+                                    {ip}
+                                  </button>
+                                ) : (
+                                  ip
+                                )}
+                              </span>
+                            );
+                          })}
+                        </span>
+                      );
+                    },
+                  },
+                  {
+                    key: "location",
+                    header: "Location",
+                    render: (r) =>
+                      r.locations.length ? (
+                        <span style={{ fontSize: 11 }}>
+                          {r.locations.join(", ")}
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "var(--w97-text-secondary)",
+                          }}
+                        >
+                          —
+                        </span>
+                      ),
+                  },
+                  {
+                    key: "poc",
+                    header: "POC",
+                    render: (r) => {
+                      if (!r.pocContacts.length) {
+                        return (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "var(--w97-text-secondary)",
+                            }}
+                          >
+                            —
+                          </span>
+                        );
+                      }
+                      if (r.pocContacts.length === 1) {
+                        return (
+                          <span
+                            style={{ fontSize: 11 }}
+                            title={r.pocContacts[0].name}
+                          >
+                            {r.pocContacts[0].email}
+                          </span>
+                        );
+                      }
+                      return (
+                        <ClickPopover
+                          label={`${r.pocContacts[0].email} +${
+                            r.pocContacts.length - 1
+                          }`}
+                        >
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                            Points of Contact
+                          </div>
+                          {r.pocContacts.map((pc) => (
+                            <div key={pc.email} style={{ padding: "2px 0" }}>
+                              <span style={{ fontWeight: 600 }}>{pc.name}</span>
+                              <br />
+                              <span
+                                style={{ color: "var(--w97-text-secondary)" }}
+                              >
+                                {pc.email}
+                              </span>
+                            </div>
+                          ))}
+                        </ClickPopover>
+                      );
+                    },
+                  },
+                  {
+                    key: "openings",
+                    header: "Openings",
+                    align: "center" as const,
+                    render: (r) => (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setJobSearch(r.client);
+                          navigateTo("vendor-posted");
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          font: "inherit",
+                          fontSize: 11,
+                          textDecoration: "underline dotted",
+                          color: "inherit",
+                        }}
+                      >
+                        <span
+                          style={{ color: "var(--w97-green)", fontWeight: 600 }}
+                        >
+                          {r.activeOpenings}
+                        </span>
+                        {" active · "}
+                        <span style={{ color: "var(--w97-text-secondary)" }}>
+                          {r.closedOpenings}
+                        </span>
+                        {" closed"}
+                      </button>
+                    ),
+                  },
+                  {
+                    key: "revenue",
+                    header: "Revenue Generated",
+                    align: "right" as const,
+                    render: (r) => (
+                      <button
+                        onClick={() => goClientTab(r.client, "financials")}
+                        className="ov-mono ov-val-green"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          textDecoration: "underline dotted",
+                          color: "inherit",
+                        }}
+                      >
+                        {fmtC(r.revenue)}
+                      </button>
+                    ),
+                  },
+                  {
+                    key: "credited",
+                    header: "Amount Credited",
+                    align: "right" as const,
+                    render: (r) => (
+                      <button
+                        onClick={() => goClientTab(r.client, "financials")}
+                        className="ov-mono ov-val-green"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          textDecoration: "underline dotted",
+                          color: "inherit",
+                        }}
+                      >
+                        {fmtC(r.credited)}
+                      </button>
+                    ),
+                  },
+                  {
+                    key: "pending",
+                    header: "Amount Pending",
+                    align: "right" as const,
+                    render: (r) => (
+                      <button
+                        onClick={() => goClientTab(r.client, "financials")}
+                        className={`ov-mono ${
+                          r.pending > 0 ? "ov-val-orange" : "ov-val-green"
+                        }`}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          textDecoration: "underline dotted",
+                          color: "inherit",
+                        }}
+                      >
+                        {r.pending > 0 ? fmtC(r.pending) : "✓ Settled"}
+                      </button>
+                    ),
+                  },
+                  {
+                    key: "pipeline",
+                    header: "Vendor Pipeline",
+                    render: (r) => {
+                      const isDirect =
+                        r.vendors.length === 1 &&
+                        r.vendors[0] === "Direct" &&
+                        !r.implementationPartners.length;
+                      if (isDirect) {
+                        return (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: "var(--w97-green)",
+                            }}
+                          >
+                            Direct
+                          </span>
+                        );
+                      }
+                      const chains = r.vendors.map((v) => {
+                        const parts = [v];
+                        if (r.implementationPartners.length)
+                          parts.push(r.implementationPartners[0]);
+                        parts.push(r.client);
+                        return parts.join(" → ");
+                      });
+                      const label =
+                        chains.length === 1
+                          ? `${r.vendors[0]} → …`
+                          : `${r.vendors.length} vendors`;
+                      return (
+                        <ClickPopover label={label}>
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                            Vendor Pipeline
+                          </div>
+                          {chains.map((c) => (
+                            <div
+                              key={c}
+                              style={{ padding: "2px 0", fontSize: 11 }}
+                            >
+                              {c}
+                            </div>
+                          ))}
+                        </ClickPopover>
+                      );
+                    },
+                  },
+                ] as DataTableColumn<ClientRow>[]
+              }
+              data={filtered}
+              keyExtractor={(r) => r.client}
+              paginate
+              pageSize={25}
+              emptyMessage="No client data available."
+              footerRow={
+                clientRows.length > 1 ? (
+                  <tr className="ov-pt-foot">
+                    <td className="ov-pt-tf" colSpan={7}>
+                      TOTAL — {clientRows.length} clients · {totalCandidates}{" "}
+                      candidates
+                    </td>
+                    <td
+                      className="ov-pt-tf ov-mono ov-val-green"
+                      style={{ textAlign: "right" }}
+                    >
+                      {fmtC(grandRevenue)}
+                    </td>
+                    <td
+                      className="ov-pt-tf ov-mono ov-val-green"
+                      style={{ textAlign: "right" }}
+                    >
+                      {fmtC(grandCredited)}
+                    </td>
+                    <td
+                      className={`ov-pt-tf ov-mono ${
+                        grandPending > 0 ? "ov-val-orange" : "ov-val-green"
+                      }`}
+                      style={{ textAlign: "right" }}
+                    >
+                      {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
+                    </td>
+                    <td className="ov-pt-tf" />
+                  </tr>
+                ) : undefined
+              }
+            />
+          </>
+        )}
+      </div>
+    );
+  }
+
+  function renderClientDetailView() {
+    const fmtC = (v: number) =>
+      `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+    const clientRows = buildClientRows();
+    const row = clientRows.find((r) => r.client === selectedClient);
+
+    if (!row) {
+      return (
+        <div style={{ padding: 40, textAlign: "center", fontSize: 13 }}>
+          Client not found.{" "}
+          <button
+            type="button"
+            style={{
+              color: "var(--w97-blue)",
+              background: "none",
+              border: "none",
+              textDecoration: "underline",
+              cursor: "pointer",
+              font: "inherit",
+            }}
+            onClick={() => navigateTo("client-summary")}
+          >
+            ← Back to Clients
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 14,
+          }}
+        >
+          <button
+            type="button"
+            style={{
+              background: "none",
+              border: "1px solid var(--w97-border)",
+              borderRadius: 3,
+              padding: "3px 10px",
+              cursor: "pointer",
+              fontSize: 12,
+              font: "inherit",
+            }}
+            onClick={() => navigateTo("client-summary")}
+          >
+            ← Back
+          </button>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{row.client}</div>
+            <div style={{ fontSize: 11, color: "var(--w97-text-secondary)" }}>
+              {row.vendors.length} vendor{row.vendors.length === 1 ? "" : "s"}
+              {" · "}
+              {row.vendors.join(", ")}
+              {row.locations.length > 0 && (
+                <>
+                  {" "}
+                  {" · 📍 "}
+                  {row.locations.join(", ")}
+                </>
+              )}
+            </div>
+            {row.pocContacts.length > 0 && (
+              <div style={{ fontSize: 11, color: "var(--w97-text-secondary)" }}>
+                POC:{" "}
+                {row.pocContacts.map((pc, i) => (
+                  <span key={pc.email}>
+                    {i > 0 && ", "}
+                    {pc.email}
+                  </span>
+                ))}
+              </div>
+            )}
+            {row.vendors.length > 0 &&
+              !(row.vendors.length === 1 && row.vendors[0] === "Direct") && (
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: "var(--w97-text-secondary)",
+                    marginTop: 2,
+                  }}
+                >
+                  Pipeline: {row.vendors[0]} →{" "}
+                  {row.implementationPartners.length
+                    ? `${row.implementationPartners.join(", ")} → `
+                    : ""}
+                  {row.client}
+                </div>
+              )}
+          </div>
+        </div>
+
+        {/* KPI strip */}
+        <div className="ov-kpi-strip" style={{ margin: "0 0 14px" }}>
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Candidates</span>
+            <span className="ov-kpi-value ov-kv-blue">
+              {row.candidateCount}
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Vendors Used</span>
+            <span className="ov-kpi-value ov-kv-teal">
+              {row.vendors.length}
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Openings</span>
+            <span className="ov-kpi-value ov-kv-blue">
+              <span style={{ color: "var(--w97-green)" }}>
+                {row.activeOpenings}
+              </span>
+              {" / "}
+              <span style={{ color: "var(--w97-text-secondary)" }}>
+                {row.closedOpenings}
+              </span>
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Revenue Generated</span>
+            <span className="ov-kpi-value ov-kv-green">
+              {fmtC(row.revenue)}
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Amount Credited</span>
+            <span className="ov-kpi-value ov-kv-green">
+              {fmtC(row.credited)}
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Amount Pending</span>
+            <span
+              className={`ov-kpi-value ${
+                row.pending > 0 ? "ov-kv-orange" : "ov-kv-green"
+              }`}
+            >
+              {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+            </span>
+          </div>
+          <div className="ov-kpi-div" />
+          <div className="ov-kpi">
+            <span className="ov-kpi-label">Total Hours</span>
+            <span className="ov-kpi-value ov-kv-blue">
+              {row.hours.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <Tabs
+          activeKey={clientDetailTab}
+          onSelect={(key) => setClientDetailTab(key as typeof clientDetailTab)}
+          tabs={[
+            { key: "candidates", label: "👤 Candidates" },
+            { key: "openings", label: "💼 Openings" },
+            { key: "vendors", label: "🏢 Vendors" },
+            { key: "financials", label: "💰 Financials" },
+          ]}
+        />
+
+        {/* ── Candidates Tab ── */}
+        {clientDetailTab === "candidates" && (
+          <DataTable<(typeof row.candidates)[number]>
+            title={`Candidates with ${row.client} — ${row.candidateCount} total`}
+            titleIcon="👤"
+            className="matchdb-auto-height"
+            columns={
+              [
+                {
+                  key: "name",
+                  header: "Candidate",
+                  width: "20%",
+                  render: (c) => (
+                    <button
+                      type="button"
+                      style={{
+                        cursor: "pointer",
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        textAlign: "left",
+                        font: "inherit",
+                      }}
+                      onClick={() => {
+                        setPrevView("client-detail");
+                        navParams({
+                          view: "candidate-detail",
+                          cid: c.id,
+                          tab: "overview",
+                        });
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          color: "var(--w97-blue)",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        {c.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "var(--w97-text-secondary)",
+                        }}
+                      >
+                        {c.role}
+                      </div>
+                    </button>
+                  ),
+                },
+                {
+                  key: "vendor",
+                  header: "Vendor Pipeline",
+                  render: (c) => {
+                    if (c.vendor === "Direct" && !c.implementationPartner) {
+                      return (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: "var(--w97-green)",
+                          }}
+                        >
+                          Direct
+                        </span>
+                      );
+                    }
+                    const parts = [c.vendor];
+                    if (c.implementationPartner)
+                      parts.push(c.implementationPartner);
+                    parts.push(row.client);
+                    const chain = parts.join(" → ");
+                    return (
+                      <ClickPopover label={`${c.vendor} → …`}>
+                        <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                          Pipeline
+                        </div>
+                        <div style={{ fontSize: 11 }}>{chain}</div>
+                      </ClickPopover>
+                    );
+                  },
+                },
+                {
+                  key: "hours",
+                  header: "Hours",
+                  align: "right" as const,
+                  render: (c) => (
+                    <span className="ov-mono">
+                      {c.hoursWorked.toLocaleString()}
+                    </span>
+                  ),
+                },
+                {
+                  key: "billed",
+                  header: "Revenue",
+                  align: "right" as const,
+                  render: (c) => (
+                    <span className="ov-mono ov-val-green">
+                      {fmtC(c.totalBilled)}
+                    </span>
+                  ),
+                },
+                {
+                  key: "credited",
+                  header: "Amount Credited",
+                  align: "right" as const,
+                  render: (c) => (
+                    <span className="ov-mono ov-val-green">
+                      {fmtC(c.amountPaid)}
+                    </span>
+                  ),
+                },
+                {
+                  key: "pending",
+                  header: "Amount Pending",
+                  align: "right" as const,
+                  render: (c) => (
+                    <span
+                      className={`ov-mono ${
+                        c.amountPending > 0 ? "ov-val-orange" : "ov-val-green"
+                      }`}
+                    >
+                      {c.amountPending > 0
+                        ? fmtC(c.amountPending)
+                        : "✓ Settled"}
+                    </span>
+                  ),
+                },
+              ] as DataTableColumn<(typeof row.candidates)[number]>[]
+            }
+            data={row.candidates}
+            keyExtractor={(c) => c.email}
+            emptyMessage="No candidates found for this client."
+            footerRow={
+              row.candidates.length > 1 ? (
+                <tr className="ov-pt-foot">
+                  <td className="ov-pt-tf" colSpan={2}>
+                    TOTAL — {row.candidateCount} candidates
+                  </td>
+                  <td
+                    className="ov-pt-tf ov-mono"
+                    style={{ textAlign: "right" }}
+                  >
+                    {row.hours.toLocaleString()}
+                  </td>
+                  <td
+                    className="ov-pt-tf ov-mono ov-val-green"
+                    style={{ textAlign: "right" }}
+                  >
+                    {fmtC(row.revenue)}
+                  </td>
+                  <td
+                    className="ov-pt-tf ov-mono ov-val-green"
+                    style={{ textAlign: "right" }}
+                  >
+                    {fmtC(row.credited)}
+                  </td>
+                  <td
+                    className={`ov-pt-tf ov-mono ${
+                      row.pending > 0 ? "ov-val-orange" : "ov-val-green"
+                    }`}
+                    style={{ textAlign: "right" }}
+                  >
+                    {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+                  </td>
+                </tr>
+              ) : undefined
+            }
+          />
+        )}
+
+        {/* ── Openings Tab ── */}
+        {clientDetailTab === "openings" &&
+          (() => {
+            const projects = (companySummary?.projects ?? []).filter(
+              (p) => (p.clientName || "Unknown Client") === selectedClient,
+            );
+            const openingRows = projects.map((p) => ({
+              jobTitle: p.jobTitle,
+              location: p.location || "—",
+              type: p.jobType || "—",
+              vendor: p.vendorCompanyName || p.vendorEmail || "Direct",
+              candidate: p.candidateName,
+              isActive: p.isActive,
+              appliedAt: p.appliedAt,
+            }));
+            type OpeningRow = (typeof openingRows)[number];
+            const activeCount = openingRows.filter((o) => o.isActive).length;
+            const closedCount = openingRows.length - activeCount;
+            return (
+              <DataTable<OpeningRow>
+                title={`Openings at ${row.client} — ${activeCount} active · ${closedCount} closed`}
+                titleIcon="💼"
+                className="matchdb-auto-height"
+                columns={
+                  [
+                    {
+                      key: "jobTitle",
+                      header: "Job Title",
+                      width: "22%",
+                      render: (o) => (
+                        <span style={{ fontWeight: 600 }}>{o.jobTitle}</span>
+                      ),
+                    },
+                    { key: "candidate", header: "Candidate" },
+                    { key: "location", header: "Location" },
+                    { key: "type", header: "Type" },
+                    {
+                      key: "vendor",
+                      header: "Vendor",
+                      render: (o) =>
+                        o.vendor === "Direct" ? (
+                          <span
+                            style={{
+                              color: "var(--w97-green)",
+                              fontWeight: 600,
+                              fontSize: 11,
+                            }}
+                          >
+                            Direct
+                          </span>
+                        ) : (
+                          <span>{o.vendor}</span>
+                        ),
+                    },
+                    {
+                      key: "status",
+                      header: "Status",
+                      render: (o) =>
+                        o.isActive ? (
+                          <span
+                            style={{
+                              color: "var(--w97-green)",
+                              fontWeight: 600,
+                              fontSize: 11,
+                            }}
+                          >
+                            ● Active
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              color: "var(--w97-text-secondary)",
+                              fontSize: 11,
+                            }}
+                          >
+                            ○ Closed
+                          </span>
+                        ),
+                    },
+                    {
+                      key: "appliedAt",
+                      header: "Applied",
+                      render: (o) => (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "var(--w97-text-secondary)",
+                          }}
+                        >
+                          {new Date(o.appliedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                      ),
+                    },
+                  ] as DataTableColumn<OpeningRow>[]
+                }
+                data={openingRows}
+                keyExtractor={(o) =>
+                  `${o.jobTitle}::${o.candidate}::${o.appliedAt}`
+                }
+                emptyMessage="No openings found for this client."
+              />
+            );
+          })()}
+
+        {/* ── Vendors Tab ── */}
+        {clientDetailTab === "vendors" &&
+          (() => {
+            const projects = (companySummary?.projects ?? []).filter(
+              (p) => (p.clientName || "Unknown Client") === selectedClient,
+            );
+            const vendorMap = new Map<
+              string,
+              {
+                vendor: string;
+                implementationPartner: string;
+                candidateCount: number;
+                revenue: number;
+                credited: number;
+                pending: number;
+              }
+            >();
+            const seen = new Set<string>();
+            for (const p of projects) {
+              const v = p.vendorCompanyName || p.vendorEmail || "Direct";
+              if (!vendorMap.has(v)) {
+                vendorMap.set(v, {
+                  vendor: v,
+                  implementationPartner: p.implementationPartner || "—",
+                  candidateCount: 0,
+                  revenue: 0,
+                  credited: 0,
+                  pending: 0,
+                });
+              }
+              const vr = vendorMap.get(v)!;
+              const candKey = `${v}::${p.candidateEmail}`;
+              if (!seen.has(candKey)) {
+                seen.add(candKey);
+                vr.candidateCount++;
+              }
+              if (p.financials) {
+                vr.revenue += p.financials.totalBilled;
+                vr.credited += p.financials.amountPaid;
+                vr.pending += p.financials.amountPending;
+              }
+            }
+            const vendorRows = [...vendorMap.values()].sort(
+              (a, b) => b.revenue - a.revenue,
+            );
+            type ClientVendorRow = (typeof vendorRows)[number];
+            return (
+              <DataTable<ClientVendorRow>
+                title={`Vendors for ${row.client} — ${vendorRows.length} total`}
+                titleIcon="🏢"
+                className="matchdb-auto-height"
+                columns={
+                  [
+                    {
+                      key: "vendor",
+                      header: "Vendor",
+                      width: "22%",
+                      render: (v) =>
+                        v.vendor === "Direct" ? (
+                          <span
+                            style={{
+                              color: "var(--w97-green)",
+                              fontWeight: 600,
+                              fontSize: 11,
+                            }}
+                          >
+                            Direct
+                          </span>
+                        ) : (
+                          <span style={{ fontWeight: 600 }}>{v.vendor}</span>
+                        ),
+                    },
+                    {
+                      key: "implementationPartner",
+                      header: "Impl. Partner",
+                      render: (v) => (
+                        <span style={{ fontSize: 11 }}>
+                          {v.implementationPartner}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "candidateCount",
+                      header: "Candidates",
+                      align: "right" as const,
+                      render: (v) => (
+                        <span className="ov-mono">{v.candidateCount}</span>
+                      ),
+                    },
+                    {
+                      key: "revenue",
+                      header: "Revenue",
+                      align: "right" as const,
+                      render: (v) => (
+                        <span className="ov-mono ov-val-green">
+                          {fmtC(v.revenue)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "credited",
+                      header: "Amount Credited",
+                      align: "right" as const,
+                      render: (v) => (
+                        <span className="ov-mono ov-val-green">
+                          {fmtC(v.credited)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "pending",
+                      header: "Amount Pending",
+                      align: "right" as const,
+                      render: (v) => (
+                        <span
+                          className={`ov-mono ${
+                            v.pending > 0 ? "ov-val-orange" : "ov-val-green"
+                          }`}
+                        >
+                          {v.pending > 0 ? fmtC(v.pending) : "✓ Settled"}
+                        </span>
+                      ),
+                    },
+                  ] as DataTableColumn<ClientVendorRow>[]
+                }
+                data={vendorRows}
+                keyExtractor={(v) => v.vendor}
+                emptyMessage="No vendor data for this client."
+                footerRow={
+                  vendorRows.length > 1 ? (
+                    <tr className="ov-pt-foot">
+                      <td className="ov-pt-tf" colSpan={3}>
+                        TOTAL — {vendorRows.length} vendors
+                      </td>
+                      <td
+                        className="ov-pt-tf ov-mono ov-val-green"
+                        style={{ textAlign: "right" }}
+                      >
+                        {fmtC(row.revenue)}
+                      </td>
+                      <td
+                        className="ov-pt-tf ov-mono ov-val-green"
+                        style={{ textAlign: "right" }}
+                      >
+                        {fmtC(row.credited)}
+                      </td>
+                      <td
+                        className={`ov-pt-tf ov-mono ${
+                          row.pending > 0 ? "ov-val-orange" : "ov-val-green"
+                        }`}
+                        style={{ textAlign: "right" }}
+                      >
+                        {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+                      </td>
+                    </tr>
+                  ) : undefined
+                }
+              />
+            );
+          })()}
+
+        {/* ── Financials Tab ── */}
+        {clientDetailTab === "financials" &&
+          (() => {
+            const projects = (companySummary?.projects ?? []).filter(
+              (p) => (p.clientName || "Unknown Client") === selectedClient,
+            );
+            const finRows = projects
+              .filter((p) => p.financials)
+              .map((p) => ({
+                candidate: p.candidateName,
+                role: p.jobTitle,
+                vendor: p.vendorCompanyName || p.vendorEmail || "Direct",
+                billRate: p.financials!.billRate,
+                payRate: p.financials!.payRate,
+                hours: p.financials!.hoursWorked,
+                revenue: p.financials!.totalBilled,
+                paid: p.financials!.amountPaid,
+                pending: p.financials!.amountPending,
+                isActive: p.isActive,
+                projectStart: p.financials!.projectStart,
+                projectEnd: p.financials!.projectEnd,
+                stateCode: p.financials!.stateCode,
+              }));
+            type FinRow = (typeof finRows)[number];
+            const fmtD = (d: string | null) =>
+              d
+                ? new Date(d).toLocaleDateString("en-US", {
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "—";
+            return (
+              <DataTable<FinRow>
+                title={`Financial Summary — ${row.client}`}
+                titleIcon="💰"
+                className="matchdb-auto-height"
+                columns={
+                  [
+                    {
+                      key: "candidate",
+                      header: "Candidate",
+                      width: "16%",
+                      render: (f) => (
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{f.candidate}</div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "var(--w97-text-secondary)",
+                            }}
+                          >
+                            {f.role}
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: "vendor",
+                      header: "Vendor",
+                      render: (f) =>
+                        f.vendor === "Direct" ? (
+                          <span
+                            style={{
+                              color: "var(--w97-green)",
+                              fontWeight: 600,
+                              fontSize: 11,
+                            }}
+                          >
+                            Direct
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 11 }}>{f.vendor}</span>
+                        ),
+                    },
+                    {
+                      key: "billRate",
+                      header: "Bill Rate",
+                      align: "right" as const,
+                      render: (f) => (
+                        <span className="ov-mono">${f.billRate}/hr</span>
+                      ),
+                    },
+                    {
+                      key: "payRate",
+                      header: "Pay Rate",
+                      align: "right" as const,
+                      render: (f) => (
+                        <span className="ov-mono">${f.payRate}/hr</span>
+                      ),
+                    },
+                    {
+                      key: "hours",
+                      header: "Hours",
+                      align: "right" as const,
+                      render: (f) => (
+                        <span className="ov-mono">
+                          {f.hours.toLocaleString()}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "revenue",
+                      header: "Revenue",
+                      align: "right" as const,
+                      render: (f) => (
+                        <span className="ov-mono ov-val-green">
+                          {fmtC(f.revenue)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "paid",
+                      header: "Credited",
+                      align: "right" as const,
+                      render: (f) => (
+                        <span className="ov-mono ov-val-green">
+                          {fmtC(f.paid)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "pending",
+                      header: "Pending",
+                      align: "right" as const,
+                      render: (f) => (
+                        <span
+                          className={`ov-mono ${
+                            f.pending > 0 ? "ov-val-orange" : "ov-val-green"
+                          }`}
+                        >
+                          {f.pending > 0 ? fmtC(f.pending) : "✓ Settled"}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "period",
+                      header: "Period",
+                      render: (f) => (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "var(--w97-text-secondary)",
+                          }}
+                        >
+                          {fmtD(f.projectStart)} – {fmtD(f.projectEnd)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "status",
+                      header: "Status",
+                      render: (f) =>
+                        f.isActive ? (
+                          <span
+                            style={{
+                              color: "var(--w97-green)",
+                              fontWeight: 600,
+                              fontSize: 11,
+                            }}
+                          >
+                            ● Active
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              color: "var(--w97-text-secondary)",
+                              fontSize: 11,
+                            }}
+                          >
+                            ○ Closed
+                          </span>
+                        ),
+                    },
+                  ] as DataTableColumn<FinRow>[]
+                }
+                data={finRows}
+                keyExtractor={(f) => `${f.candidate}::${f.vendor}::${f.role}`}
+                emptyMessage="No financial data for this client."
+                footerRow={
+                  finRows.length > 1 ? (
+                    <tr className="ov-pt-foot">
+                      <td className="ov-pt-tf" colSpan={4}>
+                        TOTAL — {finRows.length} projects
+                      </td>
+                      <td
+                        className="ov-pt-tf ov-mono"
+                        style={{ textAlign: "right" }}
+                      >
+                        {row.hours.toLocaleString()}
+                      </td>
+                      <td
+                        className="ov-pt-tf ov-mono ov-val-green"
+                        style={{ textAlign: "right" }}
+                      >
+                        {fmtC(row.revenue)}
+                      </td>
+                      <td
+                        className="ov-pt-tf ov-mono ov-val-green"
+                        style={{ textAlign: "right" }}
+                      >
+                        {fmtC(row.credited)}
+                      </td>
+                      <td
+                        className={`ov-pt-tf ov-mono ${
+                          row.pending > 0 ? "ov-val-orange" : "ov-val-green"
+                        }`}
+                        style={{ textAlign: "right" }}
+                      >
+                        {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+                      </td>
+                      <td className="ov-pt-tf" colSpan={2} />
+                    </tr>
+                  ) : undefined
+                }
+              />
+            );
+          })()}
+      </div>
+    );
+  }
+
   // ── Timesheets View ────────────────────────────────────────────────────────
 
   function renderTimesheetsView() {
@@ -4509,21 +6744,63 @@ const MarketerDashboard: React.FC<Props> = () => {
         {/* ══ ROW 2 — Modern financial KPI strip (only when financials exist) ══ */}
         {allFins.length > 0 && (
           <div className="ov-kpi-strip" style={{ margin: "14px 16px 0" }}>
-            <div className="ov-kpi">
+            <button
+              type="button"
+              className="ov-kpi"
+              style={{
+                cursor: "pointer",
+                background: "none",
+                border: "none",
+                textAlign: "left",
+              }}
+              title="View company financials"
+              onClick={() => {
+                setPrevView("candidate-detail");
+                navParams({ view: "financial-summary" });
+              }}
+            >
               <span className="ov-kpi-label">Total Hours</span>
               <span className="ov-kpi-value ov-kv-blue">
                 {totalHours.toLocaleString()}
               </span>
-            </div>
+            </button>
             <div className="ov-kpi-div" />
-            <div className="ov-kpi">
+            <button
+              type="button"
+              className="ov-kpi"
+              style={{
+                cursor: "pointer",
+                background: "none",
+                border: "none",
+                textAlign: "left",
+              }}
+              title="View company financials"
+              onClick={() => {
+                setPrevView("candidate-detail");
+                navParams({ view: "financial-summary" });
+              }}
+            >
               <span className="ov-kpi-label">Vendor Billed</span>
               <span className="ov-kpi-value ov-kv-green">
                 {fmtC(totalBilled)}
               </span>
-            </div>
+            </button>
             <div className="ov-kpi-div" />
-            <div className="ov-kpi">
+            <button
+              type="button"
+              className="ov-kpi"
+              style={{
+                cursor: "pointer",
+                background: "none",
+                border: "none",
+                textAlign: "left",
+              }}
+              title="View company financials"
+              onClick={() => {
+                setPrevView("candidate-detail");
+                navParams({ view: "financial-summary" });
+              }}
+            >
               <span className="ov-kpi-label">Your Margin</span>
               <span className="ov-kpi-value ov-kv-teal">
                 {fmtC(totalMargin)}
@@ -4535,7 +6812,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   </span>
                 )}
               </span>
-            </div>
+            </button>
             <div className="ov-kpi-div" />
             <div className="ov-kpi">
               <span className="ov-kpi-label">Net Payable</span>
@@ -4701,11 +6978,29 @@ const MarketerDashboard: React.FC<Props> = () => {
                         header: "Hours",
                         align: "right",
                         render: (p) => (
-                          <span style={{ fontFamily: "monospace" }}>
+                          <button
+                            type="button"
+                            title="View company financials"
+                            style={{
+                              cursor: p.financials ? "pointer" : "default",
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              fontFamily: "monospace",
+                              color: "inherit",
+                              textAlign: "right",
+                              width: "100%",
+                            }}
+                            onClick={() => {
+                              if (!p.financials) return;
+                              setPrevView("candidate-detail");
+                              navParams({ view: "financial-summary" });
+                            }}
+                          >
                             {p.financials
                               ? p.financials.hoursWorked.toLocaleString()
                               : "—"}
-                          </span>
+                          </button>
                         ),
                       },
                       {
@@ -4713,11 +7008,29 @@ const MarketerDashboard: React.FC<Props> = () => {
                         header: "Vendor Billed",
                         align: "right",
                         render: (p) => (
-                          <span className="ov-mono ov-val-green">
+                          <button
+                            type="button"
+                            title="View company financials"
+                            className="ov-mono ov-val-green"
+                            style={{
+                              cursor: p.financials ? "pointer" : "default",
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              textAlign: "right",
+                              width: "100%",
+                              font: "inherit",
+                            }}
+                            onClick={() => {
+                              if (!p.financials) return;
+                              setPrevView("candidate-detail");
+                              navParams({ view: "financial-summary" });
+                            }}
+                          >
                             {p.financials
                               ? fmtC(p.financials.totalBilled)
                               : "—"}
-                          </span>
+                          </button>
                         ),
                       },
                       {
@@ -4729,7 +7042,24 @@ const MarketerDashboard: React.FC<Props> = () => {
                           if (!f) return "—";
                           const m = f.totalBilled - f.totalPay;
                           return (
-                            <span className="ov-mono ov-val-teal">
+                            <button
+                              type="button"
+                              title="View company financials"
+                              className="ov-mono ov-val-teal"
+                              style={{
+                                cursor: "pointer",
+                                background: "none",
+                                border: "none",
+                                padding: 0,
+                                textAlign: "right",
+                                width: "100%",
+                                font: "inherit",
+                              }}
+                              onClick={() => {
+                                setPrevView("candidate-detail");
+                                navParams({ view: "financial-summary" });
+                              }}
+                            >
                               {fmtC(m)}{" "}
                               <span style={{ fontSize: 10, opacity: 0.7 }}>
                                 {f.totalBilled > 0
@@ -4738,7 +7068,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                                     )}%)`
                                   : ""}
                               </span>
-                            </span>
+                            </button>
                           );
                         },
                       },

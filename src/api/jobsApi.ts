@@ -188,6 +188,10 @@ export interface MarketerJob {
   poke_count: number;
   email_count: number;
   is_active: boolean;
+  client_company_id: string;
+  client_company_name: string;
+  vendor_company_id: string;
+  vendor_company_name: string;
   created_at: string;
 }
 
@@ -283,6 +287,11 @@ export interface ProjectFinancialData {
   amountPaid: number;
   amountPending: number;
   notes: string;
+  clientName: string;
+  vendorCompanyName: string;
+  implementationPartner: string;
+  pocName: string;
+  pocEmail: string;
 }
 
 export interface CandidateDetailProject {
@@ -367,6 +376,11 @@ export interface CompanySummaryProject {
   candidateEmail: string;
   jobTitle: string;
   vendorEmail: string;
+  vendorCompanyName: string;
+  clientName: string;
+  implementationPartner: string;
+  pocName: string;
+  pocEmail: string;
   location: string;
   jobType: string;
   jobSubType: string;
@@ -832,6 +846,14 @@ export const jobsApi = createApi({
       providesTags: ["MarketerCandidates", "ProjectFinancials"],
     }),
 
+    getClientCompanies: builder.query<{ id: string; name: string }[], void>({
+      query: () => "api/jobs/marketer/client-companies",
+    }),
+
+    getVendorCompanies: builder.query<{ id: string; name: string }[], void>({
+      query: () => "api/jobs/marketer/vendor-companies",
+    }),
+
     getMarketerCandidateDetail: builder.query<CandidateDetailResponse, string>({
       query: (id) => `api/jobs/marketer/candidates/${id}/detail`,
       providesTags: ["MarketerCandidates"],
@@ -974,6 +996,11 @@ export const jobsApi = createApi({
         cashPct: number;
         amountPaid: number;
         notes?: string;
+        clientName?: string;
+        vendorCompanyName?: string;
+        implementationPartner?: string;
+        pocName?: string;
+        pocEmail?: string;
       }
     >({
       query: (body) => ({
@@ -1117,6 +1144,8 @@ export const {
   useAddMarketerCandidateMutation,
   useGetMarketerCandidatesQuery,
   useGetCompanySummaryQuery,
+  useGetClientCompaniesQuery,
+  useGetVendorCompaniesQuery,
   useGetMarketerCandidateDetailQuery,
   useRemoveMarketerCandidateMutation,
   // Forward Openings

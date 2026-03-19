@@ -30,7 +30,11 @@ export type ActiveView =
   | "job-positions-summary"
   | "immigration"
   | "immigration-detail"
-  | "timesheets";
+  | "timesheets"
+  | "vendor-summary"
+  | "vendor-detail"
+  | "client-summary"
+  | "client-detail";
 
 export interface ImmigrationDependant {
   name: string;
@@ -452,6 +456,10 @@ export function getBreadcrumb(
       "Detail",
     ],
     timesheets: ["Jobs", "Marketer", "Dashboard", "Timesheets"],
+    "vendor-summary": ["Jobs", "Marketer", "Dashboard", "Vendors"],
+    "vendor-detail": ["Jobs", "Marketer", "Dashboard", "Vendors", "Detail"],
+    "client-summary": ["Jobs", "Marketer", "Dashboard", "Clients"],
+    "client-detail": ["Jobs", "Marketer", "Dashboard", "Clients", "Detail"],
   };
   return map[activeView] ?? ["Jobs", "Marketer"];
 }

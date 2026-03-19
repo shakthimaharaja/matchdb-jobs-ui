@@ -161,6 +161,15 @@ const ProjectFinancialForm: React.FC<Props> = ({
   const [cashPct, setCashPct] = useState(fin?.cashPct ?? 0);
   const [amountPaid, setAmountPaid] = useState(fin?.amountPaid ?? 0);
   const [notes, setNotes] = useState(fin?.notes ?? "");
+  const [clientName, setClientName] = useState(fin?.clientName ?? "");
+  const [vendorCompanyName, setVendorCompanyName] = useState(
+    fin?.vendorCompanyName ?? "",
+  );
+  const [implementationPartner, setImplementationPartner] = useState(
+    fin?.implementationPartner ?? "",
+  );
+  const [pocName, setPocName] = useState(fin?.pocName ?? "");
+  const [pocEmail, setPocEmail] = useState(fin?.pocEmail ?? "");
 
   useEffect(() => {
     if (fin) {
@@ -173,6 +182,11 @@ const ProjectFinancialForm: React.FC<Props> = ({
       setCashPct(fin.cashPct);
       setAmountPaid(fin.amountPaid);
       setNotes(fin.notes);
+      setClientName(fin.clientName ?? "");
+      setVendorCompanyName(fin.vendorCompanyName ?? "");
+      setImplementationPartner(fin.implementationPartner ?? "");
+      setPocName(fin.pocName ?? "");
+      setPocEmail(fin.pocEmail ?? "");
     }
   }, [fin]);
 
@@ -222,6 +236,11 @@ const ProjectFinancialForm: React.FC<Props> = ({
         cashPct,
         amountPaid,
         notes,
+        clientName: clientName || undefined,
+        vendorCompanyName: vendorCompanyName || undefined,
+        implementationPartner: implementationPartner || undefined,
+        pocName: pocName || undefined,
+        pocEmail: pocEmail || undefined,
       }).unwrap();
       setEditing(false);
       onSaved?.();
@@ -242,6 +261,11 @@ const ProjectFinancialForm: React.FC<Props> = ({
     cashPct,
     amountPaid,
     notes,
+    clientName,
+    vendorCompanyName,
+    implementationPartner,
+    pocName,
+    pocEmail,
     onSaved,
   ]);
 
@@ -355,6 +379,90 @@ const ProjectFinancialForm: React.FC<Props> = ({
         />
 
         <div className="pf-edit-form">
+          <div className="pf-edit-section-title">Vendor &amp; Client</div>
+          <div className="pf-edit-grid" style={{ marginBottom: 6 }}>
+            <div className="pf-field">
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-vendor-company-${project.id}`}
+              >
+                Vendor Company Name
+              </label>
+              <input
+                id={`pf-vendor-company-${project.id}`}
+                type="text"
+                className="pf-field-input"
+                value={vendorCompanyName}
+                onChange={(e) => setVendorCompanyName(e.target.value)}
+                placeholder="e.g. Acme Staffing"
+              />
+            </div>
+            <div className="pf-field">
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-client-name-${project.id}`}
+              >
+                Client Name
+              </label>
+              <input
+                id={`pf-client-name-${project.id}`}
+                type="text"
+                className="pf-field-input"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="e.g. Google, Amazon"
+              />
+            </div>
+            <div className="pf-field">
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-impl-partner-${project.id}`}
+              >
+                Implementation Partner
+              </label>
+              <input
+                id={`pf-impl-partner-${project.id}`}
+                type="text"
+                className="pf-field-input"
+                value={implementationPartner}
+                onChange={(e) => setImplementationPartner(e.target.value)}
+                placeholder="e.g. Intermediary vendor"
+              />
+            </div>
+            <div className="pf-field">
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-poc-name-${project.id}`}
+              >
+                POC Name
+              </label>
+              <input
+                id={`pf-poc-name-${project.id}`}
+                type="text"
+                className="pf-field-input"
+                value={pocName}
+                onChange={(e) => setPocName(e.target.value)}
+                placeholder="e.g. John Smith"
+              />
+            </div>
+            <div className="pf-field">
+              <label
+                className="pf-field-label"
+                htmlFor={`pf-poc-email-${project.id}`}
+              >
+                POC Email
+              </label>
+              <input
+                id={`pf-poc-email-${project.id}`}
+                type="email"
+                className="pf-field-input"
+                value={pocEmail}
+                onChange={(e) => setPocEmail(e.target.value)}
+                placeholder="e.g. john@client.com"
+              />
+            </div>
+          </div>
+
           <div className="pf-edit-section-title">Billing &amp; Hours</div>
           <div className="pf-edit-grid" style={{ marginBottom: 6 }}>
             <div className="pf-field">

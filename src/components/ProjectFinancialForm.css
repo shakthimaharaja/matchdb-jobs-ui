@@ -60,6 +60,8 @@
   --pf-row-alt-hover: var(--w97-nav-hover);
   --pf-hdr-bg: var(--w97-titlebar-from);
   --pf-section-bg: var(--w97-window-alt);
+  --pf-radius: 0;
+  --pf-radius-sm: 0;
 }
 
 /* ── Tab summary aggregate bar ───────────────────────────────────────────── */
@@ -1668,9 +1670,15 @@
 .ov-pt-foot {
   border-top: 2px solid var(--pf-border);
 }
-.ov-pt-foot.ov-foot-profit  { background: #e8f5e9; }
-.ov-pt-foot.ov-foot-loss    { background: #ffebee; }
-.ov-pt-foot.ov-foot-neutral { background: var(--pf-section-bg); }
+.ov-pt-foot.ov-foot-profit {
+  background: #e8f5e9;
+}
+.ov-pt-foot.ov-foot-loss {
+  background: #ffebee;
+}
+.ov-pt-foot.ov-foot-neutral {
+  background: var(--pf-section-bg);
+}
 
 .ov-pt-tf {
   padding: 7px 10px;
@@ -1801,9 +1809,15 @@
 .ov-mt-foot {
   border-top: 2px solid var(--pf-border);
 }
-.ov-mt-foot.ov-foot-profit  { background: #e8f5e9; }
-.ov-mt-foot.ov-foot-loss    { background: #ffebee; }
-.ov-mt-foot.ov-foot-neutral { background: var(--pf-section-bg); }
+.ov-mt-foot.ov-foot-profit {
+  background: #e8f5e9;
+}
+.ov-mt-foot.ov-foot-loss {
+  background: #ffebee;
+}
+.ov-mt-foot.ov-foot-neutral {
+  background: var(--pf-section-bg);
+}
 
 .ov-mt-tf {
   padding: 7px 10px;
@@ -1817,6 +1831,10 @@
 /* Footer value colours — use the standard ov-val-* classes as-is */
 
 @media (max-width: 600px) {
-  .ppt-table { font-size: 10px; }
-  .ppt-th { font-size: 9px; }
+  .ppt-table {
+    font-size: 10px;
+  }
+  .ppt-th {
+    font-size: 9px;
+  }
 }
