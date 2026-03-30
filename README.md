@@ -15,9 +15,8 @@ Remote microfrontend for the MatchDB staffing platform. Exposes the Jobs applica
 | UI Libraries | MUI 5, PrimeReact 10, Tailwind CSS 3                  |
 | UI Shared    | matchdb-component-library (local npm link)            |
 | HTTP         | Axios                                                 |
-| Realtime     | WebSocket (native browser API) — live data feeds      |
+| Realtime     | Polling (fetch + setInterval) — live data feeds        |
 | PDF          | jsPDF                                                 |
-| Proxy Server | Express + http-proxy-middleware (port 4001)           |
 | Theme        | Inherits Windows 97 theme from the shell              |
 
 ---
@@ -28,8 +27,6 @@ Remote microfrontend for the MatchDB staffing platform. Exposes the Jobs applica
 matchdb-jobs-ui/
 ├── public/
 │   └── index.html               # HTML template (standalone fallback)
-├── server/
-│   └── index.ts                 # Express proxy server (port 4001)
 ├── src/
 │   ├── index.ts                 # Webpack entry point
 │   ├── bootstrap.tsx            # React root render (standalone mode)
@@ -46,7 +43,7 @@ matchdb-jobs-ui/
 │   │   ├── JobPostingModal.css
 │   │   └── PokeEmailModal.tsx   # Poke email composer modal
 │   ├── pages/
-│   │   ├── PublicJobsView.tsx   # Pre-login view — live WebSocket tables (jobs & profiles)
+│   │   ├── PublicJobsView.tsx   # Pre-login view — live polling tables (jobs & profiles)
 │   │   ├── PublicJobsView.css
 │   │   ├── CandidateDashboard.tsx  # Candidate view — profile, matched jobs, visibility, vendor/employer sections
 │   │   ├── VendorDashboard.tsx     # Vendor view — post jobs, browse candidates
@@ -169,12 +166,12 @@ The marketer dashboard provides a comprehensive staffing management interface wi
 
 ## PublicJobsView (Pre-login)
 
-Replaces the previous `PublicLanding` component. Three sub-views by URL path (`/jobs`, `/jobs/candidate`, `/jobs/vendor`). Connects to two WebSocket endpoints:
+Replaces the previous `PublicLanding` component. Three sub-views by URL path (`/jobs`, `/jobs/candidate`, `/jobs/vendor`). Uses two polling endpoints:
 
-- `/ws/public-data` — receives full job + profile snapshots every 30 s with diff tracking (changedIds, deletedIds). Drives row flash animations (yellow for changed, red for deleted).
-- `/ws/counts` — receives live job and profile counts for the status bar.
+- `/api/jobs/poll/public-data` — fetches full job + profile snapshots every 30 s with diff tracking (changedIds, deletedIds). Drives row flash animations (yellow for changed, red for deleted).
+- `/api/jobs/poll/counts` — fetches live job and profile counts for the status bar.
 
-No HTTP polling is used — all data is pushed via WebSocket.
+All data is fetched via `fetch` + `setInterval` polling (30 s interval).
 
 ---
 
@@ -269,7 +266,6 @@ Create `env/.env.development`:
 
 ```env
 JOBS_SERVICES_URL=http://localhost:8001
-NODE_SERVER_PORT=4001
 ```
 
 ### Install & Run
@@ -278,7 +274,7 @@ NODE_SERVER_PORT=4001
 # 1. Install dependencies
 npm install
 
-# 2. Start the dev server (webpack + proxy concurrently)
+# 2. Start the dev server (webpack dev server)
 npm run dev
 ```
 
@@ -301,9 +297,8 @@ When running standalone (not inside the shell), the app renders with its own `bo
 
 | Script                   | Description                                   |
 | ------------------------ | --------------------------------------------- |
-| `npm run dev`            | Both webpack + proxy concurrently             |
+| `npm run dev`            | Start webpack dev server (port 3001)          |
 | `npm run dev:standalone` | Webpack dev server only (port 3001, no proxy) |
-| `npm start`              | Proxy server only (port 4001)                 |
 | `npm run build`          | Production build to `dist/`                   |
 
 ---
@@ -313,10 +308,10 @@ When running standalone (not inside the shell), the app renders with its own `bo
 To run the entire MatchDB platform locally, start services in this order:
 
 ```
-1. matchdb-shell-services        →  port 8000  (auth + payments API — MongoDB Atlas)
+1. matchdb-shell-services        →  port 8000  (auth + payments API + gateway — MongoDB Atlas)
 2. matchdb-jobs-services         →  port 8001  (jobs + profiles API — MongoDB Atlas)
-3. matchdb-jobs-ui               →  port 3001  (remote MFE) + proxy 4001
-4. matchdb-shell-ui              →  port 3000  (host shell) + proxy 4000
+3. matchdb-jobs-ui               →  port 3001  (remote MFE)
+4. matchdb-shell-ui              →  port 3000  (host shell)
 ```
 
 Then open **http://localhost:3000** in your browser.

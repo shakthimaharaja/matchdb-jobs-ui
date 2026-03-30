@@ -1,7 +1,12 @@
 import React, { useRef, useState } from "react";
 import { Button } from "matchdb-component-library";
 import "./components/ResumeModal.css";
-import { Routes, Route } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  useParams,
+  useSearchParams as useSearchParamsRouter,
+} from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "./store";
 import { setToken } from "./store/authSlice";
@@ -12,6 +17,7 @@ import PostJobPage from "./pages/PostJobPage";
 import PublicJobsView from "./pages/PublicJobsView";
 import MembershipGatePage from "./pages/MembershipGatePage";
 import InviteAcceptPage from "./pages/InviteAcceptPage";
+import { CandidateOnboardingFlow } from "./pages/CandidateOnboardingFlow";
 
 export interface JobsAppProps {
   token: string | null;
@@ -53,7 +59,22 @@ const JobsApp: React.FC<JobsAppProps> = ({
     return (
       <Provider store={store}>
         <div className="matchdb-page-transition matchdb-flex-col">
-          <PublicJobsView />
+          <Routes>
+            {/* Candidate onboarding (public — no auth required) */}
+            <Route
+              path="candidate/register/:token"
+              element={<CandidateOnboardingRouteWrapper step="register" />}
+            />
+            <Route
+              path="candidate/payment-success"
+              element={<CandidateOnboardingFlow initialStep="success" />}
+            />
+            <Route
+              path="candidate/payment-failed"
+              element={<CandidateOnboardingRouteWrapper step="failed" />}
+            />
+            <Route path="*" element={<PublicJobsView />} />
+          </Routes>
         </div>
       </Provider>
     );
@@ -95,41 +116,41 @@ const JobsApp: React.FC<JobsAppProps> = ({
           <Route path="invite/:token" element={<InviteAcceptPage />} />
 
           {(() => {
-            if (userType === "marketer") return (
-              <Route
-                path="*"
-                element={
-                  <MarketerDashboard
-                    token={token}
-                    userId={userId}
-                    userEmail={userEmail}
-                  />
-                }
-              />
-            );
-            if (userType === "vendor") return (
-              <>
-                <Route
-                  path="post-job"
-                  element={
-                    <PostJobPage
-                      onPosted={() => setShowPostJob(false)}
-                    />
-                  }
-                />
+            if (userType === "marketer")
+              return (
                 <Route
                   path="*"
                   element={
-                    <VendorDashboard
+                    <MarketerDashboard
                       token={token}
+                      userId={userId}
                       userEmail={userEmail}
-                      plan={plan}
-                      onPostJob={() => setShowPostJob(true)}
                     />
                   }
                 />
-              </>
-            );
+              );
+            if (userType === "vendor")
+              return (
+                <>
+                  <Route
+                    path="post-job"
+                    element={
+                      <PostJobPage onPosted={() => setShowPostJob(false)} />
+                    }
+                  />
+                  <Route
+                    path="*"
+                    element={
+                      <VendorDashboard
+                        token={token}
+                        userEmail={userEmail}
+                        plan={plan}
+                        onPostJob={() => setShowPostJob(true)}
+                      />
+                    }
+                  />
+                </>
+              );
             return (
               <Route
                 path="*"
@@ -151,10 +172,12 @@ const JobsApp: React.FC<JobsAppProps> = ({
         {/* Inline post-job overlay — W97 window chrome via rm-* classes */}
         {showPostJob && userType === "vendor" && (
           <dialog open className="rm-overlay">
-            <div className="rm-backdrop" role="none" onClick={() => setShowPostJob(false)} />
             <div
-              className="rm-window matchdb-postjob-window"
-            >
+              className="rm-backdrop"
+              role="none"
+              onClick={() => setShowPostJob(false)}
+            />
+            <div className="rm-window matchdb-postjob-window">
               {/* Title bar */}
               <div className="rm-titlebar">
                 <span className="rm-titlebar-icon">📋</span>
@@ -174,9 +197,7 @@ const JobsApp: React.FC<JobsAppProps> = ({
                 Use Smart Paste to auto-fill from any job description.
               </div>
               {/* PostJobPage owns scroll + footer */}
-              <PostJobPage
-                onPosted={() => setShowPostJob(false)}
-              />
+              <PostJobPage onPosted={() => setShowPostJob(false)} />
             </div>
           </dialog>
         )}
@@ -184,5 +205,28 @@ const JobsApp: React.FC<JobsAppProps> = ({
     </Provider>
   );
 };
+
+/**
+ * Wrapper that pulls route params from react-router and passes them
+ * to the CandidateOnboardingFlow component.
+ */
+function CandidateOnboardingRouteWrapper({
+  step,
+}: Readonly<{ step: "register" | "failed" }>) {
+  const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParamsRouter();
+
+  if (step === "register") {
+    return <CandidateOnboardingFlow token={token} initialStep="register" />;
+  }
+  return (
+    <CandidateOnboardingFlow
+      initialStep="failed"
+      candidateUserId={searchParams.get("candidateUserId") ?? ""}
+      plan={searchParams.get("plan") ?? ""}
+      companyName={searchParams.get("companyName") ?? ""}
+    />
+  );
+}
 
 export default JobsApp;

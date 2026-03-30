@@ -1,0 +1,345 @@
+/* =============================================================================
+   MatchDB Jobs-UI — Modern SaaS Theme (QuickBooks-inspired)
+   Activation: data-theme="modern2" on .legacy-shell-root (parent shell)
+   Styles the jobs MFE: dashboards, tables, modals, cards, stat-bars.
+   ============================================================================= */
+
+/* ── Design tokens (fallback — primary tokens set in shell-ui) ────────────── */
+:root[data-theme="modern2"],
+.legacy-shell-root[data-theme="modern2"] {
+  --modern-primary: #2ca01c;
+  --modern-primary-dark: #1e7a14;
+  --modern-primary-light: #e8f5e3;
+  --modern-accent: #0077c5;
+  --modern-bg: #f0f4f2;
+  --modern-card: #ffffff;
+  --modern-text: #212529;
+  --modern-text-secondary: #6b7280;
+  --modern-text-muted: #9ca3af;
+  --modern-border: #e5e7eb;
+  --modern-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --modern-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --modern-radius: 12px;
+  --modern-radius-sm: 8px;
+}
+
+/* We scope everything under the shell root's data attribute.
+   The shell sets data-theme="modern2" on .legacy-shell-root when modern is selected. */
+
+/* ── Stat Bar (dashboard chips) ───────────────────────────────────────────── */
+[data-theme="modern2"] .matchdb-stat-bar {
+  gap: 12px !important;
+}
+
+[data-theme="modern2"] .matchdb-stat-rect {
+  background: var(--modern-card) !important;
+  border: 1px solid var(--modern-border) !important;
+  border-radius: var(--modern-radius) !important;
+  box-shadow: var(--modern-shadow) !important;
+  transition: box-shadow 0.2s ease, transform 0.2s ease !important;
+  font-family: "Inter", -apple-system, sans-serif !important;
+}
+
+[data-theme="modern2"] .matchdb-stat-rect:hover {
+  box-shadow: var(--modern-shadow-md) !important;
+  transform: translateY(-1px) !important;
+}
+
+[data-theme="modern2"] .matchdb-stat-rect.active {
+  border-color: var(--modern-primary) !important;
+  box-shadow: 0 0 0 3px rgba(44, 160, 28, 0.15) !important;
+}
+
+[data-theme="modern2"] .matchdb-stat-icon {
+  font-size: 20px !important;
+}
+
+[data-theme="modern2"] .matchdb-stat-value {
+  font-family: "Inter", sans-serif !important;
+  font-weight: 700 !important;
+  color: var(--modern-text) !important;
+}
+
+[data-theme="modern2"] .matchdb-stat-label {
+  font-family: "Inter", sans-serif !important;
+  font-size: 11px !important;
+  color: var(--modern-text-secondary) !important;
+  font-weight: 500 !important;
+}
+
+/* ── Type pills ───────────────────────────────────────────────────────────── */
+[data-theme="modern2"] .matchdb-type-pill {
+  border-radius: 16px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 2px 10px !important;
+  font-family: "Inter", sans-serif !important;
+  border: none !important;
+}
+
+/* ── Action buttons ───────────────────────────────────────────────────────── */
+[data-theme="modern2"] .matchdb-btn {
+  border-radius: var(--modern-radius-sm) !important;
+  font-family: "Inter", sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  transition: all 0.15s ease !important;
+  border: 1px solid var(--modern-border) !important;
+}
+
+[data-theme="modern2"] .matchdb-btn:hover {
+  box-shadow: var(--modern-shadow) !important;
+}
+
+[data-theme="modern2"] .matchdb-btn-poke {
+  background: var(--modern-primary) !important;
+  color: #fff !important;
+  border-color: var(--modern-primary) !important;
+}
+
+[data-theme="modern2"] .matchdb-btn-poke:hover {
+  background: var(--modern-primary-dark) !important;
+}
+
+/* ── Link buttons ─────────────────────────────────────────────────────────── */
+[data-theme="modern2"] .matchdb-link-btn {
+  color: var(--modern-accent) !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="modern2"] .matchdb-link-btn:hover {
+  text-decoration: underline !important;
+}
+
+/* ── Meters (match score bars) ────────────────────────────────────────────── */
+[data-theme="modern2"] .matchdb-meter-track span {
+  border-radius: 4px !important;
+}
+
+[data-theme="modern2"] .matchdb-meter-label {
+  font-family: "Inter", sans-serif !important;
+  font-size: 11px !important;
+  color: var(--modern-text-secondary) !important;
+}
+
+/* ── RM-prefixed modal components ─────────────────────────────────────────── */
+[data-theme="modern2"] .rm-window {
+  border-radius: var(--modern-radius) !important;
+  border: 1px solid var(--modern-border) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15) !important;
+  font-family: "Inter", -apple-system, sans-serif !important;
+  overflow: hidden !important;
+}
+
+[data-theme="modern2"] .rm-titlebar {
+  background: var(--modern-card) !important;
+  border-bottom: 1px solid var(--modern-border) !important;
+  padding: 12px 16px !important;
+}
+
+[data-theme="modern2"] .rm-titlebar-title {
+  font-family: "Inter", sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  color: var(--modern-text) !important;
+}
+
+[data-theme="modern2"] .rm-titlebar-icon {
+  font-size: 16px !important;
+}
+
+[data-theme="modern2"] .rm-body {
+  background: var(--modern-bg) !important;
+  font-family: "Inter", sans-serif !important;
+}
+
+[data-theme="modern2"] .rm-statusbar {
+  background: var(--modern-card) !important;
+  border-top: 1px solid var(--modern-border) !important;
+  border-bottom: 1px solid var(--modern-border) !important;
+  font-family: "Inter", sans-serif !important;
+  font-size: 12px !important;
+  color: var(--modern-text-muted) !important;
+}
+
+[data-theme="modern2"] .rm-footer {
+  background: var(--modern-card) !important;
+  border-top: 1px solid var(--modern-border) !important;
+  padding: 12px 16px !important;
+}
+
+[data-theme="modern2"] .rm-btn {
+  border-radius: var(--modern-radius-sm) !important;
+  font-family: "Inter", sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  padding: 6px 16px !important;
+  transition: all 0.15s ease !important;
+  border: 1px solid var(--modern-border) !important;
+  background: var(--modern-card) !important;
+  color: var(--modern-text) !important;
+}
+
+[data-theme="modern2"] .rm-btn:hover {
+  background: #f3f4f6 !important;
+}
+
+[data-theme="modern2"] .rm-btn-primary {
+  background: var(--modern-primary) !important;
+  border-color: var(--modern-primary) !important;
+  color: #fff !important;
+}
+
+[data-theme="modern2"] .rm-btn-primary:hover {
+  background: var(--modern-primary-dark) !important;
+}
+
+/* ── RM form elements ─────────────────────────────────────────────────────── */
+[data-theme="modern2"] .rm-fieldset {
+  border: 1px solid var(--modern-border) !important;
+  border-radius: var(--modern-radius-sm) !important;
+  background: var(--modern-card) !important;
+}
+
+[data-theme="modern2"] .rm-fieldset legend {
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  color: var(--modern-text-secondary) !important;
+}
+
+[data-theme="modern2"] .rm-input,
+[data-theme="modern2"] .rm-textarea {
+  border: 1px solid var(--modern-border) !important;
+  border-radius: var(--modern-radius-sm) !important;
+  font-family: "Inter", sans-serif !important;
+  font-size: 13px !important;
+  padding: 8px 12px !important;
+  background: var(--modern-card) !important;
+  color: var(--modern-text) !important;
+}
+
+[data-theme="modern2"] .rm-input:focus,
+[data-theme="modern2"] .rm-textarea:focus {
+  border-color: var(--modern-primary) !important;
+  box-shadow: 0 0 0 3px rgba(44, 160, 28, 0.15) !important;
+  outline: none !important;
+}
+
+[data-theme="modern2"] .rm-alert {
+  border-radius: var(--modern-radius-sm) !important;
+  font-family: "Inter", sans-serif !important;
+  font-size: 13px !important;
+}
+
+[data-theme="modern2"] .rm-alert-success {
+  background: var(--modern-primary-light) !important;
+  border: 1px solid rgba(44, 160, 28, 0.3) !important;
+  color: var(--modern-primary-dark) !important;
+}
+
+/* ── Page transition container ────────────────────────────────────────────── */
+[data-theme="modern2"] .matchdb-page-transition {
+  font-family: "Inter", -apple-system, sans-serif !important;
+}
+
+/* ── Tables (DataTable / MatchDataTable) ──────────────────────────────────── */
+[data-theme="modern2"] .matchdb-table,
+[data-theme="modern2"] .p-datatable {
+  font-family: "Inter", sans-serif !important;
+}
+
+[data-theme="modern2"] .p-datatable .p-datatable-thead > tr > th {
+  background: #f8fafb !important;
+  color: var(--modern-text-secondary) !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  border-bottom: 2px solid var(--modern-border) !important;
+  font-family: "Inter", sans-serif !important;
+}
+
+[data-theme="modern2"] .p-datatable .p-datatable-tbody > tr > td {
+  border-bottom: 1px solid var(--modern-border) !important;
+  font-size: 13px !important;
+  color: var(--modern-text) !important;
+  font-family: "Inter", sans-serif !important;
+}
+
+[data-theme="modern2"] .p-datatable .p-datatable-tbody > tr:hover {
+  background: var(--modern-primary-light) !important;
+}
+
+/* ── Pagination ───────────────────────────────────────────────────────────── */
+[data-theme="modern2"] .matchdb-pagination button,
+[data-theme="modern2"] .p-paginator .p-paginator-element {
+  border-radius: 6px !important;
+  font-family: "Inter", sans-serif !important;
+  font-size: 12px !important;
+}
+
+[data-theme="modern2"] .p-paginator .p-highlight {
+  background: var(--modern-primary) !important;
+  color: #fff !important;
+}
+
+/* ── Project Financial Form ───────────────────────────────────────────────── */
+[data-theme="modern2"] .pf-status-badge {
+  border-radius: 16px !important;
+  font-family: "Inter", sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="modern2"] .pf-preview-label,
+[data-theme="modern2"] .pf-field-hint {
+  font-family: "Inter", sans-serif !important;
+  color: var(--modern-text-secondary) !important;
+}
+
+/* ── Project Pay Table ────────────────────────────────────────────────────── */
+[data-theme="modern2"] .ppt-sval-label,
+[data-theme="modern2"] .ppt-th-sub {
+  font-family: "Inter", sans-serif !important;
+  color: var(--modern-text-secondary) !important;
+  font-size: 11px !important;
+}
+
+/* ── Membership Gate ──────────────────────────────────────────────────────── */
+[data-theme="modern2"] .mg-statusbar {
+  background: var(--modern-card) !important;
+  border: 1px solid var(--modern-border) !important;
+  border-radius: var(--modern-radius-sm) !important;
+  font-family: "Inter", sans-serif !important;
+  color: var(--modern-text-muted) !important;
+}
+
+/* ── Vendor Dashboard pills ───────────────────────────────────────────────── */
+[data-theme="modern2"] .vdp-status {
+  border-radius: 16px !important;
+  font-family: "Inter", sans-serif !important;
+}
+
+/* ── Post-job modal ───────────────────────────────────────────────────────── */
+[data-theme="modern2"] .matchdb-postjob-window {
+  border-radius: var(--modern-radius) !important;
+}
+
+/* ── General scrollbar for jobs content ───────────────────────────────────── */
+[data-theme="modern2"] ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+[data-theme="modern2"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme="modern2"] ::-webkit-scrollbar-thumb {
+  background: #c1c8cf;
+  border-radius: 3px;
+}
+
+[data-theme="modern2"] ::-webkit-scrollbar-thumb:hover {
+  background: #a0a8b0;
+}

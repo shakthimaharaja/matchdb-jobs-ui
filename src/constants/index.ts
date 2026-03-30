@@ -196,7 +196,7 @@ export const POKE_LIMIT: Record<string, number> = {
 
 export const PAGE_SIZE = 25;
 export const FLASH_DURATION_MS = 2500;
-export const WS_RECONNECT_MS = 5000;
+export const POLL_INTERVAL_MS = 30_000;
 
 /** RTK Query cache durations (seconds) */
 export const CACHE_SHORT = 300; // 5 min

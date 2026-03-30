@@ -422,6 +422,58 @@ export interface CompanySummaryResponse {
   };
 }
 
+// ─── Vendor Financial Summary ─────────────────────────────────────────────────
+
+export interface VendorFinancialCandidate {
+  candidateId: string;
+  candidateName: string;
+  candidateEmail: string;
+  currentRole: string;
+  location: string;
+  jobTitle: string;
+  jobType: string;
+  jobSubType: string;
+  isActive: boolean;
+  clientName: string;
+  implementationPartner: string;
+  marketerCompanyName: string;
+  billRate: number;
+  payRate: number;
+  hoursWorked: number;
+  totalBilled: number;
+  totalPay: number;
+  taxAmount: number;
+  cashAmount: number;
+  netPayable: number;
+  amountPaid: number;
+  amountPending: number;
+  projectStart: string | null;
+  projectEnd: string | null;
+  status: string;
+}
+
+export interface VendorClientPipeline {
+  clientName: string;
+  candidateCount: number;
+  totalBilled: number;
+  totalPaid: number;
+  totalPending: number;
+  totalHours: number;
+}
+
+export interface VendorFinancialSummaryResponse {
+  candidates: VendorFinancialCandidate[];
+  clientPipeline: VendorClientPipeline[];
+  totals: {
+    totalCandidates: number;
+    totalBilled: number;
+    totalPay: number;
+    totalHours: number;
+    totalCredited: number;
+    totalPending: number;
+  };
+}
+
 export interface CandidateDetailVendorActivity {
   id: string;
   sender_email: string;
@@ -653,6 +705,154 @@ export interface ForwardedOpeningItem {
   marketer_email?: string;
 }
 
+// ─── Company Admin & RBAC Types ───────────────────────────────────────────────
+
+export interface CompanyAdminDashboard {
+  companyId: string;
+  companyName: string;
+  subscriptionPlan: "basic" | "pro";
+  seatLimit: number;
+  seatsUsed: number;
+  activeUsers: number;
+  pendingInvites: number;
+}
+
+export interface CompanySetupArgs {
+  companyName: string;
+  adminName: string;
+  subscriptionPlan: "basic" | "pro";
+}
+
+export interface EmployeeInviteArgs {
+  email: string;
+  name?: string;
+  role?: string;
+}
+
+export interface EmployeeInvitationItem {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  status: "pending" | "accepted" | "expired" | "revoked";
+  expiresAt: string;
+  createdAt: string;
+  usedAt: string | null;
+}
+
+export interface CompanyUserItem {
+  id: string;
+  userId: string;
+  email: string;
+  fullName: string;
+  role: string;
+  permissions: string[];
+  status: "active" | "inactive" | "suspended";
+  onlineStatus: "online" | "away" | "offline";
+  lastLoginAt: string | null;
+  lastActiveAt: string | null;
+  joinedAt: string;
+}
+
+export interface ActiveUsersResponse {
+  totalActive: number;
+  totalOnline: number;
+  totalAway: number;
+  users: CompanyUserItem[];
+}
+
+// ─── Candidate Invitation Types ───────────────────────────────────────────────
+
+export interface CandidatePlanItem {
+  _id: string;
+  companyId: string;
+  planName: string;
+  tier: "basic" | "standard" | "premium";
+  price: number;
+  currency: string;
+  billingCycle: "monthly" | "yearly" | "one-time";
+  features: string[];
+  stripePriceId: string;
+  isActive: boolean;
+}
+
+export interface CandidateInviteArgs {
+  candidateName: string;
+  candidateEmail: string;
+  jobTitle?: string;
+  candidatePlan: string;
+  personalNote?: string;
+}
+
+export interface CandidateInvitationItem {
+  id: string;
+  candidateName: string;
+  candidateEmail: string;
+  plan: string;
+  planTier: string;
+  jobTitle: string;
+  invitedBy: string;
+  invitedByRole: string;
+  status: "pending" | "payment_pending" | "active" | "expired" | "revoked";
+  paymentStatus: "unpaid" | "paid" | "failed" | "refunded";
+  createdAt: string;
+  registeredAt: string | null;
+  paidAt: string | null;
+  tokenExpiresAt: string;
+  candidateUserId: string | null;
+  candidateStatus: string | null;
+}
+
+export interface CandidateAllResponse {
+  counts: {
+    total: number;
+    pending: number;
+    paymentPending: number;
+    active: number;
+    expired: number;
+    revoked: number;
+  };
+  candidates: CandidateInvitationItem[];
+}
+
+export interface TokenVerifyResponse {
+  valid: boolean;
+  candidateName: string;
+  candidateEmail: string;
+  companyName: string;
+  planName: string;
+  plan: string;
+  status: string;
+  error?: string;
+}
+
+export interface CandidateRegisterArgs {
+  fullName: string;
+  email: string;
+  phone?: string;
+  password: string;
+}
+
+export interface CandidateRegisterResponse {
+  candidateUserId: string;
+  companyId: string;
+  companyName: string;
+  plan: string;
+  planName: string;
+  status: string;
+  message: string;
+}
+
+export interface CreatePaymentSessionArgs {
+  candidateUserId: string;
+  planId: string;
+}
+
+export interface PaymentSessionResponse {
+  sessionId: string;
+  url: string;
+}
+
 // ─── RTK Query API ────────────────────────────────────────────────────────────
 
 type StateWithAuth = { auth: { token: string | null } };
@@ -688,6 +888,13 @@ export const jobsApi = createApi({
     "Timesheets",
     "MarketerTimesheets",
     "InterviewInvites",
+    "VendorFinancials",
+    "AdminDashboard",
+    "EmployeeInvitations",
+    "CompanyUsers",
+    "ActiveUsers",
+    "CandidateInvitations",
+    "CandidatePlans",
   ],
   endpoints: (builder) => ({
     // ── Jobs ──────────────────────────────────────────────────────────────────
@@ -714,6 +921,14 @@ export const jobsApi = createApi({
     >({
       query: (params) => ({ url: "api/jobs/profilematches", params }),
       providesTags: ["VendorCandidateMatches"],
+    }),
+
+    getVendorFinancialSummary: builder.query<
+      VendorFinancialSummaryResponse,
+      void
+    >({
+      query: () => "api/jobs/vendor/financials/summary",
+      providesTags: ["VendorFinancials"],
     }),
 
     postJob: builder.mutation<Job, PostJobArgs>({
@@ -1111,6 +1326,201 @@ export const jobsApi = createApi({
       }),
       invalidatesTags: ["InterviewInvites"],
     }),
+
+    // ── Company Admin ─────────────────────────────────────────────────────────
+
+    setupCompanyAdmin: builder.mutation<
+      CompanyAdminDashboard,
+      CompanySetupArgs
+    >({
+      query: (body) => ({ url: "api/jobs/admin/setup", method: "POST", body }),
+      invalidatesTags: ["AdminDashboard"],
+    }),
+
+    getAdminDashboard: builder.query<CompanyAdminDashboard, void>({
+      query: () => "api/jobs/admin/dashboard",
+      providesTags: ["AdminDashboard"],
+    }),
+
+    // ── Employee Invitations ──────────────────────────────────────────────────
+
+    sendEmployeeInvite: builder.mutation<
+      EmployeeInvitationItem,
+      EmployeeInviteArgs
+    >({
+      query: (body) => ({ url: "api/jobs/admin/invite", method: "POST", body }),
+      invalidatesTags: ["EmployeeInvitations", "AdminDashboard"],
+    }),
+
+    getEmployeeInvitations: builder.query<EmployeeInvitationItem[], void>({
+      query: () => "api/jobs/admin/invitations",
+      providesTags: ["EmployeeInvitations"],
+    }),
+
+    revokeEmployeeInvitation: builder.mutation<
+      { id: string; status: string },
+      string
+    >({
+      query: (id) => ({
+        url: `api/jobs/admin/invitations/${id}/revoke`,
+        method: "PUT",
+      }),
+      invalidatesTags: ["EmployeeInvitations"],
+    }),
+
+    registerEmployee: builder.mutation<
+      { message: string; companyId: string; role: string },
+      { token: string; fullName: string; userId: string; email: string }
+    >({
+      query: ({ token, ...body }) => ({
+        url: `api/jobs/admin/register/${token}`,
+        method: "POST",
+        body,
+      }),
+    }),
+
+    // ── Company Users (RBAC) ──────────────────────────────────────────────────
+
+    getCompanyUsers: builder.query<
+      CompanyUserItem[],
+      { role?: string; status?: string; search?: string }
+    >({
+      query: (params) => ({ url: "api/jobs/admin/users", params }),
+      providesTags: ["CompanyUsers"],
+    }),
+
+    updateUserRole: builder.mutation<
+      { id: string; role: string; permissions: string[] },
+      { id: string; role: string }
+    >({
+      query: ({ id, role }) => ({
+        url: `api/jobs/admin/users/${id}/role`,
+        method: "PUT",
+        body: { role },
+      }),
+      invalidatesTags: ["CompanyUsers"],
+    }),
+
+    updateUserStatus: builder.mutation<
+      { id: string; status: string },
+      { id: string; status: string }
+    >({
+      query: ({ id, status }) => ({
+        url: `api/jobs/admin/users/${id}/status`,
+        method: "PUT",
+        body: { status },
+      }),
+      invalidatesTags: ["CompanyUsers", "ActiveUsers", "AdminDashboard"],
+    }),
+
+    getActiveUsers: builder.query<ActiveUsersResponse, void>({
+      query: () => "api/jobs/admin/users/active",
+      providesTags: ["ActiveUsers"],
+    }),
+
+    sendHeartbeat: builder.mutation<{ ok: boolean }, void>({
+      query: () => ({ url: "api/jobs/admin/heartbeat", method: "POST" }),
+    }),
+
+    // ── Candidate Invitations ─────────────────────────────────────────────────
+
+    sendCandidateInvite: builder.mutation<
+      CandidateInvitationItem,
+      CandidateInviteArgs
+    >({
+      query: (body) => ({
+        url: "api/jobs/candidate/invite",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["CandidateInvitations"],
+    }),
+
+    verifyCandidateToken: builder.query<TokenVerifyResponse, string>({
+      query: (token) => `api/jobs/candidate/invite/verify/${token}`,
+    }),
+
+    registerCandidate: builder.mutation<
+      CandidateRegisterResponse,
+      { token: string } & CandidateRegisterArgs
+    >({
+      query: ({ token, ...body }) => ({
+        url: `api/jobs/candidate/register/${token}`,
+        method: "POST",
+        body,
+      }),
+    }),
+
+    createCandidatePaymentSession: builder.mutation<
+      PaymentSessionResponse,
+      CreatePaymentSessionArgs
+    >({
+      query: (body) => ({
+        url: "api/jobs/candidate/payment/session",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getAllCandidates: builder.query<CandidateAllResponse, void>({
+      query: () => "api/jobs/candidate/all",
+      providesTags: ["CandidateInvitations"],
+    }),
+
+    getCandidateProfile: builder.query<any, string>({
+      query: (id) => `api/jobs/candidate/${id}`,
+      providesTags: ["CandidateInvitations"],
+    }),
+
+    revokeCandidateInvite: builder.mutation<
+      { id: string; status: string },
+      string
+    >({
+      query: (id) => ({
+        url: `api/jobs/candidate/invite/${id}/revoke`,
+        method: "PUT",
+      }),
+      invalidatesTags: ["CandidateInvitations"],
+    }),
+
+    resendCandidateInvite: builder.mutation<CandidateInvitationItem, string>({
+      query: (id) => ({
+        url: `api/jobs/candidate/invite/${id}/resend`,
+        method: "POST",
+      }),
+      invalidatesTags: ["CandidateInvitations"],
+    }),
+
+    // ── Candidate Plans ───────────────────────────────────────────────────────
+
+    getCandidatePlans: builder.query<CandidatePlanItem[], void>({
+      query: () => "api/jobs/candidate/plans",
+      providesTags: ["CandidatePlans"],
+    }),
+
+    createCandidatePlan: builder.mutation<
+      CandidatePlanItem,
+      Omit<CandidatePlanItem, "_id" | "companyId">
+    >({
+      query: (body) => ({
+        url: "api/jobs/candidate/plans",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["CandidatePlans"],
+    }),
+
+    updateCandidatePlan: builder.mutation<
+      CandidatePlanItem,
+      { id: string } & Partial<CandidatePlanItem>
+    >({
+      query: ({ id, ...body }) => ({
+        url: `api/jobs/candidate/plans/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["CandidatePlans"],
+    }),
   }),
 });
 
@@ -1180,4 +1590,33 @@ export const {
   useGetInterviewInvitesSentQuery,
   useGetInterviewInvitesReceivedQuery,
   useRespondToInterviewInviteMutation,
+  // Vendor Financials
+  useGetVendorFinancialSummaryQuery,
+  // Company Admin
+  useSetupCompanyAdminMutation,
+  useGetAdminDashboardQuery,
+  // Employee Invitations
+  useSendEmployeeInviteMutation,
+  useGetEmployeeInvitationsQuery,
+  useRevokeEmployeeInvitationMutation,
+  useRegisterEmployeeMutation,
+  // Company Users (RBAC)
+  useGetCompanyUsersQuery,
+  useUpdateUserRoleMutation,
+  useUpdateUserStatusMutation,
+  useGetActiveUsersQuery,
+  useSendHeartbeatMutation,
+  // Candidate Invitations
+  useSendCandidateInviteMutation,
+  useVerifyCandidateTokenQuery,
+  useRegisterCandidateMutation,
+  useCreateCandidatePaymentSessionMutation,
+  useGetAllCandidatesQuery,
+  useGetCandidateProfileQuery,
+  useRevokeCandidateInviteMutation,
+  useResendCandidateInviteMutation,
+  // Candidate Plans
+  useGetCandidatePlansQuery,
+  useCreateCandidatePlanMutation,
+  useUpdateCandidatePlanMutation,
 } = jobsApi;

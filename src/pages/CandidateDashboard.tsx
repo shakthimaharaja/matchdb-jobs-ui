@@ -1166,76 +1166,6 @@ const CandidateDashboard: React.FC<Props> = ({
         ],
       },
       {
-        label: "Job Type",
-        icon: "",
-        items: jobTypeNavItems,
-      },
-      {
-        label: `Pokes (${pokeCount}/${
-          Number.isFinite(pokeLimit) ? pokeLimit : "∞"
-        })`,
-        icon: "",
-        items: [
-          {
-            id: "pokes-sent",
-            label: "Pokes Sent",
-            count: pokesSentOnly.length,
-            active: activeView === "pokes-sent",
-            onClick: () => navParams({ view: "pokes-sent" }),
-          },
-          {
-            id: "pokes-received",
-            label: "Pokes Received",
-            count: pokesReceivedOnly.length,
-            active: activeView === "pokes-received",
-            onClick: () => navParams({ view: "pokes-received" }),
-          },
-          ...(Number.isFinite(pokeLimit)
-            ? [
-                {
-                  id: "pokes-remaining",
-                  label: "Remaining",
-                  count: Math.max(0, pokeLimit - pokeCount),
-                },
-              ]
-            : []),
-        ],
-      },
-      {
-        label: `Mails (${emailCount})`,
-        icon: "",
-        items: [
-          {
-            id: "mails-sent",
-            label: "Mails Sent",
-            count: mailsSentOnly.length,
-            active: activeView === "mails-sent",
-            onClick: () => navParams({ view: "mails-sent" }),
-          },
-          {
-            id: "mails-received",
-            label: "Mails Received",
-            count: mailsReceivedOnly.length,
-            active: activeView === "mails-received",
-            onClick: () => navParams({ view: "mails-received" }),
-          },
-          ...(hasPurchasedVisibility && rows.length > 0
-            ? [
-                {
-                  id: "mail-template",
-                  label: "✉ Mail Template",
-                  tooltip:
-                    "Compose a personalised email with your resume — click ✉ next to any row",
-                  onClick: () => {
-                    navParams({ view: "matches" });
-                    if (rows.length > 0) handlePokeEmail(rows[0]);
-                  },
-                },
-              ]
-            : []),
-        ],
-      },
-      {
         label: "My Dashboard",
         icon: "",
         items: [
@@ -1280,6 +1210,146 @@ const CandidateDashboard: React.FC<Props> = ({
               myDetailTab === "forwarded-openings",
             onClick: () =>
               navParams({ view: "my-detail", dtab: "forwarded-openings" }),
+          },
+        ],
+      },
+      {
+        label: "Jobs",
+        icon: "",
+        items: jobTypeNavItems,
+      },
+      {
+        label: "Vendor",
+        icon: "",
+        items: [
+          {
+            id: "vendor-openings",
+            label: "Forwarded Openings",
+            count: forwardedOpenings.length,
+            active: activeView === "vendor-openings",
+            onClick: () => navParams({ view: "vendor-openings", sub: null }),
+          },
+          ...["contract", "c2c", "w2c", "c2h", "full_time"].map((sub) => ({
+            id: `vendor-${sub}`,
+            label: sub
+              .replaceAll("_", " ")
+              .replaceAll(/\b\w/g, (c) => c.toUpperCase()),
+            depth: 1,
+            count: forwardedOpenings.filter(
+              (f) => f.job_type === sub || f.job_sub_type === sub,
+            ).length,
+            active: activeView === "vendor-openings" && filterSubType === sub,
+            onClick: () => navParams({ view: "vendor-openings", sub }),
+          })),
+          {
+            id: "pokes-heading",
+            label: `Pokes (${pokeCount}/${
+              Number.isFinite(pokeLimit) ? pokeLimit : "∞"
+            })`,
+            active:
+              activeView === "pokes-sent" || activeView === "pokes-received",
+          },
+          {
+            id: "pokes-sent",
+            label: "Sent",
+            depth: 1,
+            count: pokesSentOnly.length,
+            active: activeView === "pokes-sent",
+            onClick: () => navParams({ view: "pokes-sent" }),
+          },
+          {
+            id: "pokes-received",
+            label: "Received",
+            depth: 1,
+            count: pokesReceivedOnly.length,
+            active: activeView === "pokes-received",
+            onClick: () => navParams({ view: "pokes-received" }),
+          },
+          ...(Number.isFinite(pokeLimit)
+            ? [
+                {
+                  id: "pokes-remaining",
+                  label: "Remaining",
+                  depth: 1,
+                  count: Math.max(0, pokeLimit - pokeCount),
+                },
+              ]
+            : []),
+          {
+            id: "mail-heading",
+            label: `Mail (${emailCount})`,
+            active:
+              activeView === "mails-sent" || activeView === "mails-received",
+          },
+          {
+            id: "mails-sent",
+            label: "Sent",
+            depth: 1,
+            count: mailsSentOnly.length,
+            active: activeView === "mails-sent",
+            onClick: () => navParams({ view: "mails-sent" }),
+          },
+          {
+            id: "mails-received",
+            label: "Received",
+            depth: 1,
+            count: mailsReceivedOnly.length,
+            active: activeView === "mails-received",
+            onClick: () => navParams({ view: "mails-received" }),
+          },
+          ...(hasPurchasedVisibility && rows.length > 0
+            ? [
+                {
+                  id: "mail-template",
+                  label: "✉ Mail Template",
+                  depth: 1,
+                  tooltip:
+                    "Compose a personalised email with your resume — click ✉ next to any row",
+                  onClick: () => {
+                    navParams({ view: "matches" });
+                    if (rows.length > 0) handlePokeEmail(rows[0]);
+                  },
+                },
+              ]
+            : []),
+        ],
+      },
+      {
+        label: "Employer",
+        icon: "",
+        items: [
+          {
+            id: "employer-openings",
+            label: "Forwarded Openings",
+            count: forwardedOpenings.length,
+            active: activeView === "employer-openings",
+            onClick: () => navParams({ view: "employer-openings" }),
+          },
+          {
+            id: "employer-finance",
+            label: "Finance",
+            count: myDetail?.projects.length ?? 0,
+            active: activeView === "employer-finance",
+            onClick: () => navParams({ view: "employer-finance" }),
+          },
+          {
+            id: "employer-immigration",
+            label: "Immigration",
+            active: activeView === "employer-immigration",
+            onClick: () => navParams({ view: "employer-immigration" }),
+          },
+          {
+            id: "timesheets",
+            label: "Timesheets",
+            active: activeView === "timesheets",
+            onClick: () => navParams({ view: "timesheets" }),
+          },
+          {
+            id: "interviews",
+            label: "Interviews",
+            count: interviewInvites.length,
+            active: activeView === "interviews",
+            onClick: () => navParams({ view: "interviews" }),
           },
         ],
       },
@@ -1335,70 +1405,6 @@ const CandidateDashboard: React.FC<Props> = ({
             : []),
         ],
       },
-      {
-        label: "Vendor",
-        icon: "",
-        items: [
-          {
-            id: "vendor-openings",
-            label: "Forwarded Openings",
-            count: forwardedOpenings.length,
-            active: activeView === "vendor-openings",
-            onClick: () => navParams({ view: "vendor-openings", sub: null }),
-          },
-          ...["contract", "c2c", "w2c", "c2h", "full_time"].map((sub) => ({
-            id: `vendor-${sub}`,
-            label: sub
-              .replaceAll("_", " ")
-              .replaceAll(/\b\w/g, (c) => c.toUpperCase()),
-            depth: 1,
-            count: forwardedOpenings.filter(
-              (f) => f.job_type === sub || f.job_sub_type === sub,
-            ).length,
-            active: activeView === "vendor-openings" && filterSubType === sub,
-            onClick: () => navParams({ view: "vendor-openings", sub }),
-          })),
-        ],
-      },
-      {
-        label: "Employer",
-        icon: "",
-        items: [
-          {
-            id: "employer-openings",
-            label: "Forwarded Openings",
-            count: forwardedOpenings.length,
-            active: activeView === "employer-openings",
-            onClick: () => navParams({ view: "employer-openings" }),
-          },
-          {
-            id: "employer-finance",
-            label: "Finance",
-            count: myDetail?.projects.length ?? 0,
-            active: activeView === "employer-finance",
-            onClick: () => navParams({ view: "employer-finance" }),
-          },
-          {
-            id: "employer-immigration",
-            label: "Immigration",
-            active: activeView === "employer-immigration",
-            onClick: () => navParams({ view: "employer-immigration" }),
-          },
-          {
-            id: "timesheets",
-            label: "Timesheets",
-            active: activeView === "timesheets",
-            onClick: () => navParams({ view: "timesheets" }),
-          },
-          {
-            id: "interviews",
-            label: "Interviews",
-            count: interviewInvites.length,
-            active: activeView === "interviews",
-            onClick: () => navParams({ view: "interviews" }),
-          },
-        ],
-      },
     ];
   }
   const navGroups = buildNavGroups();
@@ -1424,13 +1430,13 @@ const CandidateDashboard: React.FC<Props> = ({
 
   const breadcrumb: [string, string, string] = (() => {
     if (activeView === "pokes-sent")
-      return ["Candidate Portal", "Pokes", "Pokes Sent"];
+      return ["Candidate Portal", "Vendor", "Pokes Sent"];
     if (activeView === "pokes-received")
-      return ["Candidate Portal", "Pokes", "Pokes Received"];
+      return ["Candidate Portal", "Vendor", "Pokes Received"];
     if (activeView === "mails-sent")
-      return ["Candidate Portal", "Mails", "Mails Sent"];
+      return ["Candidate Portal", "Vendor", "Mails Sent"];
     if (activeView === "mails-received")
-      return ["Candidate Portal", "Mails", "Mails Received"];
+      return ["Candidate Portal", "Vendor", "Mails Received"];
     if (activeView === "forwarded")
       return ["Candidate Portal", "Actions", "Forwarded Openings"];
     if (activeView === "my-detail")
@@ -3003,40 +3009,28 @@ const CandidateDashboard: React.FC<Props> = ({
         <div className="matchdb-stat-bar">
           {[
             {
+              label: "Finance Dashboard",
+              value: myDetail?.projects.length ?? 0,
+              icon: ICONS.PIN,
+              view: "employer-finance" as ActiveView,
+            },
+            {
               label: "Matched Jobs",
               value: grandTotal,
-              icon: ICONS.PIN,
+              icon: ICONS.WAVE,
               view: "matches" as ActiveView,
             },
             {
-              label: "Pokes Sent",
-              value: pokesSentOnly.length,
-              icon: ICONS.WAVE,
-              view: "pokes-sent" as ActiveView,
-            },
-            {
-              label: "Pokes In",
-              value: pokesReceivedOnly.length,
-              icon: ICONS.INBOX,
-              view: "pokes-received" as ActiveView,
-            },
-            {
-              label: "Mails Sent",
-              value: mailsSentOnly.length,
+              label: "Vendor Openings",
+              value: forwardedOpenings.length,
               icon: ICONS.OUTBOX,
-              view: "mails-sent" as ActiveView,
+              view: "vendor-openings" as ActiveView,
             },
             {
-              label: "Mails In",
-              value: mailsReceivedOnly.length,
-              icon: ICONS.MAILBOX,
-              view: "mails-received" as ActiveView,
-            },
-            {
-              label: "Interviews",
-              value: interviewInvites.length,
-              icon: ICONS.PHONE,
-              view: "interviews" as ActiveView,
+              label: "Employer Openings",
+              value: forwardedOpenings.length,
+              icon: ICONS.INBOX,
+              view: "employer-openings" as ActiveView,
             },
             {
               label: "Visibility",

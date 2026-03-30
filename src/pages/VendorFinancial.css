@@ -1,0 +1,335 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Vendor Financial Summary — VendorDashboard financial-summary view
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.vfin-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── KPI Strip ───────────────────────────────────────────────────────────── */
+.vfin-kpi-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 10px 16px;
+  background: var(--pf-card, #fff);
+  border: 1px solid var(--pf-border-lt, #e0e0e0);
+  border-radius: var(--pf-radius, 5px);
+  box-shadow: var(--pf-shadow, 0 1px 3px rgba(0, 0, 0, 0.06));
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.vfin-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 16px;
+  min-width: 90px;
+}
+
+.vfin-kpi:first-child {
+  padding-left: 0;
+}
+
+.vfin-kpi-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--pf-muted, #888);
+  white-space: nowrap;
+}
+
+.vfin-kpi-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pf-text, #222);
+  white-space: nowrap;
+}
+
+.vfin-kpi-blue {
+  color: var(--pf-blue, #1976d2);
+}
+.vfin-kpi-green {
+  color: var(--pf-green, #388e3c);
+}
+.vfin-kpi-teal {
+  color: var(--pf-teal, #00897b);
+}
+.vfin-kpi-red {
+  color: var(--pf-orange, #e53935);
+}
+
+.vfin-kpi-div {
+  width: 1px;
+  height: 36px;
+  background: var(--pf-border-lt, #e0e0e0);
+  flex-shrink: 0;
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+.vfin-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 1px;
+}
+
+.vfin-tab {
+  padding: 5px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--pf-border-lt, #d0d0d0);
+  border-radius: 4px;
+  background: var(--pf-card, #fff);
+  color: var(--pf-text, #333);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.vfin-tab:hover {
+  background: var(--w97-hover, #f0f0f0);
+}
+
+.vfin-tab.active {
+  background: var(--pf-blue, #1976d2);
+  color: #fff;
+  border-color: var(--pf-blue, #1976d2);
+}
+
+/* ── Section wrapper ─────────────────────────────────────────────────────── */
+.vfin-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Toolbar with search / filter ────────────────────────────────────────── */
+.vfin-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 8px;
+  flex-shrink: 0;
+}
+
+.vfin-search {
+  max-width: 260px;
+}
+
+.vfin-select {
+  max-width: 140px;
+}
+
+.vfin-count {
+  font-size: 11px;
+  color: var(--pf-muted, #888);
+  margin-left: auto;
+}
+
+/* ── Table ────────────────────────────────────────────────────────────────── */
+.vfin-table-wrap {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--pf-border-lt, #e0e0e0);
+  border-radius: var(--pf-radius, 5px);
+  background: var(--pf-card, #fff);
+}
+
+.vfin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.vfin-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--pf-header-bg, #f7f8fa);
+  padding: 7px 10px;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pf-muted, #666);
+  border-bottom: 2px solid var(--pf-border-lt, #d0d0d0);
+  text-align: left;
+}
+
+.vfin-table tbody tr {
+  border-bottom: 1px solid var(--pf-border-lt, #eee);
+}
+
+.vfin-table tbody tr:hover {
+  background: var(--w97-hover, #f5f7fa);
+}
+
+.vfin-table td {
+  padding: 7px 10px;
+  vertical-align: middle;
+  color: var(--pf-text, #333);
+}
+
+.vfin-td-name {
+  min-width: 140px;
+}
+
+.vfin-name {
+  font-weight: 600;
+  font-size: 11.5px;
+  color: var(--pf-text, #222);
+}
+
+.vfin-sub {
+  font-size: 10px;
+  color: var(--pf-muted, #999);
+  margin-top: 1px;
+}
+
+.vfin-td-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.vfin-td-period {
+  font-size: 10.5px;
+  color: var(--pf-muted, #666);
+}
+
+.vfin-green {
+  color: var(--pf-green, #388e3c) !important;
+}
+.vfin-red {
+  color: var(--pf-orange, #e53935) !important;
+}
+
+/* Status badge */
+.vfin-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.vfin-badge-active {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.vfin-badge-closed {
+  background: #f3f3f3;
+  color: #888;
+}
+
+/* ── Client Pipeline Cards ───────────────────────────────────────────────── */
+.vfin-pipeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.vfin-pipeline-card {
+  background: var(--pf-card, #fff);
+  border: 1px solid var(--pf-border-lt, #e0e0e0);
+  border-radius: var(--pf-radius, 5px);
+  padding: 14px 16px;
+  box-shadow: var(--pf-shadow, 0 1px 3px rgba(0, 0, 0, 0.05));
+}
+
+.vfin-pipeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.vfin-pipeline-name {
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--pf-text, #222);
+}
+
+.vfin-pipeline-count {
+  font-size: 10px;
+  color: var(--pf-muted, #888);
+  background: var(--pf-header-bg, #f5f5f5);
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+
+.vfin-pipeline-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+
+.vfin-pipeline-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vfin-pipeline-metric-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pf-muted, #888);
+}
+
+.vfin-pipeline-metric-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pf-text, #333);
+}
+
+/* Progress bar */
+.vfin-pipeline-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pf-border-lt, #e8e8e8);
+  overflow: hidden;
+}
+
+.vfin-pipeline-progress-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--pf-green, #43a047);
+  transition: width 0.3s ease;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .vfin-kpi-strip {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .vfin-kpi-div {
+    display: none;
+  }
+
+  .vfin-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .vfin-pipeline {
+    grid-template-columns: 1fr;
+  }
+}

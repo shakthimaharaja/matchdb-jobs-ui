@@ -6,9 +6,9 @@
 /** SSE endpoint for live data updates */
 export const SSE_EVENTS = "/api/jobs/events";
 
-/** WebSocket endpoints (used in PublicJobsView) */
-export const WS_COUNTS = "/ws/counts";
-export const WS_PUBLIC_DATA = "/ws/public-data";
+/** Polling endpoints (used in PublicJobsView) */
+export const POLL_COUNTS = "/api/jobs/poll/counts";
+export const POLL_PUBLIC_DATA = "/api/jobs/poll/public-data";
 
 /** Invite endpoints */
 export const INVITE_VERIFY = (token: string) => `/api/jobs/invite/${token}`;

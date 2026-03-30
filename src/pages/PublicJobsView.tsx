@@ -7,11 +7,10 @@
  *   /jobs/vendor     → VendorView: candidate profiles sorted by exp
  *
  * Data strategy:
- *  • Connects to /ws/public-data WebSocket on mount
- *  • Server pushes full job + profile snapshots every 30 seconds from the DB
- *  • Server diffs each broadcast and includes changedJobIds / changedProfileIds
+ *  • Polls /api/jobs/poll/public-data every 30 seconds
+ *  • Server diffs each response and includes changedJobIds / changedProfileIds
  *  • Changed rows flash gold for 2.5 s via the DataTable flashIds prop
- *  • Live counts come from /ws/counts WebSocket (no HTTP polling)
+ *  • Live counts come from /api/jobs/poll/counts (HTTP polling)
  *  • No hardcoded / mock data — the table is empty until the DB responds
  *
  * Uses DataTable + DataTableColumn from matchdb-component-library.
@@ -27,8 +26,8 @@ import { useLocation } from "react-router-dom";
 import { DataTable } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import "./PublicJobsView.css";
-import { PAGE_SIZE, FLASH_DURATION_MS, WS_RECONNECT_MS } from "../constants";
-import { WS_COUNTS, WS_PUBLIC_DATA } from "../constants/endpoints";
+import { PAGE_SIZE, FLASH_DURATION_MS, POLL_INTERVAL_MS } from "../constants";
+import { POLL_COUNTS, POLL_PUBLIC_DATA } from "../constants/endpoints";
 
 interface PublicJob {
   [key: string]: unknown;
@@ -84,45 +83,33 @@ interface PublicDataMessage {
   deletedProfiles: PublicProfile[];
 }
 
-// ── WebSocket helpers ─────────────────────────────────────────────────────────
-
-/** Build a ws:// or wss:// URL relative to the current page origin. */
-function wsUrl(path: string): string {
-  const proto = globalThis.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${globalThis.location.host}${path}`;
-}
+// ── Polling helpers ───────────────────────────────────────────────────────────
 
 /**
- * Connects to /ws/counts and returns live { jobs, profiles } counts
- * pushed by the server every 30 seconds.
+ * Polls /api/jobs/poll/counts every 30 s and returns live { jobs, profiles } counts.
  */
 function useLiveCount(field: "jobs" | "profiles"): number | null {
   const [value, setValue] = useState<number | null>(null);
 
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let active = true;
 
-    function connect() {
-      ws = new WebSocket(wsUrl(WS_COUNTS));
-      ws.onmessage = (ev) => {
-        try {
-          const data = JSON.parse(ev.data) as Record<string, number>;
-          if (typeof data[field] === "number") setValue(data[field]);
-        } catch {
-          /* ignore malformed frames */
-        }
-      };
-      ws.onclose = () => {
-        reconnectTimer = setTimeout(connect, WS_RECONNECT_MS);
-      };
-      ws.onerror = () => ws?.close();
+    async function poll() {
+      try {
+        const res = await fetch(POLL_COUNTS);
+        if (!res.ok) return;
+        const data = (await res.json()) as Record<string, number>;
+        if (active && typeof data[field] === "number") setValue(data[field]);
+      } catch {
+        /* ignore fetch errors */
+      }
     }
 
-    connect();
+    poll();
+    const id = setInterval(poll, POLL_INTERVAL_MS);
     return () => {
-      clearTimeout(reconnectTimer);
-      ws?.close();
+      active = false;
+      clearInterval(id);
     };
   }, [field]);
 
@@ -1041,7 +1028,7 @@ const VendorView: React.FC<VendorViewProps> = ({
   );
 };
 
-// ── PublicJobsView (root) — connects to /ws/public-data WebSocket ─────────────
+// ── PublicJobsView (root) — polls /api/jobs/poll/public-data ──────────────────
 
 const PublicJobsView: React.FC = () => {
   const location = useLocation();
@@ -1049,7 +1036,7 @@ const PublicJobsView: React.FC = () => {
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [jobTypeFilter, setJobTypeFilter] = useState("");
-  const [wsConnected, setWsConnected] = useState(false);
+  const [wsConnected, setWsConnected] = useState(true);
   const [lastSync, setLastSync] = useState<number | null>(null);
 
   const [flashJobIds, setFlashJobIds] = useState<Set<string>>(new Set());
@@ -1127,88 +1114,73 @@ const PublicJobsView: React.FC = () => {
     location.pathname === "/jobs/candidate" ||
     location.pathname.startsWith("/jobs/candidate/");
 
-  // ── WebSocket connection to /ws/public-data ───────────────────────────────
+  // ── Polling connection to /api/jobs/poll/public-data ────────────────────────
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let active = true;
     let isFirst = true;
 
-    function connect() {
-      ws = new WebSocket(wsUrl(WS_PUBLIC_DATA));
+    async function poll() {
+      try {
+        const res = await fetch(POLL_PUBLIC_DATA);
+        if (!res.ok || !active) return;
+        const msg: PublicDataMessage = await res.json();
 
-      ws.onopen = () => {
-        setWsConnected(true);
-      };
+        // Merge deleted rows into table data so they appear briefly with red flash
+        const deletedJobSet = new Set(msg.deletedJobIds ?? []);
+        const deletedProfileSet = new Set(msg.deletedProfileIds ?? []);
 
-      ws.onmessage = (ev) => {
-        try {
-          const msg: PublicDataMessage = JSON.parse(ev.data);
-
-          // Merge deleted rows into table data so they appear briefly with red flash
-          const deletedJobSet = new Set(msg.deletedJobIds ?? []);
-          const deletedProfileSet = new Set(msg.deletedProfileIds ?? []);
-
-          if (Array.isArray(msg.jobs)) {
-            const liveJobs = msg.jobs.slice(0, PAGE_SIZE);
-            // Append deleted rows (from server's last-known cache) at the end
-            const deletedRows = msg.deletedJobs ?? [];
-            const combined = [...liveJobs, ...deletedRows].slice(0, PAGE_SIZE);
-            setJobs(combined);
-          }
-          if (Array.isArray(msg.profiles)) {
-            const liveProfiles = msg.profiles.slice(0, PAGE_SIZE);
-            const deletedRows = msg.deletedProfiles ?? [];
-            const combined = [...liveProfiles, ...deletedRows].slice(
-              0,
-              PAGE_SIZE,
-            );
-            setProfiles(combined);
-          }
-
-          // Flash changed/deleted rows (skip on the very first message — initial load)
-          if (!isFirst) {
-            if (msg.changedJobIds?.length) {
-              scheduleFlashJobs(msg.changedJobIds);
-            }
-            if (msg.changedProfileIds?.length) {
-              scheduleFlashProfiles(msg.changedProfileIds);
-            }
-            if (deletedJobSet.size > 0) {
-              scheduleDeleteFlashJobs(deletedJobSet);
-            }
-            if (deletedProfileSet.size > 0) {
-              scheduleDeleteFlashProfiles(deletedProfileSet);
-            }
-          }
-
-          isFirst = false;
-          setLoading(false);
-          setLastSync(Date.now());
-        } catch {
-          /* ignore malformed frames */
+        if (Array.isArray(msg.jobs)) {
+          const liveJobs = msg.jobs.slice(0, PAGE_SIZE);
+          const deletedRows = msg.deletedJobs ?? [];
+          const combined = [...liveJobs, ...deletedRows].slice(0, PAGE_SIZE);
+          setJobs(combined);
         }
-      };
+        if (Array.isArray(msg.profiles)) {
+          const liveProfiles = msg.profiles.slice(0, PAGE_SIZE);
+          const deletedRows = msg.deletedProfiles ?? [];
+          const combined = [...liveProfiles, ...deletedRows].slice(
+            0,
+            PAGE_SIZE,
+          );
+          setProfiles(combined);
+        }
 
-      ws.onclose = () => {
-        setWsConnected(false);
-        // Auto-reconnect after 5 s
-        reconnectTimer = setTimeout(connect, WS_RECONNECT_MS);
-      };
+        // Flash changed/deleted rows (skip on the very first poll — initial load)
+        if (!isFirst) {
+          if (msg.changedJobIds?.length) {
+            scheduleFlashJobs(msg.changedJobIds);
+          }
+          if (msg.changedProfileIds?.length) {
+            scheduleFlashProfiles(msg.changedProfileIds);
+          }
+          if (deletedJobSet.size > 0) {
+            scheduleDeleteFlashJobs(deletedJobSet);
+          }
+          if (deletedProfileSet.size > 0) {
+            scheduleDeleteFlashProfiles(deletedProfileSet);
+          }
+        }
 
-      ws.onerror = () => ws?.close();
+        isFirst = false;
+        setLoading(false);
+        setLastSync(Date.now());
+      } catch {
+        /* ignore fetch errors */
+      }
     }
 
-    connect();
+    poll();
+    const intervalId = setInterval(poll, POLL_INTERVAL_MS);
 
     return () => {
-      clearTimeout(reconnectTimer);
+      active = false;
+      clearInterval(intervalId);
       clearTimeout(flashJobTimer.current);
       clearTimeout(flashProfileTimer.current);
       clearTimeout(deleteFlashJobTimer.current);
       clearTimeout(deleteFlashProfileTimer.current);
-      ws?.close();
     };
-    // WebSocket setup runs once on mount — schedule callbacks are stable refs
+    // Polling setup runs once on mount — schedule callbacks are stable refs
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

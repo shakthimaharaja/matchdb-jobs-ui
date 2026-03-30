@@ -81,6 +81,13 @@ import {
   buildMonthlyRows,
   getBreadcrumb,
 } from "./marketer/marketerHelpers";
+import { InviteEmployeeModal } from "../components/InviteEmployeeModal";
+import { InviteCandidateModal } from "../components/InviteCandidateModal";
+import { InvitationList } from "../components/InvitationList";
+import { UserManagementTable } from "../components/UserManagementTable";
+import { ActiveUsersPanel } from "../components/ActiveUsersPanel";
+import { CandidateInvitationList } from "../components/CandidateInvitationList";
+import { useGetAdminDashboardQuery } from "../api/jobsApi";
 
 // ── Click-to-open Popover (used in client table columns) ──────────────────────
 function ClickPopover({
@@ -155,6 +162,170 @@ function ClickPopover({
             }}
           >
             {children}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+// ── Mock LCA wage data for H-1B candidates ───────────────────────────────────
+interface LcaWageEntry {
+  caseNumber: string;
+  jobTitle: string;
+  wageLevel: string;
+  wageFrom: number;
+  wageTo: number;
+  wageUnit: "Year" | "Hour";
+  prevailingWage: number;
+  worksiteCity: string;
+  worksiteState: string;
+  filedDate: string;
+  status: "Certified" | "Withdrawn" | "Denied" | "Pending";
+}
+
+const MOCK_LCA_WAGES: Record<string, LcaWageEntry[]> = {
+  default: [
+    {
+      caseNumber: "H-300-24180-123456",
+      jobTitle: "Software Engineer",
+      wageLevel: "Level II",
+      wageFrom: 95000,
+      wageTo: 115000,
+      wageUnit: "Year",
+      prevailingWage: 92000,
+      worksiteCity: "Plano",
+      worksiteState: "TX",
+      filedDate: "2024-06-15",
+      status: "Certified",
+    },
+    {
+      caseNumber: "H-300-23045-789012",
+      jobTitle: "Sr. Software Developer",
+      wageLevel: "Level III",
+      wageFrom: 120000,
+      wageTo: 145000,
+      wageUnit: "Year",
+      prevailingWage: 118000,
+      worksiteCity: "Dallas",
+      worksiteState: "TX",
+      filedDate: "2023-02-20",
+      status: "Certified",
+    },
+  ],
+};
+
+function getLcaWages(candidateId: string): LcaWageEntry[] {
+  return MOCK_LCA_WAGES[candidateId] || MOCK_LCA_WAGES.default;
+}
+
+// ── H-1B LCA Wage Popover ─────────────────────────────────────────────────────
+function LcaWagePopover({
+  candidateName,
+  candidateId,
+}: Readonly<{
+  candidateName: string;
+  candidateId: string;
+}>) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const popWidth = 520;
+    let left = rect.left;
+    if (left + popWidth > window.innerWidth - 16) {
+      left = window.innerWidth - popWidth - 16;
+    }
+    setPos({ top: rect.bottom + 4, left });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const entries = getLcaWages(candidateId);
+  const fmtW = (n: number) =>
+    "$" + n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        className="lca-wage-trigger"
+        onClick={() => setOpen(!open)}
+      >
+        H-1B
+      </button>
+      {open &&
+        createPortal(
+          <div
+            ref={popRef}
+            className="lca-wage-popover"
+            style={{ top: pos.top, left: pos.left }}
+          >
+            <div className="lca-wage-header">
+              <span className="lca-wage-title">
+                LCA Wages — {candidateName}
+              </span>
+              <button
+                type="button"
+                className="lca-wage-close"
+                onClick={() => setOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <table className="lca-wage-table">
+              <thead>
+                <tr>
+                  <th>Case #</th>
+                  <th>Job Title</th>
+                  <th>Level</th>
+                  <th>Wage Range</th>
+                  <th>Prevailing</th>
+                  <th>Worksite</th>
+                  <th>Filed</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((e) => (
+                  <tr key={e.caseNumber}>
+                    <td className="lca-wage-case">{e.caseNumber}</td>
+                    <td>{e.jobTitle}</td>
+                    <td>{e.wageLevel}</td>
+                    <td>
+                      {fmtW(e.wageFrom)} – {fmtW(e.wageTo)}
+                      <span className="lca-wage-unit">/{e.wageUnit}</span>
+                    </td>
+                    <td>{fmtW(e.prevailingWage)}</td>
+                    <td>
+                      {e.worksiteCity}, {e.worksiteState}
+                    </td>
+                    <td>{e.filedDate}</td>
+                    <td>
+                      <span
+                        className={`lca-wage-status lca-wage-status--${e.status.toLowerCase()}`}
+                      >
+                        {e.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>,
           document.body,
         )}
@@ -454,6 +625,19 @@ const MarketerDashboard: React.FC<Props> = () => {
     if (view === "vendor-posted") setNewJobsBadge(0);
     if (view === "candidate-created") setNewProfilesBadge(0);
   };
+
+  // ── Admin modals state ──────────────────────────────────────────────────────
+  const [inviteEmployeeOpen, setInviteEmployeeOpen] = useState(false);
+  const [inviteCandidateOpen, setInviteCandidateOpen] = useState(false);
+  const { data: adminDashboard } = useGetAdminDashboardQuery(undefined, {
+    skip: !(
+      activeView === "admin-dashboard" ||
+      activeView === "admin-users" ||
+      activeView === "admin-invitations" ||
+      activeView === "admin-active-users" ||
+      activeView === "admin-candidate-tracking"
+    ),
+  });
 
   // ── Open detail modal ───────────────────────────────────────────────────────
 
@@ -829,6 +1013,42 @@ const MarketerDashboard: React.FC<Props> = () => {
               activeView === "candidate-created" && subFilter === "full_time",
             onClick: () =>
               navParams({ view: "candidate-created", filter: "full_time" }),
+          },
+        ],
+      },
+      {
+        label: "Admin",
+        icon: ICONS.GEAR,
+        items: [
+          {
+            id: "admin-dashboard",
+            label: "Admin Dashboard",
+            active: activeView === "admin-dashboard",
+            onClick: () => navigateTo("admin-dashboard"),
+          },
+          {
+            id: "admin-users",
+            label: "User Management",
+            active: activeView === "admin-users",
+            onClick: () => navigateTo("admin-users"),
+          },
+          {
+            id: "admin-invitations",
+            label: "Employee Invites",
+            active: activeView === "admin-invitations",
+            onClick: () => navigateTo("admin-invitations"),
+          },
+          {
+            id: "admin-active-users",
+            label: "Active Users",
+            active: activeView === "admin-active-users",
+            onClick: () => navigateTo("admin-active-users"),
+          },
+          {
+            id: "admin-candidate-tracking",
+            label: "Candidate Tracking",
+            active: activeView === "admin-candidate-tracking",
+            onClick: () => navigateTo("admin-candidate-tracking"),
           },
         ],
       },
@@ -1619,6 +1839,13 @@ const MarketerDashboard: React.FC<Props> = () => {
     if (activeView === "client-summary") return renderClientSummaryView();
     if (activeView === "client-detail" && selectedClient)
       return renderClientDetailView();
+    if (activeView === "admin-dashboard") return renderAdminDashboardView();
+    if (activeView === "admin-users") return renderAdminUsersView();
+    if (activeView === "admin-invitations") return renderAdminInvitationsView();
+    if (activeView === "admin-active-users")
+      return renderAdminActiveUsersView();
+    if (activeView === "admin-candidate-tracking")
+      return renderAdminCandidateTrackingView();
     return renderForwardedOpeningsView();
   }
 
@@ -3474,21 +3701,27 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Immigration Status",
         width: "12%",
         skeletonWidth: 80,
-        render: (r) => (
-          <span
-            className="matchdb-type-pill"
-            style={{
-              color:
-                r.immigrationStatus === "Green Card" ||
-                r.immigrationStatus === "US Citizen"
-                  ? "var(--w97-green)"
-                  : "var(--w97-blue)",
-              fontWeight: 600,
-            }}
-          >
-            {r.immigrationStatus}
-          </span>
-        ),
+        render: (r) =>
+          r.immigrationStatus === "H-1B" ? (
+            <LcaWagePopover
+              candidateName={r.candidateName}
+              candidateId={r.candidateId}
+            />
+          ) : (
+            <span
+              className="matchdb-type-pill"
+              style={{
+                color:
+                  r.immigrationStatus === "Green Card" ||
+                  r.immigrationStatus === "US Citizen"
+                    ? "var(--w97-green)"
+                    : "var(--w97-blue)",
+                fontWeight: 600,
+              }}
+            >
+              {r.immigrationStatus}
+            </span>
+          ),
       },
       {
         key: "joinedDate",
@@ -8374,6 +8607,184 @@ const MarketerDashboard: React.FC<Props> = () => {
       </div>
     );
   }
+  // ── Admin views ────────────────────────────────────────────────────────────
+
+  function renderAdminDashboardView() {
+    return (
+      <div>
+        <h2 style={{ fontSize: 16, margin: "0 0 14px", color: "#1d4479" }}>
+          ⚙ Company Admin Dashboard
+        </h2>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 14,
+            marginBottom: 20,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #e0e0e0",
+              borderRadius: 8,
+              padding: 16,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#1d4479" }}>
+              {adminDashboard?.seatsUsed ?? "—"}
+            </div>
+            <div style={{ fontSize: 12, color: "#888" }}>Total Users</div>
+          </div>
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #e0e0e0",
+              borderRadius: 8,
+              padding: 16,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#2e7d32" }}>
+              {adminDashboard?.activeUsers ?? "—"}
+            </div>
+            <div style={{ fontSize: 12, color: "#888" }}>Active Users</div>
+          </div>
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #e0e0e0",
+              borderRadius: 8,
+              padding: 16,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#b8860b" }}>
+              {adminDashboard?.pendingInvites ?? "—"}
+            </div>
+            <div style={{ fontSize: 12, color: "#888" }}>Pending Invites</div>
+          </div>
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #e0e0e0",
+              borderRadius: 8,
+              padding: 16,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#555" }}>
+              {adminDashboard?.seatsUsed ?? "—"}/
+              {adminDashboard?.seatLimit ?? "—"}
+            </div>
+            <div style={{ fontSize: 12, color: "#888" }}>Seats Used</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Button variant="primary" onClick={() => setInviteEmployeeOpen(true)}>
+            + Invite Employee
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => setInviteCandidateOpen(true)}
+          >
+            + Invite Candidate
+          </Button>
+          <Button onClick={() => navigateTo("admin-users")}>
+            👥 Manage Users
+          </Button>
+          <Button onClick={() => navigateTo("admin-active-users")}>
+            🟢 Active Users
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  function renderAdminUsersView() {
+    return (
+      <div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 14,
+          }}
+        >
+          <h2 style={{ fontSize: 16, margin: 0, color: "#1d4479" }}>
+            👥 User Management
+          </h2>
+          <Button variant="primary" onClick={() => setInviteEmployeeOpen(true)}>
+            + Invite Employee
+          </Button>
+        </div>
+        <UserManagementTable />
+      </div>
+    );
+  }
+
+  function renderAdminInvitationsView() {
+    return (
+      <div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 14,
+          }}
+        >
+          <h2 style={{ fontSize: 16, margin: 0, color: "#1d4479" }}>
+            ✉ Employee Invitations
+          </h2>
+          <Button variant="primary" onClick={() => setInviteEmployeeOpen(true)}>
+            + Send Invite
+          </Button>
+        </div>
+        <InvitationList />
+      </div>
+    );
+  }
+
+  function renderAdminActiveUsersView() {
+    return (
+      <div>
+        <h2 style={{ fontSize: 16, margin: "0 0 14px", color: "#1d4479" }}>
+          🟢 Active Users
+        </h2>
+        <ActiveUsersPanel />
+      </div>
+    );
+  }
+
+  function renderAdminCandidateTrackingView() {
+    return (
+      <div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 14,
+          }}
+        >
+          <h2 style={{ fontSize: 16, margin: 0, color: "#1d4479" }}>
+            🎯 Candidate Tracking
+          </h2>
+          <Button
+            variant="primary"
+            onClick={() => setInviteCandidateOpen(true)}
+          >
+            + Invite Candidate
+          </Button>
+        </div>
+        <CandidateInvitationList />
+      </div>
+    );
+  }
+
   return (
     <DBLayout userType="vendor" navGroups={navGroups} breadcrumb={breadcrumb}>
       <div className="matchdb-page">
@@ -9023,6 +9434,21 @@ const MarketerDashboard: React.FC<Props> = () => {
             </div>
           </div>
         </dialog>
+      )}
+      {/* ── Admin: Invite Employee Modal ── */}
+      {inviteEmployeeOpen && (
+        <InviteEmployeeModal
+          open={inviteEmployeeOpen}
+          onClose={() => setInviteEmployeeOpen(false)}
+        />
+      )}
+
+      {/* ── Admin: Invite Candidate Modal ── */}
+      {inviteCandidateOpen && (
+        <InviteCandidateModal
+          open={inviteCandidateOpen}
+          onClose={() => setInviteCandidateOpen(false)}
+        />
       )}
     </DBLayout>
   );

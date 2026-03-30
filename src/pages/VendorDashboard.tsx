@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import MatchDataTable, { MatchRow } from "../components/MatchDataTable";
 import DBLayout, { NavGroup } from "../components/DBLayout";
+import "./VendorFinancial.css";
 import DetailModal from "../components/DetailModal";
 import JobPostingModal from "../components/JobPostingModal";
 import PokeEmailModal from "../components/PokeEmailModal";
@@ -26,12 +27,14 @@ import {
   useReopenJobMutation,
   useSendInterviewInviteMutation,
   useGetInterviewInvitesSentQuery,
+  useGetVendorFinancialSummaryQuery,
   type Job,
   type CandidateProfileMatch,
   type PokeRecord,
   type InterviewInvite,
   type VendorJobsArgs,
   type VendorCandidateMatchesArgs,
+  type VendorFinancialCandidate,
 } from "../api/jobsApi";
 
 interface Props {
@@ -145,7 +148,8 @@ type ViewMode =
   | "pokes-received"
   | "mails-sent"
   | "mails-received"
-  | "interviews-sent";
+  | "interviews-sent"
+  | "financial-summary";
 
 /** Color badge for count thresholds */
 const COUNT_COLOR_THRESHOLDS: [number, string][] = [
@@ -215,6 +219,18 @@ const VendorDashboard: React.FC<Props> = ({
     useSendInterviewInviteMutation();
   const { data: invitesSentData, refetch: refetchInvites } =
     useGetInterviewInvitesSentQuery();
+  const {
+    data: vendorFinData,
+    isLoading: vendorFinLoading,
+    refetch: refetchVendorFin,
+  } = useGetVendorFinancialSummaryQuery();
+
+  // Financial summary local state
+  const [finSearch, setFinSearch] = useState("");
+  const [finStatusFilter, setFinStatusFilter] = useState<
+    "all" | "active" | "completed"
+  >("all");
+  const [finTab, setFinTab] = useState<"candidates" | "pipeline">("candidates");
 
   // Derive flat arrays from paginated-or-array responses
   const [vendorJobs, vendorJobsTotal] = unwrapPaginated<Job>(jobsData);
@@ -466,6 +482,7 @@ const VendorDashboard: React.FC<Props> = ({
       "mails-sent": mailsSentOnly.length,
       "mails-received": mailsReceivedOnly.length,
       "interviews-sent": invitesSent.length,
+      "financial-summary": vendorFinData?.totals?.totalCandidates ?? 0,
     };
     const count = VIEW_COUNT[viewMode] ?? 0;
     const suffix = count === 1 ? "" : "s";
@@ -1184,6 +1201,19 @@ const VendorDashboard: React.FC<Props> = ({
         ],
       },
       {
+        label: "Finance",
+        icon: "",
+        items: [
+          {
+            id: "financial-summary",
+            label: "Financial Summary",
+            count: vendorFinData?.totals?.totalCandidates ?? 0,
+            active: viewMode === "financial-summary",
+            onClick: () => navigateToView("financial-summary"),
+          },
+        ],
+      },
+      {
         label: "Actions",
         icon: "",
         items: [
@@ -1194,6 +1224,7 @@ const VendorDashboard: React.FC<Props> = ({
               refetchJobs();
               refetchPokesSent();
               refetchPokesReceived();
+              refetchVendorFin();
               if (viewMode === "candidates") {
                 setCurrentPage(1);
                 setMatchArgs({
@@ -1228,10 +1259,360 @@ const VendorDashboard: React.FC<Props> = ({
     "mails-sent": ["Vendor Portal", "Mails", "Mails Sent"],
     "mails-received": ["Vendor Portal", "Mails", "Mails Received"],
     "interviews-sent": ["Vendor Portal", "Interviews", "Invites Sent"],
+    "financial-summary": ["Vendor Portal", "Finance", "Financial Summary"],
     candidates: ["Vendor Portal", selectedJobTitle],
     "active-openings": ["Vendor Portal", "Active Openings"],
     postings: ["Vendor Portal", "My Job Postings"],
   };
+
+  // ── VENDOR FINANCIAL SUMMARY VIEW ──────────────────────────────────────────
+  function renderFinancialSummaryView() {
+    if (vendorFinLoading)
+      return (
+        <div
+          style={{
+            textAlign: "center",
+            padding: 60,
+            fontSize: 13,
+            color: "var(--w97-text-secondary)",
+          }}
+        >
+          Loading financial data…
+        </div>
+      );
+
+    const data = vendorFinData;
+    if (!data || data.candidates.length === 0)
+      return (
+        <div
+          style={{
+            textAlign: "center",
+            padding: 60,
+            fontSize: 13,
+            color: "var(--w97-text-secondary)",
+          }}
+        >
+          No financial data available. Financial details will appear here when
+          marketers add project financials for candidates matched to your jobs.
+        </div>
+      );
+
+    const { totals, candidates, clientPipeline } = data;
+    const fmtC = (v: number) =>
+      `$${Math.abs(v).toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      })}`;
+
+    const filtered = candidates.filter((c) => {
+      if (finSearch) {
+        const q = finSearch.toLowerCase();
+        if (
+          !c.candidateName.toLowerCase().includes(q) &&
+          !c.clientName.toLowerCase().includes(q) &&
+          !c.jobTitle.toLowerCase().includes(q) &&
+          !c.implementationPartner.toLowerCase().includes(q)
+        )
+          return false;
+      }
+      if (finStatusFilter === "active") return c.isActive;
+      if (finStatusFilter === "completed") return !c.isActive;
+      return true;
+    });
+
+    return (
+      <div className="vfin-root">
+        {/* ── KPI STRIP ──────────────────────────────────────────────────────── */}
+        <div className="vfin-kpi-strip">
+          {[
+            {
+              label: "Total Candidates",
+              value: String(totals.totalCandidates),
+              cls: "vfin-kpi-blue",
+            },
+            {
+              label: "Total Hours",
+              value: totals.totalHours.toFixed(0),
+              cls: "vfin-kpi-blue",
+            },
+            {
+              label: "Total Billed",
+              value: fmtC(totals.totalBilled),
+              cls: "vfin-kpi-green",
+            },
+            {
+              label: "Total Pay",
+              value: fmtC(totals.totalPay),
+              cls: "vfin-kpi-teal",
+            },
+            {
+              label: "Credited",
+              value: fmtC(totals.totalCredited),
+              cls: "vfin-kpi-green",
+            },
+            {
+              label: "Pending",
+              value: fmtC(totals.totalPending),
+              cls: totals.totalPending > 0 ? "vfin-kpi-red" : "vfin-kpi-blue",
+            },
+          ].map((k, i, arr) => (
+            <React.Fragment key={k.label}>
+              <div className="vfin-kpi">
+                <span className="vfin-kpi-label">{k.label}</span>
+                <span className={`vfin-kpi-value ${k.cls}`}>{k.value}</span>
+              </div>
+              {i < arr.length - 1 && <div className="vfin-kpi-div" />}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* ── TAB BAR ────────────────────────────────────────────────────────── */}
+        <div className="vfin-tabs">
+          <button
+            type="button"
+            className={`vfin-tab${finTab === "candidates" ? " active" : ""}`}
+            onClick={() => setFinTab("candidates")}
+          >
+            👤 Candidates & Employers
+          </button>
+          <button
+            type="button"
+            className={`vfin-tab${finTab === "pipeline" ? " active" : ""}`}
+            onClick={() => setFinTab("pipeline")}
+          >
+            🏢 Client Pipeline
+          </button>
+          <div style={{ flex: 1 }} />
+          <Button size="xs" onClick={() => refetchVendorFin()}>
+            ↻ Refresh
+          </Button>
+        </div>
+
+        {/* ── CANDIDATES TAB ─────────────────────────────────────────────────── */}
+        {finTab === "candidates" && (
+          <div className="vfin-section">
+            {/* Search & filter bar */}
+            <div className="vfin-toolbar">
+              <Input
+                id="vfin-search"
+                className="vfin-search"
+                value={finSearch}
+                onChange={(e) => setFinSearch(e.target.value)}
+                placeholder="Search candidate, client, job…"
+              />
+              <Select
+                id="vfin-status"
+                className="vfin-select"
+                value={finStatusFilter}
+                onChange={(e) => setFinStatusFilter(e.target.value as any)}
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+              </Select>
+              <Button
+                size="xs"
+                onClick={() => {
+                  setFinSearch("");
+                  setFinStatusFilter("all");
+                }}
+              >
+                Reset
+              </Button>
+              <span className="vfin-count">
+                {filtered.length} / {candidates.length}
+              </span>
+            </div>
+
+            {/* Table */}
+            <div className="vfin-table-wrap">
+              <table className="vfin-table">
+                <thead>
+                  <tr>
+                    {[
+                      "Candidate",
+                      "Job Title",
+                      "Client",
+                      "Impl. Partner",
+                      "Employer",
+                      "Rate",
+                      "Hours",
+                      "Billed",
+                      "Paid",
+                      "Pending",
+                      "Period",
+                      "Status",
+                    ].map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={12}
+                        style={{
+                          textAlign: "center",
+                          padding: 24,
+                          color: "var(--w97-text-secondary)",
+                        }}
+                      >
+                        No matching records.
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((c, i) => (
+                      <tr key={`${c.candidateId}-${c.jobTitle}-${i}`}>
+                        <td className="vfin-td-name">
+                          <div className="vfin-name">{c.candidateName}</div>
+                          <div className="vfin-sub">{c.candidateEmail}</div>
+                        </td>
+                        <td>
+                          <div className="vfin-name">{c.jobTitle}</div>
+                          <div className="vfin-sub">
+                            {c.jobType}
+                            {c.jobSubType ? ` › ${c.jobSubType}` : ""}
+                          </div>
+                        </td>
+                        <td>{c.clientName}</td>
+                        <td>{c.implementationPartner}</td>
+                        <td>{c.marketerCompanyName}</td>
+                        <td className="vfin-td-num">${c.payRate}/hr</td>
+                        <td className="vfin-td-num">{c.hoursWorked}h</td>
+                        <td className="vfin-td-num">{fmtC(c.totalBilled)}</td>
+                        <td className="vfin-td-num vfin-green">
+                          {fmtC(c.amountPaid)}
+                        </td>
+                        <td
+                          className={`vfin-td-num${
+                            c.amountPending > 0 ? " vfin-red" : ""
+                          }`}
+                        >
+                          {c.amountPending > 0 ? fmtC(c.amountPending) : "—"}
+                        </td>
+                        <td className="vfin-td-period">
+                          {c.projectStart
+                            ? new Date(c.projectStart).toLocaleDateString(
+                                "en-US",
+                                { month: "short", year: "2-digit" },
+                              )
+                            : "—"}
+                          {" – "}
+                          {c.projectEnd
+                            ? new Date(c.projectEnd).toLocaleDateString(
+                                "en-US",
+                                { month: "short", year: "2-digit" },
+                              )
+                            : "now"}
+                        </td>
+                        <td>
+                          <span
+                            className={`vfin-badge ${
+                              c.isActive
+                                ? "vfin-badge-active"
+                                : "vfin-badge-closed"
+                            }`}
+                          >
+                            {c.isActive ? "Active" : "Closed"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── CLIENT PIPELINE TAB ────────────────────────────────────────────── */}
+        {finTab === "pipeline" && (
+          <div className="vfin-section">
+            <div className="vfin-pipeline">
+              {clientPipeline.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: 40,
+                    color: "var(--w97-text-secondary)",
+                    fontSize: 13,
+                  }}
+                >
+                  No client pipeline data yet.
+                </div>
+              ) : (
+                clientPipeline.map((cp) => (
+                  <div key={cp.clientName} className="vfin-pipeline-card">
+                    <div className="vfin-pipeline-header">
+                      <span className="vfin-pipeline-name">
+                        🏢 {cp.clientName}
+                      </span>
+                      <span className="vfin-pipeline-count">
+                        {cp.candidateCount} candidate
+                        {cp.candidateCount !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="vfin-pipeline-metrics">
+                      <div className="vfin-pipeline-metric">
+                        <span className="vfin-pipeline-metric-label">
+                          Total Hours
+                        </span>
+                        <span className="vfin-pipeline-metric-value">
+                          {cp.totalHours.toFixed(0)}
+                        </span>
+                      </div>
+                      <div className="vfin-pipeline-metric">
+                        <span className="vfin-pipeline-metric-label">
+                          Total Billed
+                        </span>
+                        <span className="vfin-pipeline-metric-value vfin-green">
+                          {fmtC(cp.totalBilled)}
+                        </span>
+                      </div>
+                      <div className="vfin-pipeline-metric">
+                        <span className="vfin-pipeline-metric-label">Paid</span>
+                        <span className="vfin-pipeline-metric-value">
+                          {fmtC(cp.totalPaid)}
+                        </span>
+                      </div>
+                      <div className="vfin-pipeline-metric">
+                        <span className="vfin-pipeline-metric-label">
+                          Pending
+                        </span>
+                        <span
+                          className={`vfin-pipeline-metric-value${
+                            cp.totalPending > 0 ? " vfin-red" : ""
+                          }`}
+                        >
+                          {cp.totalPending > 0 ? fmtC(cp.totalPending) : "—"}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Mini progress bar */}
+                    <div className="vfin-pipeline-progress">
+                      <div
+                        className="vfin-pipeline-progress-bar"
+                        style={{
+                          width:
+                            cp.totalBilled > 0
+                              ? `${Math.min(
+                                  100,
+                                  (cp.totalPaid / cp.totalBilled) * 100,
+                                )}%`
+                              : "0%",
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   function renderInterviewsSentView() {
     const fmtProposed = (iso: string | null) =>
@@ -1797,6 +2178,9 @@ const VendorDashboard: React.FC<Props> = ({
               />
             );
           })()}
+
+        {/* ── FINANCIAL SUMMARY VIEW ── */}
+        {viewMode === "financial-summary" && renderFinancialSummaryView()}
 
         {/* ── INTERVIEWS SENT VIEW ── */}
         {viewMode === "interviews-sent" && renderInterviewsSentView()}

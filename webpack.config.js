@@ -98,16 +98,10 @@ module.exports = function webpackConfig(env = {}) {
       },
       proxy: [
         {
-          context: ["/api/jobs"],
-          target: useHttps ? "https://localhost:4001" : "http://localhost:4001",
+          // All API traffic goes through shell-services gateway (:8000)
+          context: ["/api"],
+          target: "http://localhost:8000",
           changeOrigin: true,
-          secure: false,
-        },
-        {
-          context: ["/ws"],
-          target: "http://localhost:8001",
-          changeOrigin: true,
-          ws: true,
         },
       ],
     },

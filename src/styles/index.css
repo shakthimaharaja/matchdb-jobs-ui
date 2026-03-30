@@ -8,6 +8,8 @@
 @import "matchdb-component-library/src/styles/w97-base.css";
 @import "matchdb-component-library/src/styles/components.css";
 @import "matchdb-component-library/src/styles/aws-theme.css";
+@import "matchdb-component-library/src/styles/modern-theme.css";
+@import "./modern-theme.css";
 
 /* ── Modal centering — full dialog[open] reset ────────────────────────
    The browser UA stylesheet gives <dialog open> { display: block;
