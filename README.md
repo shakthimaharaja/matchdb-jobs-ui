@@ -15,7 +15,7 @@ Remote microfrontend for the MatchDB staffing platform. Exposes the Jobs applica
 | UI Libraries | MUI 5, PrimeReact 10, Tailwind CSS 3                  |
 | UI Shared    | matchdb-component-library (local npm link)            |
 | HTTP         | Axios                                                 |
-| Realtime     | Polling (fetch + setInterval) — live data feeds        |
+| Realtime     | Polling (fetch + setInterval) — live data feeds       |
 | PDF          | jsPDF                                                 |
 | Theme        | Inherits Windows 97 theme from the shell              |
 
