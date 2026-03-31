@@ -6,19 +6,25 @@
  */
 import React from "react";
 import { Select } from "matchdb-component-library";
+import type { UserRole, MarketerDepartment } from "../api/jobsApi";
 
-const ROLE_OPTIONS = [
+const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "admin", label: "Admin" },
-  { value: "finance", label: "Finance Team" },
-  { value: "hr", label: "HR Team" },
-  { value: "operations", label: "Operations" },
-  { value: "marketing", label: "Marketing" },
-  { value: "viewer", label: "Viewer (Read-only)" },
+  { value: "manager", label: "Manager" },
+  { value: "vendor", label: "Vendor (Job Postings)" },
+  { value: "marketer", label: "Marketer (Staffing)" },
+];
+
+const DEPARTMENT_OPTIONS: { value: MarketerDepartment; label: string }[] = [
+  { value: "accounts", label: "Accounts" },
+  { value: "immigration", label: "Immigration" },
+  { value: "placement", label: "Placement" },
 ];
 
 interface RoleAssignmentDropdownProps {
-  value: string;
-  onChange: (role: string) => void;
+  value: UserRole;
+  department?: MarketerDepartment | null;
+  onChange: (role: UserRole, department?: MarketerDepartment | null) => void;
   disabled?: boolean;
   excludeAdmin?: boolean;
   size?: "sm" | "md";
@@ -26,6 +32,7 @@ interface RoleAssignmentDropdownProps {
 
 export function RoleAssignmentDropdown({
   value,
+  department,
   onChange,
   disabled,
   excludeAdmin,
@@ -35,21 +42,44 @@ export function RoleAssignmentDropdown({
     ? ROLE_OPTIONS.filter((o) => o.value !== "admin")
     : ROLE_OPTIONS;
 
+  const fontSize = size === "sm" ? 11 : 13;
+
   return (
-    <Select
-      value={value}
-      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-        onChange(e.target.value)
-      }
-      disabled={disabled}
-      style={{ fontSize: size === "sm" ? 11 : 13, minWidth: 120 }}
-    >
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </Select>
+    <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+      <Select
+        value={value}
+        onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+          onChange(
+            e.target.value as UserRole,
+            value === "marketer" ? department : null,
+          )
+        }
+        disabled={disabled}
+        style={{ fontSize, minWidth: 120 }}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </Select>
+      {value === "marketer" && (
+        <Select
+          value={department || "accounts"}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            onChange(value, e.target.value as MarketerDepartment)
+          }
+          disabled={disabled}
+          style={{ fontSize, minWidth: 100 }}
+        >
+          {DEPARTMENT_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </Select>
+      )}
+    </span>
   );
 }
 

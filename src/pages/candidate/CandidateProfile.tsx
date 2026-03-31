@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import useDraftCache from "../hooks/useDraftCache";
+import useDraftCache from "../../hooks/useDraftCache";
 import axios from "axios";
-import { getApiErrorMessage } from "../utils";
+import { getApiErrorMessage } from "../../utils";
 import { Button as MDBButton, PI } from "matchdb-component-library";
 import { Button } from "primereact/button";
 import { Dropdown } from "primereact/dropdown";
@@ -18,14 +18,14 @@ import {
   useLazySearchCompaniesQuery,
   type CandidateProfile as IProfile,
   type CompanySearchResult,
-} from "../api/jobsApi";
+} from "../../api/jobsApi";
 import "./LegacyForms.css";
-import "../components/ResumeModal.css";
+import "../../components/ResumeModal.css";
 import {
   JOB_TYPES_EXTENDED as JOB_TYPES,
   VISIBILITY_TYPES,
   COUNTRIES,
-} from "../constants";
+} from "../../constants";
 
 const EMPTY: IProfile = {
   name: "",

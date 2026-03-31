@@ -8,7 +8,7 @@ import React, {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import DBLayout, { NavGroup } from "../components/DBLayout";
+import DBLayout, { NavGroup } from "../../components/DBLayout";
 import {
   DataTable,
   Button,
@@ -19,12 +19,12 @@ import {
   ICONS,
 } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
-import DetailModal from "../components/DetailModal";
-import { getApiErrorMessage } from "../utils";
-import "../components/ProjectFinancialForm.css";
-import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
-import { useLiveRefresh } from "../hooks/useLiveRefresh";
-import { useCompanyContext } from "../hooks/useCompanyContext";
+import DetailModal from "../../components/DetailModal";
+import { getApiErrorMessage } from "../../utils";
+import "../../components/ProjectFinancialForm.css";
+import { useAutoRefreshFlash } from "../../hooks/useAutoRefreshFlash";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { useCompanyContext } from "../../hooks/useCompanyContext";
 import {
   useGetMarketerJobsQuery,
   useGetMarketerProfilesQuery,
@@ -53,7 +53,7 @@ import {
   useApproveTimesheetMutation,
   useRejectTimesheetMutation,
   type Timesheet,
-} from "../api/jobsApi";
+} from "../../api/jobsApi";
 import {
   type MarketerDashboardProps as Props,
   type ActiveView,
@@ -81,14 +81,16 @@ import {
   buildImmigrationData,
   buildMonthlyRows,
   getBreadcrumb,
-} from "./marketer/marketerHelpers";
-import { InviteEmployeeModal } from "../components/InviteEmployeeModal";
-import { InviteCandidateModal } from "../components/InviteCandidateModal";
-import { InvitationList } from "../components/InvitationList";
-import { UserManagementTable } from "../components/UserManagementTable";
-import { ActiveUsersPanel } from "../components/ActiveUsersPanel";
-import { CandidateInvitationList } from "../components/CandidateInvitationList";
-import { useGetAdminDashboardQuery } from "../api/jobsApi";
+} from "./employerHelpers";
+import { InviteEmployeeModal } from "../../components/InviteEmployeeModal";
+import { InviteCandidateModal } from "../../components/InviteCandidateModal";
+import { InvitationList } from "../../components/InvitationList";
+import ProjectPayTable from "../../components/ProjectPayTable";
+import { PAGE_SIZE } from "../../constants";
+import { UserManagementTable } from "../../components/UserManagementTable";
+import { ActiveUsersPanel } from "../../components/ActiveUsersPanel";
+import { CandidateInvitationList } from "../../components/CandidateInvitationList";
+import { useGetAdminDashboardQuery } from "../../api/jobsApi";
 
 // ── Click-to-open Popover (used in client table columns) ──────────────────────
 function ClickPopover({
@@ -336,7 +338,7 @@ function LcaWagePopover({
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const MarketerDashboard: React.FC<Props> = () => {
+const OperationsDashboard: React.FC<Props> = () => {
   // ── RBAC context — used to filter sidebar nav items by permission
   const { hasPermission, role: companyRole } = useCompanyContext();
 
@@ -859,17 +861,28 @@ const MarketerDashboard: React.FC<Props> = () => {
               activeView === "candidate-detail",
             onClick: () => navigateTo("company-candidates"),
           },
-          {
-            id: "add-candidate",
-            label: "+ Add Candidate",
-            depth: 1,
-            onClick: () => setAddCandModalOpen(true),
-          },
+          ...(activeView === "candidate-detail" &&
+          candidateDetail?.roster?.candidate_name
+            ? [
+                {
+                  id: "active-candidate-name",
+                  label: candidateDetail.roster.candidate_name,
+                  depth: 1,
+                  active: true,
+                },
+              ]
+            : []),
           {
             id: "candidate-dashboard",
             label: "Candidate Dashboard",
             active: activeView === "candidate-dashboard",
             onClick: () => navigateTo("candidate-dashboard"),
+          },
+          {
+            id: "add-candidate",
+            label: "+ Add Candidate",
+            depth: 1,
+            onClick: () => setAddCandModalOpen(true),
           },
           {
             id: "admin-candidate-tracking",
@@ -1082,6 +1095,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       companyCandidates.length,
       forwardedOpenings.length,
       companyLabel,
+      candidateDetail?.roster?.candidate_name,
     ],
   );
 
@@ -1907,6 +1921,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         keyExtractor={(j) => j.id}
         loading={jobsLoading}
         paginate
+        pageSize={PAGE_SIZE}
         flashIds={jobsFlash.flashIds}
         deleteFlashIds={jobsFlash.deleteFlashIds}
         titleIcon="💼"
@@ -1973,6 +1988,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         keyExtractor={(p) => p.id}
         loading={profilesLoading}
         paginate
+        pageSize={PAGE_SIZE}
         flashIds={profilesFlash.flashIds}
         deleteFlashIds={profilesFlash.deleteFlashIds}
         titleIcon="👤"
@@ -2103,6 +2119,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         keyExtractor={(f) => f.id}
         loading={false}
         paginate
+        pageSize={PAGE_SIZE}
         titleIcon="📤"
         title="Forwarded Openings"
       />
@@ -3911,6 +3928,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           data={filtered}
           keyExtractor={(r) => r.candidateId}
           paginate
+          pageSize={PAGE_SIZE}
           emptyMessage="No immigration records found."
           title="Immigration Tracking"
           titleIcon="🛂"
@@ -4242,6 +4260,8 @@ const MarketerDashboard: React.FC<Props> = () => {
               columns={depColumns}
               data={record.dependants}
               keyExtractor={(d) => d.name}
+              paginate
+              pageSize={PAGE_SIZE}
               emptyMessage="No dependants."
               title=""
             />
@@ -4570,6 +4590,8 @@ const MarketerDashboard: React.FC<Props> = () => {
               }
               data={filtered}
               keyExtractor={(r) => r.vendor}
+              paginate
+              pageSize={PAGE_SIZE}
               emptyMessage="No vendor data available."
               footerRow={
                 vendorRows.length > 1 ? (
@@ -4847,6 +4869,8 @@ const MarketerDashboard: React.FC<Props> = () => {
           }
           data={row.candidates}
           keyExtractor={(c) => c.email}
+          paginate
+          pageSize={PAGE_SIZE}
           emptyMessage="No candidates found for this vendor."
           footerRow={
             row.candidates.length > 1 ? (
@@ -5814,6 +5838,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             }
             data={row.candidates}
             keyExtractor={(c) => c.email}
+            paginate
+            pageSize={PAGE_SIZE}
             emptyMessage="No candidates found for this client."
             footerRow={
               row.candidates.length > 1 ? (
@@ -5956,6 +5982,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                 keyExtractor={(o) =>
                   `${o.jobTitle}::${o.candidate}::${o.appliedAt}`
                 }
+                paginate
+                pageSize={PAGE_SIZE}
                 emptyMessage="No openings found for this client."
               />
             );
@@ -6088,6 +6116,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                 }
                 data={vendorRows}
                 keyExtractor={(v) => v.vendor}
+                paginate
+                pageSize={PAGE_SIZE}
                 emptyMessage="No vendor data for this client."
                 footerRow={
                   vendorRows.length > 1 ? (
@@ -6299,6 +6329,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                 }
                 data={finRows}
                 keyExtractor={(f) => `${f.candidate}::${f.vendor}::${f.role}`}
+                paginate
+                pageSize={PAGE_SIZE}
                 emptyMessage="No financial data for this client."
                 footerRow={
                   finRows.length > 1 ? (
@@ -6607,6 +6639,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           keyExtractor={(r) => r.id}
           loading={timesheetsLoading}
           paginate
+          pageSize={PAGE_SIZE}
           emptyMessage="No timesheets found for the selected status."
           title="Candidate Timesheets"
           titleIcon="🗂️"
@@ -7399,6 +7432,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                     ...candidateDetail.projects.filter((p) => !p.is_active),
                   ]}
                   keyExtractor={(p) => String(p.id)}
+                  paginate
+                  pageSize={PAGE_SIZE}
                   emptyMessage="No projects found."
                   footerRow={
                     allFins.length > 1 ? (
@@ -7578,6 +7613,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                 }
                 data={monthRows}
                 keyExtractor={(row) => row.label}
+                paginate
+                pageSize={PAGE_SIZE}
                 emptyMessage="No monthly data."
                 footerRow={
                   <tr className={`ov-mt-foot ${footerRowClass(totalMargin)}`}>
@@ -7664,235 +7701,11 @@ const MarketerDashboard: React.FC<Props> = () => {
 
     const activeProject = sorted.find((p) => p.id === activeProjectId);
 
-    // Month names & variation factors for period generation
-    const MN = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const VAR = [1, 0.92, 1.08, 1.02, 0.94, 1.06, 1, 0.92, 1.08, 1, 0.94, 1.04];
-
-    // Build pay rows for the selected project
-    interface CombinedRow {
-      key: string;
-      payPeriod: string;
-      sortKey: number;
-      projectName: string;
-      projectId: string;
-      isActive: boolean;
-      hours: number;
-      billRate: number;
-      payRate: number;
-      billed: number;
-      grossPay: number;
-      stateTax: number;
-      stateTaxPct: number;
-      withholding: number;
-      cashPct: number;
-      netPay: number;
-      paid: number;
-      balance: number;
-    }
-
-    const buildRows = (proj: (typeof sorted)[number]): CombinedRow[] => {
-      const fin = proj.financials;
-      const bRate = fin?.billRate ?? 0;
-      const pRate = fin?.payRate ?? 0;
-      const sTaxPct = fin?.stateTaxPct ?? 0;
-      const cPct = fin?.cashPct ?? 0;
-
-      const now = new Date();
-      const start = fin?.projectStart
-        ? new Date(fin.projectStart)
-        : new Date(now.getFullYear() - 1, now.getMonth(), 1);
-      const rawH =
-        fin?.hoursWorked && fin.hoursWorked > 0 ? fin.hoursWorked / 12 : 80;
-
-      const periods = Array.from({ length: 12 }, (_, i) => {
-        const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
-        return {
-          label: `${MN[d.getMonth()]} ${d.getFullYear()}`,
-          sortKey: d.getTime(),
-          hours: Math.round(rawH * VAR[i] * 2) / 2,
-          amountPaid: 0,
-        };
-      });
-
-      if (fin?.hoursWorked && fin.hoursWorked > 0) {
-        const sumH = periods.reduce((a, p) => a + p.hours, 0);
-        const scale = fin.hoursWorked / sumH;
-        periods.forEach((p) => {
-          p.hours = Math.round(p.hours * scale * 2) / 2;
-        });
-        const diff = fin.hoursWorked - periods.reduce((a, p) => a + p.hours, 0);
-        if (Math.abs(diff) > 0)
-          periods[11].hours = Math.round((periods[11].hours + diff) * 2) / 2;
-      }
-
-      if (fin?.amountPaid && fin.amountPaid > 0) {
-        const sumH = periods.reduce((a, p) => a + p.hours, 0);
-        let allocated = 0;
-        periods.forEach((p, i) => {
-          if (i < 11) {
-            const share =
-              Math.round((p.hours / sumH) * fin.amountPaid * 100) / 100;
-            p.amountPaid = share;
-            allocated += share;
-          } else {
-            p.amountPaid = Math.round((fin.amountPaid - allocated) * 100) / 100;
-          }
-        });
-      }
-
-      const rows: CombinedRow[] = [];
-      periods.forEach((period) => {
-        const billed = bRate * period.hours;
-        const gross = pRate * period.hours;
-        const tax = (gross * sTaxPct) / 100;
-        const withhold = (gross * cPct) / 100;
-        const net = gross - tax - withhold;
-        const bal = net - period.amountPaid;
-        rows.push({
-          key: `${proj.id}-${period.label}`,
-          payPeriod: period.label,
-          sortKey: period.sortKey,
-          projectName: proj.job_title || "Untitled",
-          projectId: proj.id,
-          isActive: proj.is_active,
-          hours: period.hours,
-          billRate: bRate,
-          payRate: pRate,
-          billed,
-          grossPay: gross,
-          stateTax: tax,
-          stateTaxPct: sTaxPct,
-          withholding: withhold,
-          cashPct: cPct,
-          netPay: net,
-          paid: period.amountPaid,
-          balance: bal,
-        });
-      });
-      rows.sort((a, b) => a.sortKey - b.sortKey);
-      return rows;
-    };
-
-    const combinedRows = activeProject ? buildRows(activeProject) : [];
-
-    const totals = combinedRows.reduce(
-      (acc, r) => ({
-        hours: acc.hours + r.hours,
-        billed: acc.billed + r.billed,
-        grossPay: acc.grossPay + r.grossPay,
-        stateTax: acc.stateTax + r.stateTax,
-        withholding: acc.withholding + r.withholding,
-        netPay: acc.netPay + r.netPay,
-        paid: acc.paid + r.paid,
-        balance: acc.balance + r.balance,
-      }),
-      {
-        hours: 0,
-        billed: 0,
-        grossPay: 0,
-        stateTax: 0,
-        withholding: 0,
-        netPay: 0,
-        paid: 0,
-        balance: 0,
-      },
-    );
-
-    const taxDisplay = totals.stateTax > 0 ? `−${fmtF(totals.stateTax)}` : "—";
-    const withholdDisplay =
-      totals.withholding > 0 ? `−${fmtF(totals.withholding)}` : "—";
-    const balanceDisplayCls =
-      totals.balance > 0.01 ? "ov-val-orange" : "ov-val-green";
+    // Only admin / finance roles can edit project financials
+    const canEdit = companyRole === "admin" || hasPermission("finance");
 
     return (
       <div>
-        {/* ── Candidate + Project Info Line ── */}
-        {activeProject && (
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 16,
-              padding: "8px 14px",
-              margin: "0 0 4px",
-              fontSize: 11.5,
-              color: "var(--w97-text-secondary)",
-              background: "var(--w97-window-alt)",
-              borderBottom: "1px solid var(--w97-btn-shadow)",
-            }}
-          >
-            <span>
-              👤{" "}
-              <strong style={{ color: "var(--w97-text)" }}>
-                {candidateDetail.roster.candidate_name}
-              </strong>
-              {" · "}
-              {candidateDetail.roster.candidate_email}
-            </span>
-            <span style={{ opacity: 0.4 }}>|</span>
-            <span>
-              💼{" "}
-              <strong style={{ color: "var(--w97-titlebar-from)" }}>
-                {activeProject.job_title || "Untitled"}
-              </strong>
-              {" · "}
-              {activeProject.job_type}
-              {activeProject.job_sub_type
-                ? ` · ${activeProject.job_sub_type.toUpperCase()}`
-                : ""}
-              {activeProject.vendor_email
-                ? ` · ${
-                    activeProject.vendor_email.split("@")[1]?.split(".")[0] ||
-                    activeProject.vendor_email
-                  }`
-                : ""}
-            </span>
-            <span style={{ opacity: 0.4 }}>|</span>
-            <span
-              className={
-                activeProject.is_active ? "ov-proj-active" : "ov-proj-closed"
-              }
-              style={{
-                padding: "1px 8px",
-                borderRadius: 10,
-                fontSize: 10,
-                fontWeight: 600,
-              }}
-            >
-              {activeProject.is_active ? "● Active" : "✓ Closed"}
-            </span>
-            {activeProject.financials && (
-              <>
-                <span style={{ opacity: 0.4 }}>|</span>
-                <span style={{ fontFamily: "monospace", fontSize: 11 }}>
-                  Bill{" "}
-                  <span style={{ color: "var(--pf-green)" }}>
-                    ${activeProject.financials.billRate}
-                  </span>
-                  {" / "}Pay{" "}
-                  <span style={{ color: "var(--pf-blue)" }}>
-                    ${activeProject.financials.payRate}
-                  </span>
-                </span>
-              </>
-            )}
-          </div>
-        )}
-
         {/* ── Project Tabs ── */}
         <div style={{ display: "flex", gap: 0, margin: "0 14px" }}>
           {sorted.map((proj) => (
@@ -7915,164 +7728,15 @@ const MarketerDashboard: React.FC<Props> = () => {
           ))}
         </div>
 
-        {/* ── Pay Periods DataTable for selected project ── */}
-        <DataTable
-          title={`${activeProject?.job_title || "Project"} — Pay Periods`}
-          titleIcon="💼"
-          className="matchdb-auto-height"
-          titleExtra={
-            <span style={{ fontSize: 10, opacity: 0.7 }}>
-              {combinedRows.length} periods
-            </span>
-          }
-          showRowNumbers={false}
-          columns={
-            [
-              {
-                key: "payPeriod",
-                header: "Pay Period",
-                width: "14%",
-                render: (r) => (
-                  <span style={{ fontWeight: 600 }}>{r.payPeriod}</span>
-                ),
-              },
-              {
-                key: "hours",
-                header: "Hours",
-                align: "right" as const,
-                render: (r) => (
-                  <span style={{ fontFamily: "monospace" }}>{r.hours}</span>
-                ),
-              },
-              {
-                key: "billed",
-                header: "Billed",
-                align: "right" as const,
-                render: (r) => (
-                  <span className="ov-mono ov-val-green">{fmtF(r.billed)}</span>
-                ),
-              },
-              {
-                key: "grossPay",
-                header: "Gross Pay",
-                align: "right" as const,
-                render: (r) => (
-                  <span style={{ fontFamily: "monospace" }}>
-                    {fmtF(r.grossPay)}
-                  </span>
-                ),
-              },
-              {
-                key: "stateTax",
-                header: "State Tax",
-                align: "right" as const,
-                render: (r) => (
-                  <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
-                    {r.stateTax > 0 ? `−${fmtF(r.stateTax)}` : "—"}
-                  </span>
-                ),
-              },
-              {
-                key: "withholding",
-                header: "Withholding",
-                align: "right" as const,
-                render: (r) => (
-                  <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
-                    {r.withholding > 0 ? `−${fmtF(r.withholding)}` : "—"}
-                  </span>
-                ),
-              },
-              {
-                key: "netPay",
-                header: "Net Pay",
-                align: "right" as const,
-                render: (r) => (
-                  <span className="ov-mono ov-val-blue">{fmtF(r.netPay)}</span>
-                ),
-              },
-              {
-                key: "paid",
-                header: "Paid",
-                align: "right" as const,
-                render: (r) => (
-                  <span
-                    className={`ov-mono ${r.paid > 0 ? "ov-val-green" : ""}`}
-                  >
-                    {r.paid > 0 ? fmtF(r.paid) : "—"}
-                  </span>
-                ),
-              },
-              {
-                key: "balance",
-                header: "Balance",
-                align: "right" as const,
-                render: (r) => (
-                  <span className={`ov-mono ${balanceClass(r.balance)}`}>
-                    {balanceLabel(r.balance, fmtF)}
-                  </span>
-                ),
-              },
-            ] as DataTableColumn<CombinedRow>[]
-          }
-          data={combinedRows}
-          keyExtractor={(r) => r.key}
-          emptyMessage="No pay period data."
-          footerRow={
-            combinedRows.length > 0 ? (
-              <tr
-                className={`ov-pt-foot ${footerRowClass(
-                  totals.billed - totals.grossPay,
-                )}`}
-              >
-                <td className="ov-pt-tf" style={{ fontWeight: 700 }}>
-                  TOTAL
-                </td>
-                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>
-                  {totals.hours.toLocaleString()}
-                </td>
-                <td
-                  className="ov-pt-tf ov-mono ov-val-green"
-                  style={{ textAlign: "right" }}
-                >
-                  {fmtF(totals.billed)}
-                </td>
-                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>
-                  {fmtF(totals.grossPay)}
-                </td>
-                <td
-                  className="ov-pt-tf ov-mono"
-                  style={{ textAlign: "right", color: "var(--w97-red)" }}
-                >
-                  {taxDisplay}
-                </td>
-                <td
-                  className="ov-pt-tf ov-mono"
-                  style={{ textAlign: "right", color: "var(--w97-red)" }}
-                >
-                  {withholdDisplay}
-                </td>
-                <td
-                  className="ov-pt-tf ov-mono ov-val-blue"
-                  style={{ textAlign: "right" }}
-                >
-                  {fmtF(totals.netPay)}
-                </td>
-                <td
-                  className="ov-pt-tf ov-mono ov-val-green"
-                  style={{ textAlign: "right" }}
-                >
-                  {fmtF(totals.paid)}
-                </td>
-                <td
-                  className={`ov-pt-tf ov-mono ${balanceDisplayCls}`}
-                  style={{ textAlign: "right" }}
-                >
-                  {settledOrAmount(totals.balance, fmtF)}
-                </td>
-              </tr>
-            ) : undefined
-          }
-        />
+        {/* ── Pay Periods (ProjectPayTable) for selected project ── */}
+        {activeProject && (
+          <ProjectPayTable
+            project={activeProject}
+            candidateId={candidateDetail.roster.id}
+            candidateEmail={candidateDetail.roster.candidate_email}
+            readOnly={!canEdit}
+          />
+        )}
       </div>
     );
   }
@@ -9211,6 +8875,8 @@ const MarketerDashboard: React.FC<Props> = () => {
               }
               data={companyCandidates}
               keyExtractor={(c) => String(c.id)}
+              paginate
+              pageSize={PAGE_SIZE}
               emptyMessage="No candidates yet. Add one above."
             />
           </div>
@@ -9569,4 +9235,4 @@ const MarketerDashboard: React.FC<Props> = () => {
   );
 };
 
-export default MarketerDashboard;
+export default OperationsDashboard;

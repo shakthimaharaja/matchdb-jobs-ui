@@ -92,6 +92,86 @@
 }
 
 /* ── Root ─────────────────────────────────────────────────────────── */
+
+/* ── Stat Chips Bar ──────────────────────────────────────────────── */
+.pub-stat-chips {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  flex-wrap: wrap;
+  background: var(--w97-face, #d4d0c8);
+  border-bottom: 1px solid var(--w97-btn-shadow, #808080);
+}
+
+.pub-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1.5px solid;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+/* Clickable chip button overrides */
+.pub-stat-chip-btn {
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s, transform 0.15s;
+  outline: none;
+}
+.pub-stat-chip-btn:hover {
+  filter: brightness(0.93);
+  transform: translateY(-1px);
+}
+.pub-stat-chip-btn:active {
+  transform: scale(0.97);
+}
+
+/* Daily (toggled) state — inverted colors */
+.pub-stat-chip-daily .pub-stat-chip-value,
+.pub-stat-chip-daily .pub-stat-chip-label {
+  color: #fff;
+}
+
+/* Value pop animation — re-triggers on key change */
+.pub-stat-chip-value-anim {
+  display: inline-block;
+  animation: chipValuePop 0.45s ease-out;
+}
+
+@keyframes chipValuePop {
+  0% {
+    transform: scale(1.4);
+    opacity: 0.5;
+  }
+  60% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pub-stat-chip-icon {
+  font-size: 13px;
+}
+
+.pub-stat-chip-value {
+  font-weight: 700;
+  font-size: 12px;
+  color: #000;
+}
+
+.pub-stat-chip-label {
+  font-size: 10px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 .pub-landing {
   display: flex;
   flex-direction: column;

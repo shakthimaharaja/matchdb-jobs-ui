@@ -10,14 +10,13 @@ import {
 import { Provider } from "react-redux";
 import { store } from "./store";
 import { setToken } from "./store/authSlice";
-import CandidateDashboard from "./pages/CandidateDashboard";
-import VendorDashboard from "./pages/VendorDashboard";
-import MarketerDashboard from "./pages/MarketerDashboard";
-import PostJobPage from "./pages/PostJobPage";
-import PublicJobsView from "./pages/PublicJobsView";
-import MembershipGatePage from "./pages/MembershipGatePage";
-import InviteAcceptPage from "./pages/InviteAcceptPage";
-import { CandidateOnboardingFlow } from "./pages/CandidateOnboardingFlow";
+import CandidateDashboard from "./pages/candidate/CandidateDashboard";
+import EmployerDashboard from "./pages/employer/EmployerDashboard";
+import PostJobPage from "./pages/employer/PostJobPage";
+import PublicJobsView from "./pages/shared/PublicJobsView";
+import MembershipGatePage from "./pages/shared/MembershipGatePage";
+import InviteAcceptPage from "./pages/candidate/InviteAcceptPage";
+import { CandidateOnboardingFlow } from "./pages/candidate/CandidateOnboardingFlow";
 
 export interface JobsAppProps {
   token: string | null;
@@ -80,20 +79,11 @@ const JobsApp: React.FC<JobsAppProps> = ({
     );
   }
 
-  /* ---- Marketer without active subscription → membership gate ---- */
-  if (userType === "marketer" && plan !== "marketer") {
+  /* ---- Employer without subscription → membership gate ---- */
+  if (userType === "employer" && plan === "free") {
     return (
       <Provider store={store}>
-        <MembershipGatePage userType="marketer" />
-      </Provider>
-    );
-  }
-
-  /* ---- Vendor without subscription → membership gate ---- */
-  if (userType === "vendor" && plan === "free") {
-    return (
-      <Provider store={store}>
-        <MembershipGatePage userType="vendor" />
+        <MembershipGatePage userType="employer" />
       </Provider>
     );
   }
@@ -116,20 +106,7 @@ const JobsApp: React.FC<JobsAppProps> = ({
           <Route path="invite/:token" element={<InviteAcceptPage />} />
 
           {(() => {
-            if (userType === "marketer")
-              return (
-                <Route
-                  path="*"
-                  element={
-                    <MarketerDashboard
-                      token={token}
-                      userId={userId}
-                      userEmail={userEmail}
-                    />
-                  }
-                />
-              );
-            if (userType === "vendor")
+            if (userType === "employer")
               return (
                 <>
                   <Route
@@ -141,8 +118,9 @@ const JobsApp: React.FC<JobsAppProps> = ({
                   <Route
                     path="*"
                     element={
-                      <VendorDashboard
+                      <EmployerDashboard
                         token={token}
+                        userId={userId}
                         userEmail={userEmail}
                         plan={plan}
                         onPostJob={() => setShowPostJob(true)}
@@ -170,7 +148,7 @@ const JobsApp: React.FC<JobsAppProps> = ({
         </Routes>
 
         {/* Inline post-job overlay — W97 window chrome via rm-* classes */}
-        {showPostJob && userType === "vendor" && (
+        {showPostJob && userType === "employer" && (
           <dialog open className="rm-overlay">
             <div
               className="rm-backdrop"

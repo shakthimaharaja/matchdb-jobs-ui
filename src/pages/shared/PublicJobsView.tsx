@@ -26,8 +26,12 @@ import { useLocation } from "react-router-dom";
 import { DataTable } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 import "./PublicJobsView.css";
-import { PAGE_SIZE, FLASH_DURATION_MS, POLL_INTERVAL_MS } from "../constants";
-import { POLL_COUNTS, POLL_PUBLIC_DATA } from "../constants/endpoints";
+import {
+  PAGE_SIZE,
+  FLASH_DURATION_MS,
+  POLL_INTERVAL_MS,
+} from "../../constants";
+import { POLL_COUNTS, POLL_PUBLIC_DATA } from "../../constants/endpoints";
 
 interface PublicJob {
   [key: string]: unknown;
@@ -86,20 +90,60 @@ interface PublicDataMessage {
 // ── Polling helpers ───────────────────────────────────────────────────────────
 
 /**
- * Polls /api/jobs/poll/counts every 30 s and returns live { jobs, profiles } counts.
+ * Polls /api/jobs/poll/counts every 30 s and returns live stats.
  */
-function useLiveCount(field: "jobs" | "profiles"): number | null {
-  const [value, setValue] = useState<number | null>(null);
+interface LiveStats {
+  jobs: number | null;
+  profiles: number | null;
+  dailyNewJobs: number | null;
+  vendors: number | null;
+  marketers: number | null;
+  dailyNewProfiles: number | null;
+  dailyNewVendors: number | null;
+  dailyNewMarketers: number | null;
+}
+
+/**
+ * Polls /api/jobs/poll/counts every 30 s and returns all live stats.
+ * Also emits a "matchdb:liveStats" custom event so the Shell can display the stats.
+ */
+function useLiveStats(): LiveStats {
+  const [stats, setStats] = useState<LiveStats>({
+    jobs: null,
+    profiles: null,
+    dailyNewJobs: null,
+    vendors: null,
+    marketers: null,
+    dailyNewProfiles: null,
+    dailyNewVendors: null,
+    dailyNewMarketers: null,
+  });
 
   useEffect(() => {
     let active = true;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     async function poll() {
       try {
-        const res = await fetch(POLL_COUNTS);
+        const res = await fetch(`${POLL_COUNTS}?tz=${encodeURIComponent(tz)}`);
         if (!res.ok) return;
-        const data = (await res.json()) as Record<string, number>;
-        if (active && typeof data[field] === "number") setValue(data[field]);
+        const data = await res.json();
+        if (!active) return;
+        const num = (v: unknown) => (typeof v === "number" ? v : null);
+        const next: LiveStats = {
+          jobs: num(data.jobs),
+          profiles: num(data.profiles),
+          dailyNewJobs: num(data.dailyNewJobs),
+          vendors: num(data.vendors),
+          marketers: num(data.marketers),
+          dailyNewProfiles: num(data.dailyNewProfiles),
+          dailyNewVendors: num(data.dailyNewVendors),
+          dailyNewMarketers: num(data.dailyNewMarketers),
+        };
+        setStats(next);
+        globalThis.dispatchEvent(
+          new CustomEvent("matchdb:liveStats", { detail: next }),
+        );
       } catch {
         /* ignore fetch errors */
       }
@@ -111,9 +155,9 @@ function useLiveCount(field: "jobs" | "profiles"): number | null {
       active = false;
       clearInterval(id);
     };
-  }, [field]);
+  }, []);
 
-  return value;
+  return stats;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -171,7 +215,7 @@ const MatchBar: React.FC<{ score: number }> = ({ score }) => (
 
 const LoginWarningBar: React.FC<{
   message?: string;
-  viewType?: "candidate" | "vendor";
+  viewType?: "candidate" | "vendor" | "marketer" | "employer";
   openPricing?: () => void;
 }> = ({ message, viewType, openPricing }) => (
   <div className="pub-login-warning">
@@ -197,6 +241,8 @@ const LoginWarningBar: React.FC<{
       {(() => {
         if (viewType === "vendor") return "View Vendor Plans & Pricing →";
         if (viewType === "candidate") return "View Candidate Plans & Pricing →";
+        if (viewType === "marketer") return "View Marketer Plans & Pricing →";
+        if (viewType === "employer") return "View Employer Plans & Pricing →";
         return "See Prices and Plans →";
       })()}
     </button>
@@ -219,6 +265,108 @@ const SignUpBanner: React.FC = () => (
     </span>
   </div>
 );
+
+/** Stat chips row — displayed below the pagehead in each public view.
+ *  Each chip toggles between total count and "new today" count on click. */
+const StatChipsBar: React.FC<{ stats: LiveStats }> = ({ stats }) => {
+  const [toggled, setToggled] = useState<Set<string>>(() => new Set());
+
+  const toggle = useCallback((key: string) => {
+    setToggled((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const chips: {
+    key: string;
+    icon: string;
+    label: string;
+    total: number;
+    daily: number;
+    color: string;
+    border: string;
+  }[] = [
+    {
+      key: "jobs",
+      icon: "💼",
+      label: "Job Openings",
+      total: stats.jobs ?? 0,
+      daily: stats.dailyNewJobs ?? 0,
+      color: "#e3f2fd",
+      border: "#1976d2",
+    },
+    {
+      key: "profiles",
+      icon: "👥",
+      label: "Candidates",
+      total: stats.profiles ?? 0,
+      daily: stats.dailyNewProfiles ?? 0,
+      color: "#fff3e0",
+      border: "#f57c00",
+    },
+    {
+      key: "vendors",
+      icon: "🏢",
+      label: "Vendors",
+      total: stats.vendors ?? 0,
+      daily: stats.dailyNewVendors ?? 0,
+      color: "#f3e5f5",
+      border: "#7b1fa2",
+    },
+    {
+      key: "marketers",
+      icon: "📊",
+      label: "Marketers",
+      total: stats.marketers ?? 0,
+      daily: stats.dailyNewMarketers ?? 0,
+      color: "#fce4ec",
+      border: "#c62828",
+    },
+  ];
+
+  return (
+    <div className="pub-stat-chips">
+      {chips.map((c) => {
+        const isDaily = toggled.has(c.key);
+        const value = isDaily ? c.daily : c.total;
+        return (
+          <button
+            key={c.key}
+            type="button"
+            className={`pub-stat-chip pub-stat-chip-btn${
+              isDaily ? " pub-stat-chip-daily" : ""
+            }`}
+            style={{
+              background: isDaily ? c.border : c.color,
+              borderColor: c.border,
+              color: isDaily ? "#fff" : undefined,
+            }}
+            onClick={() => toggle(c.key)}
+            title={
+              isDaily
+                ? `${c.label} — new today (click for total)`
+                : `${c.label} — total (click for new today)`
+            }
+          >
+            <span className="pub-stat-chip-icon">{c.icon}</span>
+            <span
+              key={`${c.key}-${value}`}
+              className="pub-stat-chip-value pub-stat-chip-value-anim"
+            >
+              {value.toLocaleString()}
+            </span>
+            <span className="pub-stat-chip-label">
+              {isDaily ? `New Today` : c.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 /**
  * Renders a number with a typewriter-style animation,
@@ -331,6 +479,7 @@ interface TwinProps {
   deleteFlashProfileIds: Set<string>;
   wsConnected: boolean;
   lastSync: number | null;
+  stats: LiveStats;
 }
 
 const TwinView: React.FC<TwinProps> = ({
@@ -340,6 +489,7 @@ const TwinView: React.FC<TwinProps> = ({
   openLogin: _openLogin,
   flashJobIds,
   flashProfileIds,
+  stats,
   deleteFlashJobIds,
   deleteFlashProfileIds,
   wsConnected,
@@ -556,25 +706,30 @@ const TwinView: React.FC<TwinProps> = ({
 
   return (
     <div className="pub-landing">
-      <SignUpBanner />
+      <StatChipsBar stats={stats} />
       <div className="pub-section">
-        <div className="pub-section-titlebar">
-          <span className="pub-section-icon">🗄️</span>
-          <span className="pub-section-title">
-            💼 Job Openings <span className="pub-join-badge">&amp;</span> 👥
-            Candidate Profiles
-          </span>
-        </div>
-
         <LoginWarningBar
           message="Without login you cannot contact recruiters or connect with candidates or view important columns such as salary, skills, and match scores."
-          openPricing={() =>
+          viewType={(() => {
+            const p = globalThis.location.pathname;
+            if (p.startsWith("/jobs/candidate")) return "candidate" as const;
+            if (p.startsWith("/jobs/vendor")) return "vendor" as const;
+            if (p.startsWith("/jobs/marketer")) return "marketer" as const;
+            if (p.startsWith("/jobs/employer")) return "employer" as const;
+            return undefined;
+          })()}
+          openPricing={() => {
+            const p = globalThis.location.pathname;
+            let tab: string = "vendor";
+            if (p.startsWith("/jobs/candidate")) tab = "candidate";
+            else if (p.startsWith("/jobs/marketer")) tab = "marketer";
+            else if (p.startsWith("/jobs/employer")) tab = "employer";
             globalThis.dispatchEvent(
               new CustomEvent("matchdb:openPricing", {
-                detail: { tab: "vendor" },
+                detail: { tab },
               }),
-            )
-          }
+            );
+          }}
         />
 
         <div className="pub-twin-panels">
@@ -591,7 +746,7 @@ const TwinView: React.FC<TwinProps> = ({
             rowCount={PAGE_SIZE}
           />
           <DataTable<ProfileWithFit>
-            title="candidate_profiles"
+            title="Candidate Profiles"
             titleIcon="👥"
             data={pageProfiles}
             columns={twinProfileColumns}
@@ -632,6 +787,7 @@ interface CandViewProps {
   deleteFlashJobIds: Set<string>;
   wsConnected: boolean;
   lastSync: number | null;
+  stats: LiveStats;
 }
 
 const CandView: React.FC<CandViewProps> = ({
@@ -644,8 +800,8 @@ const CandView: React.FC<CandViewProps> = ({
   deleteFlashJobIds,
   wsConnected,
   lastSync,
+  stats,
 }) => {
-  const liveJobCount = useLiveCount("jobs");
   const queryTime = useMemo(
     () => (Math.random() * 0.004 + 0.001).toFixed(3),
     [],
@@ -785,24 +941,8 @@ const CandView: React.FC<CandViewProps> = ({
 
   return (
     <div className="pub-landing">
-      <SignUpBanner />
+      <StatChipsBar stats={stats} />
       <div className="pub-section">
-        <div className="pub-section-titlebar">
-          <span className="pub-section-icon">💼</span>
-          <span className="pub-section-title">
-            Total Job Openings :{" "}
-            <TypewriterCount
-              value={liveJobCount}
-              fallback={sortedJobs.length}
-            />
-            {jobTypeFilter && (
-              <span className="pub-filter-badge">
-                {jobTypeFilter.toUpperCase()}
-              </span>
-            )}
-          </span>
-        </div>
-
         <LoginWarningBar
           message="Without login you cannot contact recruiters or view important columns such as salary, skills, and match scores."
           viewType="candidate"
@@ -859,6 +999,7 @@ interface VendorViewProps {
   deleteFlashProfileIds: Set<string>;
   wsConnected: boolean;
   lastSync: number | null;
+  stats: LiveStats;
 }
 
 const VendorView: React.FC<VendorViewProps> = ({
@@ -869,8 +1010,8 @@ const VendorView: React.FC<VendorViewProps> = ({
   deleteFlashProfileIds,
   wsConnected,
   lastSync,
+  stats,
 }) => {
-  const liveProfileCount = useLiveCount("profiles");
   const queryTime = useMemo(
     () => (Math.random() * 0.003 + 0.001).toFixed(3),
     [],
@@ -973,19 +1114,8 @@ const VendorView: React.FC<VendorViewProps> = ({
 
   return (
     <div className="pub-landing">
-      <SignUpBanner />
+      <StatChipsBar stats={stats} />
       <div className="pub-section">
-        <div className="pub-section-titlebar">
-          <span className="pub-section-icon">👥</span>
-          <span className="pub-section-title">
-            Total Candidate Profiles :{" "}
-            <TypewriterCount
-              value={liveProfileCount}
-              fallback={sortedProfiles.length}
-            />
-          </span>
-        </div>
-
         <LoginWarningBar
           message="Without login you cannot contact Candidates or view important columns such as salary, skills, and match scores."
           viewType="vendor"
@@ -999,7 +1129,7 @@ const VendorView: React.FC<VendorViewProps> = ({
         />
 
         <DataTable<PublicProfile>
-          title="Candidate_Profiles"
+          title="Candidate Profiles"
           titleIcon="👥"
           data={pageProfiles}
           columns={vendorColumns}
@@ -1207,6 +1337,8 @@ const PublicJobsView: React.FC = () => {
     [isCandView, isVendorView],
   );
 
+  const stats = useLiveStats();
+
   // ── Route-based view selection ────────────────────────────────────────────
   if (isVendorView) {
     return (
@@ -1218,6 +1350,7 @@ const PublicJobsView: React.FC = () => {
         deleteFlashProfileIds={deleteFlashProfileIds}
         wsConnected={wsConnected}
         lastSync={lastSync}
+        stats={stats}
       />
     );
   }
@@ -1234,6 +1367,7 @@ const PublicJobsView: React.FC = () => {
         deleteFlashJobIds={deleteFlashJobIds}
         wsConnected={wsConnected}
         lastSync={lastSync}
+        stats={stats}
       />
     );
   }
@@ -1250,6 +1384,7 @@ const PublicJobsView: React.FC = () => {
       deleteFlashProfileIds={deleteFlashProfileIds}
       wsConnected={wsConnected}
       lastSync={lastSync}
+      stats={stats}
     />
   );
 };

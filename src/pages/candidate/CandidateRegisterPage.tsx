@@ -9,7 +9,7 @@ import { Button, Input } from "matchdb-component-library";
 import {
   useVerifyCandidateTokenQuery,
   useRegisterCandidateMutation,
-} from "../api/jobsApi";
+} from "../../api/jobsApi";
 
 interface CandidateRegisterPageProps {
   token: string;

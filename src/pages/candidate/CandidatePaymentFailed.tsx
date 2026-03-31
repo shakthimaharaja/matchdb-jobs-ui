@@ -5,7 +5,7 @@
  */
 import React, { useState } from "react";
 import { Button } from "matchdb-component-library";
-import { useCreateCandidatePaymentSessionMutation } from "../api/jobsApi";
+import { useCreateCandidatePaymentSessionMutation } from "../../api/jobsApi";
 
 interface CandidatePaymentFailedProps {
   candidateUserId: string;

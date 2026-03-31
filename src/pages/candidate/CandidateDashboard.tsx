@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+﻿import { useSearchParams } from "react-router-dom";
 import React, {
   useCallback,
   useEffect,
@@ -6,8 +6,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { MatchRow } from "../components/MatchDataTable";
-import { getApiErrorMessage } from "../utils";
+import { MatchRow } from "../../components/MatchDataTable";
+import { getApiErrorMessage } from "../../utils";
 import {
   DataTable,
   Button,
@@ -18,14 +18,14 @@ import {
   ICONS,
 } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
-import DBLayout, { NavGroup } from "../components/DBLayout";
-import DetailModal from "../components/DetailModal";
-import PokeEmailModal from "../components/PokeEmailModal";
+import DBLayout, { NavGroup } from "../../components/DBLayout";
+import DetailModal from "../../components/DetailModal";
+import PokeEmailModal from "../../components/PokeEmailModal";
 import CandidateProfile from "./CandidateProfile";
 import TimesheetView from "./TimesheetView";
-import { PokesTable } from "../shared";
-import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
-import { useLiveRefresh } from "../hooks/useLiveRefresh";
+import { PokesTable } from "../../shared";
+import { useAutoRefreshFlash } from "../../hooks/useAutoRefreshFlash";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import {
   useGetCandidateMatchesQuery,
   useGetProfileQuery,
@@ -40,7 +40,7 @@ import {
   type CandidateMatchesArgs,
   type ForwardedOpeningItem,
   type InterviewInvite,
-} from "../api/jobsApi";
+} from "../../api/jobsApi";
 import {
   type CandidateDashboardProps as Props,
   type ActiveView,
@@ -67,7 +67,8 @@ import {
   fmtC,
   companyFromEmail,
   FinancialRow,
-} from "./candidate/candidateHelpers";
+} from "./candidateHelpers";
+import { PAGE_SIZE } from "../../constants";
 
 const CandidateDashboard: React.FC<Props> = ({
   token: _token,
@@ -1192,7 +1193,7 @@ const CandidateDashboard: React.FC<Props> = ({
           },
           {
             id: "my-detail-activity",
-            label: "Marketer Activity",
+            label: "Employer Activity",
             depth: 1,
             count: myDetail?.vendor_activity.length ?? 0,
             active:
@@ -1216,12 +1217,8 @@ const CandidateDashboard: React.FC<Props> = ({
       {
         label: "Jobs",
         icon: "",
-        items: jobTypeNavItems,
-      },
-      {
-        label: "Vendor",
-        icon: "",
         items: [
+          ...jobTypeNavItems,
           {
             id: "vendor-openings",
             label: "Forwarded Openings",
@@ -1424,19 +1421,19 @@ const CandidateDashboard: React.FC<Props> = ({
   const myDetailTabLabel = (() => {
     if (myDetailTab === "overview") return "Overview";
     if (myDetailTab === "projects") return "Projects";
-    if (myDetailTab === "marketer-activity") return "Marketer Activity";
+    if (myDetailTab === "marketer-activity") return "Employer Activity";
     return "Forwarded Openings";
   })();
 
   const breadcrumb: [string, string, string] = (() => {
     if (activeView === "pokes-sent")
-      return ["Candidate Portal", "Vendor", "Pokes Sent"];
+      return ["Candidate Portal", "Jobs", "Pokes Sent"];
     if (activeView === "pokes-received")
-      return ["Candidate Portal", "Vendor", "Pokes Received"];
+      return ["Candidate Portal", "Jobs", "Pokes Received"];
     if (activeView === "mails-sent")
-      return ["Candidate Portal", "Vendor", "Mails Sent"];
+      return ["Candidate Portal", "Jobs", "Mails Sent"];
     if (activeView === "mails-received")
-      return ["Candidate Portal", "Vendor", "Mails Received"];
+      return ["Candidate Portal", "Jobs", "Mails Received"];
     if (activeView === "forwarded")
       return ["Candidate Portal", "Actions", "Forwarded Openings"];
     if (activeView === "my-detail")
@@ -1444,7 +1441,7 @@ const CandidateDashboard: React.FC<Props> = ({
     if (activeView === "vendor-openings")
       return [
         "Candidate Portal",
-        "Vendor",
+        "Jobs",
         filterSubType
           ? `Openings › ${filterSubType
               .replaceAll("_", " ")
@@ -2014,6 +2011,7 @@ const CandidateDashboard: React.FC<Props> = ({
           keyExtractor={(f) => f.id}
           loading={false}
           paginate
+          pageSize={PAGE_SIZE}
           titleIcon="🏢"
           title={`Vendor Forwarded Openings — ${subLabel}`}
           emptyMessage="No vendor forwarded openings found for this category."
@@ -2127,6 +2125,7 @@ const CandidateDashboard: React.FC<Props> = ({
         keyExtractor={(f) => f.id}
         loading={false}
         paginate
+        pageSize={PAGE_SIZE}
         titleIcon="🏭"
         title="Employer Forwarded Openings"
         emptyMessage="No employer forwarded openings found."
@@ -2455,7 +2454,7 @@ const CandidateDashboard: React.FC<Props> = ({
               key: "marketer-activity",
               label: (
                 <>
-                  📊 Marketer Activity{" "}
+                  📊 Employer Activity{" "}
                   <span className="matchdb-tab-badge">
                     {myDetail.vendor_activity.length}
                   </span>
@@ -2482,7 +2481,7 @@ const CandidateDashboard: React.FC<Props> = ({
         {/* ── Tab: Projects ── */}
         {myDetailTab === "projects" && renderProjectsTab()}
 
-        {/* ── Tab: Marketer Activity ── */}
+        {/* ── Tab: Employer Activity ── */}
         {myDetailTab === "marketer-activity" && (
           <div
             style={{
@@ -2641,9 +2640,10 @@ const CandidateDashboard: React.FC<Props> = ({
               keyExtractor={(r) => r.id}
               loading={myDetailLoading}
               paginate
+              pageSize={PAGE_SIZE}
               titleIcon="📊"
-              title="Vendor Interactions (Pokes & Emails Sent to You)"
-              emptyMessage="No vendor activity recorded yet."
+              title="Employer Interactions (Pokes & Emails Sent to You)"
+              emptyMessage="No employer activity recorded yet."
             />
           </div>
         )}
@@ -2744,6 +2744,7 @@ const CandidateDashboard: React.FC<Props> = ({
               keyExtractor={(f) => f.id}
               loading={myDetailLoading}
               paginate
+              pageSize={PAGE_SIZE}
               titleIcon="📤"
               title="Job Openings Forwarded to You by Your Marketing Company"
               emptyMessage="No openings have been forwarded to you yet."
@@ -2976,6 +2977,7 @@ const CandidateDashboard: React.FC<Props> = ({
           keyExtractor={(r) => r.id}
           loading={false}
           paginate
+          pageSize={PAGE_SIZE}
           emptyMessage="No interview invites received yet."
           title="Interview Invites"
           titleIcon="📞"
@@ -3233,6 +3235,7 @@ const CandidateDashboard: React.FC<Props> = ({
             keyExtractor={(f) => f.id}
             loading={false}
             paginate
+            pageSize={PAGE_SIZE}
             titleIcon="📤"
             title="Forwarded Openings from Your Marketing Company"
             emptyMessage="No openings have been forwarded to you yet."
@@ -3289,6 +3292,7 @@ const CandidateDashboard: React.FC<Props> = ({
             data={sortedRows}
             keyExtractor={(r) => r.id}
             loading={matchesLoading}
+            rnColWidth="20px"
             paginate
             emptyMessage="MySQL returned an empty result set (i.e. zero rows)."
             alertSuccess={pokeSent ? "Poke sent successfully!" : undefined}

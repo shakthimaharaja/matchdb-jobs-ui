@@ -2,24 +2,22 @@
  * PermissionGuard.tsx
  *
  * Conditional render wrapper that checks the current user's permissions
- * before rendering children. Uses the RBAC system to hide unauthorized UI.
+ * before rendering children. Uses the CompanyContext RBAC system.
  *
  * Usage:
- *   <PermissionGuard requiredPermission="invite:candidate">
- *     <Button>Invite Candidate</Button>
+ *   <PermissionGuard requiredPermission="invite_workers">
+ *     <Button>Invite Worker</Button>
  *   </PermissionGuard>
  */
 import React from "react";
+import { useCompanyContext } from "../hooks/useCompanyContext";
+import type { UserRole } from "../api/jobsApi";
 
 interface PermissionGuardProps {
-  /** Permission string to check, e.g. "invite:candidate" */
+  /** Permission string to check, e.g. "invite_workers" */
   requiredPermission?: string;
   /** Role(s) to check — user must have one of these */
-  requiredRoles?: string[];
-  /** Current user's permissions array */
-  userPermissions: string[];
-  /** Current user's role */
-  userRole: string;
+  requiredRoles?: UserRole[];
   /** Fallback to render if unauthorized (defaults to null) */
   fallback?: React.ReactNode;
   children: React.ReactNode;
@@ -28,22 +26,25 @@ interface PermissionGuardProps {
 export function PermissionGuard({
   requiredPermission,
   requiredRoles,
-  userPermissions,
-  userRole,
   fallback = null,
   children,
 }: PermissionGuardProps) {
+  const { role, hasPermission, hasRole, isLoading } = useCompanyContext();
+
+  // While loading, hide protected content
+  if (isLoading) return <>{fallback}</>;
+
   // Admin always has access
-  if (userRole === "admin") return <>{children}</>;
+  if (role === "admin") return <>{children}</>;
 
   // Check role requirement
   if (requiredRoles && requiredRoles.length > 0) {
-    if (!requiredRoles.includes(userRole)) return <>{fallback}</>;
+    if (!hasRole(...requiredRoles)) return <>{fallback}</>;
   }
 
   // Check permission requirement
   if (requiredPermission) {
-    if (!userPermissions.includes(requiredPermission)) return <>{fallback}</>;
+    if (!hasPermission(requiredPermission)) return <>{fallback}</>;
   }
 
   return <>{children}</>;

@@ -10,6 +10,8 @@ import { RoleAssignmentDropdown } from "./RoleAssignmentDropdown";
 import {
   useSendEmployeeInviteMutation,
   useGetAdminDashboardQuery,
+  type UserRole,
+  type MarketerDepartment,
 } from "../api/jobsApi";
 
 interface InviteEmployeeModalProps {
@@ -23,7 +25,8 @@ export function InviteEmployeeModal({
 }: InviteEmployeeModalProps) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState("viewer");
+  const [role, setRole] = useState<UserRole>("vendor");
+  const [department, setDepartment] = useState<MarketerDepartment | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -48,11 +51,13 @@ export function InviteEmployeeModal({
         email: email.trim(),
         name: name.trim(),
         role,
+        department: role === "marketer" ? department : null,
       }).unwrap();
       setSuccess(`Invitation sent to ${email}`);
       setEmail("");
       setName("");
-      setRole("viewer");
+      setRole("vendor");
+      setDepartment(null);
       setTimeout(() => {
         setSuccess("");
         onClose();
@@ -91,7 +96,7 @@ export function InviteEmployeeModal({
             <strong>
               {dashboard.seatsUsed} / {dashboard.seatLimit}
             </strong>{" "}
-            ({dashboard.subscriptionPlan} plan)
+            ({dashboard.plan?.name ?? "free"} plan)
             {seatsFull && (
               <span style={{ color: "#c00", marginLeft: 8, fontWeight: 600 }}>
                 — Limit reached. Upgrade to add more.
@@ -158,7 +163,11 @@ export function InviteEmployeeModal({
             </label>
             <RoleAssignmentDropdown
               value={role}
-              onChange={setRole}
+              department={department}
+              onChange={(r, d) => {
+                setRole(r);
+                setDepartment(d ?? null);
+              }}
               disabled={isLoading || seatsFull}
               excludeAdmin
             />

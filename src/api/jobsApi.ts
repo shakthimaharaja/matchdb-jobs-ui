@@ -243,7 +243,7 @@ export interface MarketerStats {
 export interface CompanyInfo {
   id: string;
   name: string;
-  marketer_id?: string;
+  uid?: string;
   marketer_email?: string;
   created_at?: string;
 }
@@ -326,7 +326,7 @@ export interface CandidateMyDetailProject {
   status: string;
   is_active: boolean;
   applied_at: string;
-  financials: (ProjectFinancialData & { marketer_id: string })[];
+  financials: (ProjectFinancialData & { uid: string })[];
 }
 
 export interface USStateTax {
@@ -567,7 +567,7 @@ export interface CandidateMyDetailResponse {
   vendor_activity: CandidateDetailVendorActivity[];
   marketer_info: {
     id: string;
-    marketer_id: string;
+    uid: string;
     company_id: string;
     company_name: string;
     invite_status: string;
@@ -707,10 +707,75 @@ export interface ForwardedOpeningItem {
 
 // ─── Company Admin & RBAC Types ───────────────────────────────────────────────
 
+export type UserRole = "admin" | "manager" | "vendor" | "marketer";
+export type MarketerDepartment = "accounts" | "immigration" | "placement";
+export type UserStatus = "active" | "invited" | "deactivated";
+
+/** Returned by GET /admin/me — the current user's company context */
+export interface CompanyContext {
+  companyId: string;
+  companyName: string;
+  role: UserRole;
+  department: MarketerDepartment | null;
+  permissions: string[];
+}
+
+export interface SubscriptionPlanItem {
+  _id: string;
+  name: string;
+  slug: string;
+  maxJobPostings: number | null;
+  maxCandidates: number | null;
+  maxWorkers: number | null;
+  priceMonthly: number;
+  priceYearly: number;
+  extraAdminFee: number;
+  isActive: boolean;
+}
+
+export interface SubscriptionUsage {
+  plan: SubscriptionPlanItem | null;
+  usage: {
+    jobPostings: number;
+    maxJobPostings: number | null;
+    candidates: number;
+    maxCandidates: number | null;
+    workers: number;
+    maxWorkers: number | null;
+    adminCount: number;
+    extraAdminCount: number;
+    extraAdminFee: number;
+  };
+}
+
+export interface CompanyDetails {
+  _id: string;
+  name: string;
+  legalName?: string;
+  ein?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+  };
+  phone?: string;
+  email?: string;
+  website?: string;
+  industry?: string;
+  companySize?: string;
+  logoUrl?: string;
+}
+
 export interface CompanyAdminDashboard {
   companyId: string;
   companyName: string;
-  subscriptionPlan: "basic" | "pro";
+  company: CompanyDetails;
+  plan: SubscriptionPlanItem | null;
+  role: UserRole;
+  department: MarketerDepartment | null;
+  permissions: string[];
   seatLimit: number;
   seatsUsed: number;
   activeUsers: number;
@@ -718,15 +783,32 @@ export interface CompanyAdminDashboard {
 }
 
 export interface CompanySetupArgs {
-  companyName: string;
   adminName: string;
-  subscriptionPlan: "basic" | "pro";
+  adminPhone?: string;
+  adminDesignation?: string;
+  companyName: string;
+  companyLegalName?: string;
+  companyEin?: string;
+  companyAddress?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+  };
+  companyPhone?: string;
+  companyEmail?: string;
+  companyWebsite?: string;
+  companyIndustry?: string;
+  companySize?: string;
+  subscriptionPlanSlug?: string;
 }
 
 export interface EmployeeInviteArgs {
   email: string;
   name?: string;
-  role?: string;
+  role?: UserRole;
+  department?: MarketerDepartment | null;
 }
 
 export interface EmployeeInvitationItem {
@@ -734,6 +816,7 @@ export interface EmployeeInvitationItem {
   email: string;
   name: string;
   role: string;
+  department?: string | null;
   status: "pending" | "accepted" | "expired" | "revoked";
   expiresAt: string;
   createdAt: string;
@@ -745,9 +828,10 @@ export interface CompanyUserItem {
   userId: string;
   email: string;
   fullName: string;
-  role: string;
+  role: UserRole;
+  department: MarketerDepartment | null;
   permissions: string[];
-  status: "active" | "inactive" | "suspended";
+  status: UserStatus;
   onlineStatus: "online" | "away" | "offline";
   lastLoginAt: string | null;
   lastActiveAt: string | null;
@@ -893,6 +977,10 @@ export const jobsApi = createApi({
     "EmployeeInvitations",
     "CompanyUsers",
     "ActiveUsers",
+    "CompanyContext",
+    "SubscriptionPlans",
+    "SubscriptionUsage",
+    "CompanyDetails",
     "CandidateInvitations",
     "CandidatePlans",
   ],
@@ -1329,6 +1417,61 @@ export const jobsApi = createApi({
 
     // ── Company Admin ─────────────────────────────────────────────────────────
 
+    /** GET /admin/me — current user's company context (role, permissions) */
+    getCompanyContext: builder.query<CompanyContext, void>({
+      query: () => "api/jobs/admin/me",
+      providesTags: ["CompanyContext"],
+    }),
+
+    /** GET /admin/plans — list subscription plans */
+    getSubscriptionPlans: builder.query<SubscriptionPlanItem[], void>({
+      query: () => "api/jobs/admin/plans",
+      providesTags: ["SubscriptionPlans"],
+    }),
+
+    /** GET /admin/subscription/usage — current usage vs plan limits */
+    getSubscriptionUsage: builder.query<SubscriptionUsage, void>({
+      query: () => "api/jobs/admin/subscription/usage",
+      providesTags: ["SubscriptionUsage"],
+    }),
+
+    /** PUT /admin/subscription/select — select or upgrade plan */
+    selectSubscriptionPlan: builder.mutation<
+      { message: string },
+      { planSlug: string }
+    >({
+      query: (body) => ({
+        url: "api/jobs/admin/subscription/select",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: [
+        "SubscriptionUsage",
+        "SubscriptionPlans",
+        "AdminDashboard",
+        "CompanyContext",
+      ],
+    }),
+
+    /** GET /admin/company — company details */
+    getCompanyDetails: builder.query<CompanyDetails, void>({
+      query: () => "api/jobs/admin/company",
+      providesTags: ["CompanyDetails"],
+    }),
+
+    /** PUT /admin/company — update company details */
+    updateCompanyDetails: builder.mutation<
+      CompanyDetails,
+      Partial<CompanyDetails>
+    >({
+      query: (body) => ({
+        url: "api/jobs/admin/company",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["CompanyDetails", "AdminDashboard"],
+    }),
+
     setupCompanyAdmin: builder.mutation<
       CompanyAdminDashboard,
       CompanySetupArgs
@@ -1391,12 +1534,12 @@ export const jobsApi = createApi({
 
     updateUserRole: builder.mutation<
       { id: string; role: string; permissions: string[] },
-      { id: string; role: string }
+      { id: string; role: UserRole; department?: MarketerDepartment | null }
     >({
-      query: ({ id, role }) => ({
+      query: ({ id, role, department }) => ({
         url: `api/jobs/admin/users/${id}/role`,
         method: "PUT",
-        body: { role },
+        body: { role, department },
       }),
       invalidatesTags: ["CompanyUsers"],
     }),
@@ -1593,6 +1736,12 @@ export const {
   // Vendor Financials
   useGetVendorFinancialSummaryQuery,
   // Company Admin
+  useGetCompanyContextQuery,
+  useGetSubscriptionPlansQuery,
+  useGetSubscriptionUsageQuery,
+  useSelectSubscriptionPlanMutation,
+  useGetCompanyDetailsQuery,
+  useUpdateCompanyDetailsMutation,
   useSetupCompanyAdminMutation,
   useGetAdminDashboardQuery,
   // Employee Invitations

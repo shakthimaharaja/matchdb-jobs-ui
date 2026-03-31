@@ -13,8 +13,11 @@
 
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useVerifyInviteQuery, useAcceptInviteMutation } from "../api/jobsApi";
-import { getApiErrorMessage } from "../utils";
+import {
+  useVerifyInviteQuery,
+  useAcceptInviteMutation,
+} from "../../api/jobsApi";
+import { getApiErrorMessage } from "../../utils";
 import { Button } from "matchdb-component-library";
 
 const STATUS_LABELS: Record<

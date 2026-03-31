@@ -1,0 +1,52 @@
+/* ── EmployerDashboard mode bar ── */
+.employer-dashboard {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.employer-mode-bar {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: 2px solid var(--w97-border, #808080);
+  background: var(--w97-window, #c0c0c0);
+  flex-shrink: 0;
+}
+
+.employer-mode-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 14px;
+  border: 1px solid var(--w97-btn-dark, #404040);
+  border-bottom: none;
+  background: var(--w97-btn-face, #d4d0c8);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--w97-text, #222);
+  border-radius: 3px 3px 0 0;
+  position: relative;
+  top: 2px;
+}
+
+.employer-mode-tab.active {
+  background: var(--w97-window, #fff);
+  border-bottom: 2px solid var(--w97-window, #fff);
+  color: var(--w97-navy, #235a81);
+  font-weight: 700;
+}
+
+.employer-mode-tab:hover:not(.active) {
+  background: var(--w97-btn-highlight, #f5f5f5);
+}
+
+.employer-mode-icon {
+  font-size: 14px;
+}
+
+.employer-mode-label {
+  white-space: nowrap;
+}

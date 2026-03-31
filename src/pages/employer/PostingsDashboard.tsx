@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import MatchDataTable, { MatchRow } from "../components/MatchDataTable";
-import DBLayout, { NavGroup } from "../components/DBLayout";
-import "./VendorFinancial.css";
-import DetailModal from "../components/DetailModal";
-import JobPostingModal from "../components/JobPostingModal";
-import PokeEmailModal from "../components/PokeEmailModal";
-import { PokesTable } from "../shared";
+import MatchDataTable, { MatchRow } from "../../components/MatchDataTable";
+import DBLayout, { NavGroup } from "../../components/DBLayout";
+import "./EmployerFinancial.css";
+import DetailModal from "../../components/DetailModal";
+import JobPostingModal from "../../components/JobPostingModal";
+import PokeEmailModal from "../../components/PokeEmailModal";
+import { PokesTable } from "../../shared";
 import {
   DataTable,
   Button,
@@ -15,8 +15,8 @@ import {
   ICONS,
 } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
-import { useAutoRefreshFlash } from "../hooks/useAutoRefreshFlash";
-import { useLiveRefresh } from "../hooks/useLiveRefresh";
+import { useAutoRefreshFlash } from "../../hooks/useAutoRefreshFlash";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import {
   useGetVendorJobsQuery,
   useGetVendorCandidateMatchesQuery,
@@ -35,7 +35,7 @@ import {
   type VendorJobsArgs,
   type VendorCandidateMatchesArgs,
   type VendorFinancialCandidate,
-} from "../api/jobsApi";
+} from "../../api/jobsApi";
 
 interface Props {
   token: string | null;
@@ -178,7 +178,7 @@ function unwrapPaginated<T>(
 /** Column definitions for the job postings table are built inside the component
  *  via useMemo so that render functions can close over handlers and state. */
 
-const VendorDashboard: React.FC<Props> = ({
+const PostingsDashboard: React.FC<Props> = ({
   token: _token,
   userEmail,
   plan = "free",
@@ -2241,4 +2241,4 @@ const VendorDashboard: React.FC<Props> = ({
   );
 };
 
-export default VendorDashboard;
+export default PostingsDashboard;

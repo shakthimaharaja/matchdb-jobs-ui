@@ -18,12 +18,14 @@ import {
   useUpdateUserRoleMutation,
   useUpdateUserStatusMutation,
   type CompanyUserItem,
+  type UserRole,
+  type MarketerDepartment,
 } from "../api/jobsApi";
 
 const STATUS_COLORS: Record<string, string> = {
   active: "#2e7d32",
-  inactive: "#888",
-  suspended: "#c62828",
+  invited: "#1565c0",
+  deactivated: "#888",
 };
 
 const ONLINE_INDICATORS: Record<string, string> = {
@@ -51,13 +53,17 @@ export function UserManagementTable() {
   const [updateStatus, { isLoading: updatingStatus }] =
     useUpdateUserStatusMutation();
 
-  const handleRoleChange = async (id: string, role: string) => {
-    await updateRole({ id, role });
+  const handleRoleChange = async (
+    id: string,
+    role: UserRole,
+    department?: MarketerDepartment | null,
+  ) => {
+    await updateRole({ id, role, department });
     refetch();
   };
 
   const handleStatusToggle = async (user: CompanyUserItem) => {
-    const newStatus = user.status === "active" ? "inactive" : "active";
+    const newStatus = user.status === "active" ? "deactivated" : "active";
     await updateStatus({ id: user.id, status: newStatus });
     refetch();
   };
@@ -104,7 +110,8 @@ export function UserManagementTable() {
       render: (r) => (
         <RoleAssignmentDropdown
           value={r.role}
-          onChange={(role) => handleRoleChange(r.id, role)}
+          department={r.department}
+          onChange={(role, dept) => handleRoleChange(r.id, role, dept)}
           disabled={updatingRole}
         />
       ),
@@ -161,25 +168,14 @@ export function UserManagementTable() {
         if (r.role === "admin")
           return <span style={{ color: "#aaa", fontSize: 11 }}>Admin</span>;
         return (
-          <div style={{ display: "flex", gap: 4 }}>
-            <Button
-              size="sm"
-              variant={r.status === "active" ? undefined : "primary"}
-              onClick={() => handleStatusToggle(r)}
-              disabled={updatingStatus}
-            >
-              {r.status === "active" ? "Deactivate" : "Activate"}
-            </Button>
-            {r.status === "active" && (
-              <Button
-                size="sm"
-                onClick={() => updateStatus({ id: r.id, status: "suspended" })}
-                disabled={updatingStatus}
-              >
-                Suspend
-              </Button>
-            )}
-          </div>
+          <Button
+            size="sm"
+            variant={r.status === "active" ? undefined : "primary"}
+            onClick={() => handleStatusToggle(r)}
+            disabled={updatingStatus}
+          >
+            {r.status === "active" ? "Deactivate" : "Activate"}
+          </Button>
         );
       },
     },
@@ -215,11 +211,9 @@ export function UserManagementTable() {
         >
           <option value="all">All Roles</option>
           <option value="admin">Admin</option>
-          <option value="finance">Finance</option>
-          <option value="hr">HR</option>
-          <option value="operations">Operations</option>
-          <option value="marketing">Marketing</option>
-          <option value="viewer">Viewer</option>
+          <option value="manager">Manager</option>
+          <option value="vendor">Vendor</option>
+          <option value="marketer">Marketer</option>
         </Select>
         <span style={{ fontSize: 11, fontWeight: 600 }}>Status:</span>
         <Select
@@ -231,8 +225,8 @@ export function UserManagementTable() {
         >
           <option value="all">All</option>
           <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="suspended">Suspended</option>
+          <option value="invited">Invited</option>
+          <option value="deactivated">Deactivated</option>
         </Select>
       </div>
 

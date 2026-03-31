@@ -31,6 +31,8 @@ matchdb-jobs-ui/
 │   ├── index.ts                 # Webpack entry point
 │   ├── bootstrap.tsx            # React root render (standalone mode)
 │   ├── JobsApp.tsx              # Exposed MFE component — routing entry
+│   ├── api/
+│   │   └── jobsApi.ts           # RTK Query API — all HTTP endpoints + types
 │   ├── components/
 │   │   ├── index.ts             # Barrel export (all components + types)
 │   │   ├── DBLayout.tsx         # phpMyAdmin-style panel with subnav + breadcrumb events
@@ -39,36 +41,65 @@ matchdb-jobs-ui/
 │   │   ├── DetailModal.css
 │   │   ├── ResumeModal.tsx      # Candidate profile create/edit modal
 │   │   ├── ResumeModal.css
-│   │   ├── JobPostingModal.tsx  # Vendor job detail viewer with close/reopen
+│   │   ├── JobPostingModal.tsx  # Employer job detail viewer with close/reopen
 │   │   ├── JobPostingModal.css
-│   │   └── PokeEmailModal.tsx   # Poke email composer modal
+│   │   ├── PokeEmailModal.tsx   # Poke email composer modal
+│   │   ├── InviteEmployeeModal.tsx    # Invite employer team members
+│   │   ├── InviteCandidateModal.tsx   # Invite candidates to company
+│   │   ├── InvitationList.tsx         # Employee invitation list
+│   │   ├── CandidateInvitationList.tsx # Candidate invitation list
+│   │   ├── UserManagementTable.tsx    # Company user RBAC management
+│   │   ├── ActiveUsersPanel.tsx       # Active users overview
+│   │   ├── PermissionGuard.tsx        # RBAC conditional renderer
+│   │   └── RoleAssignmentDropdown.tsx # Role + department picker
 │   ├── pages/
-│   │   ├── PublicJobsView.tsx   # Pre-login view — live polling tables (jobs & profiles)
-│   │   ├── PublicJobsView.css
-│   │   ├── CandidateDashboard.tsx  # Candidate view — profile, matched jobs, visibility, vendor/employer sections
-│   │   ├── VendorDashboard.tsx     # Vendor view — post jobs, browse candidates
-│   │   ├── MarketerDashboard.tsx   # Marketer view — roster, forwarding, financials, projects
-│   │   ├── MembershipGatePage.tsx  # Membership paywall / visibility purchase gate
-│   │   ├── MembershipGatePage.css
-│   │   ├── InviteAcceptPage.tsx    # Marketer invite acceptance flow
-│   │   ├── CandidateProfile.tsx    # Candidate profile edit form
-│   │   ├── PostJobPage.tsx         # Vendor job posting form
-│   │   ├── PostJobPage.css
-│   │   └── LegacyForms.css        # Form styling shared between pages
+│   │   ├── index.ts                # Barrel export — all pages
+│   │   ├── candidate/             # ── Candidate login pages ──
+│   │   │   ├── candidateHelpers.tsx       # Types & utilities for candidate views
+│   │   │   ├── CandidateDashboard.tsx     # Main candidate portal — matches, pokes, interviews
+│   │   │   ├── CandidateProfile.tsx       # Profile editor — personal info, work history, resume
+│   │   │   ├── CandidateOnboardingFlow.tsx # Registration orchestrator (register → payment → success)
+│   │   │   ├── CandidateRegisterPage.tsx  # Token validation + account creation form
+│   │   │   ├── CandidatePaymentPage.tsx   # Plan summary + Stripe Checkout redirect
+│   │   │   ├── CandidatePaymentSuccess.tsx # Payment success confirmation
+│   │   │   ├── CandidatePaymentFailed.tsx  # Payment failure + retry
+│   │   │   ├── TimesheetView.tsx          # Timesheet entry, drafts, submission & history
+│   │   │   ├── InviteAcceptPage.tsx       # Invite token verification + acceptance
+│   │   │   └── LegacyForms.css            # Legacy form styling (CandidateProfile)
+│   │   ├── employer/              # ── Employer login pages ──
+│   │   │   ├── employerHelpers.ts         # Types & utilities for employer views
+│   │   │   ├── EmployerDashboard.tsx      # Unified employer hub — switches Postings/Operations
+│   │   │   ├── EmployerDashboard.css
+│   │   │   ├── PostingsDashboard.tsx      # Job postings, candidate matching, pokes, interviews
+│   │   │   ├── OperationsDashboard.tsx    # Staffing ops — roster, financials, immigration, admin
+│   │   │   ├── PostJobPage.tsx            # Job posting form with Smart Paste parser
+│   │   │   ├── PostJobPage.css
+│   │   │   └── VendorFinancial.css        # Financial summary styling
+│   │   └── shared/                # ── No login / both types ──
+│   │       ├── PublicJobsView.tsx         # Pre-login live data tables (jobs ⋈ profiles)
+│   │       ├── PublicJobsView.css
+│   │       ├── MembershipGatePage.tsx     # Paywall — employer subscription / candidate visibility
+│   │       └── MembershipGatePage.css
 │   ├── store/
 │   │   ├── index.ts             # Redux store config
+│   │   ├── authSlice.ts         # Auth token state
 │   │   └── jobsSlice.ts         # Jobs state, CRUD thunks, poke thunks
 │   ├── hooks/
+│   │   ├── index.ts             # Barrel export — hooks + CompanyContext
 │   │   ├── useDraftCache.ts     # Draft form persistence hook
 │   │   ├── useAutoRefreshFlash.ts # Auto-refresh + row flash animation hook
-│   │   └── useLiveRefresh.ts    # SSE-based live data refresh hook
+│   │   ├── useLiveRefresh.ts    # Polling-based live data refresh hook
+│   │   └── useCompanyContext.tsx # RBAC CompanyContext — role, permissions, hasPermission()
 │   ├── shared/
 │   │   ├── index.ts             # Re-exports DataTable & types from component library
 │   │   └── PokesTable.tsx       # Poke interactions table
 │   ├── styles/
 │   │   └── index.css            # Barrel — imports theme, base & component styles from library
+│   ├── constants/
+│   │   ├── index.ts             # Shared constants (job types, countries, thresholds)
+│   │   └── endpoints.ts         # API endpoint URLs
 │   └── utils/
-│       └── generateResumePDF.ts # Resume PDF generation utility
+│       └── index.ts             # Shared utilities (error formatting, PDF generation)
 ├── env/
 │   └── .env.development         # Local env vars
 ├── webpack.config.js            # Webpack + Module Federation config
@@ -102,28 +133,42 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
 
 ## Props from Shell (JobsAppProps)
 
-| Prop                     | Type                              | Description                          |
-| ------------------------ | --------------------------------- | ------------------------------------ |
-| `token`                  | `string \| null`                  | JWT access token                     |
-| `userType`               | `string \| undefined`             | `candidate`, `vendor`, or `marketer` |
-| `userId`                 | `string \| undefined`             | User ID                              |
-| `userEmail`              | `string \| undefined`             | User email                           |
-| `username`               | `string \| undefined`             | Username slug for profile URLs       |
-| `plan`                   | `string \| undefined`             | Subscription plan                    |
-| `membershipConfig`       | `Record<string,string[]> \| null` | Purchased visibility domains         |
-| `hasPurchasedVisibility` | `boolean \| undefined`            | Unlocks matched jobs view            |
+| Prop                     | Type                              | Description                    |
+| ------------------------ | --------------------------------- | ------------------------------ |
+| `token`                  | `string \| null`                  | JWT access token               |
+| `userType`               | `string \| undefined`             | `candidate` or `employer`      |
+| `userId`                 | `string \| undefined`             | User ID                        |
+| `userEmail`              | `string \| undefined`             | User email                     |
+| `username`               | `string \| undefined`             | Username slug for profile URLs |
+| `plan`                   | `string \| undefined`             | Subscription plan              |
+| `membershipConfig`       | `Record<string,string[]> \| null` | Purchased visibility domains   |
+| `hasPurchasedVisibility` | `boolean \| undefined`            | Unlocks matched jobs view      |
 
 ---
 
 ## Routing (JobsApp.tsx)
 
-| Condition                  | Component Rendered   | URL Paths                                  |
-| -------------------------- | -------------------- | ------------------------------------------ |
-| Not logged in              | `PublicJobsView`     | `/jobs`, `/jobs/candidate`, `/jobs/vendor` |
-| Logged in as **candidate** | `CandidateDashboard` |                                            |
-| Logged in as **vendor**    | `VendorDashboard`    |                                            |
-| Logged in as **marketer**  | `MarketerDashboard`  |                                            |
-| Invite token in URL        | `InviteAcceptPage`   | `/jobs/invite/:token`                      |
+| Condition                                   | Component Rendered        | URL Paths                                                  |
+| ------------------------------------------- | ------------------------- | ---------------------------------------------------------- |
+| Not logged in                               | `PublicJobsView`          | `/jobs`, `/jobs/candidate`, `/jobs/vendor`                 |
+| Not logged in — candidate onboarding        | `CandidateOnboardingFlow` | `/candidate/register/:token`, `/candidate/payment-*`       |
+| Employer, no subscription (plan === "free") | `MembershipGatePage`      | —                                                          |
+| Candidate, no visibility                    | `MembershipGatePage`      | —                                                          |
+| Logged in as **employer**                   | `EmployerDashboard`       | `/*` (with PostingsDashboard / OperationsDashboard inside) |
+| Employer — post a job                       | `PostJobPage`             | `/post-job`                                                |
+| Logged in as **candidate**                  | `CandidateDashboard`      | `/*`                                                       |
+| Invite token in URL                         | `InviteAcceptPage`        | `/invite/:token`                                           |
+
+### Employer Dashboard Mode Switching
+
+`EmployerDashboard` uses RBAC (`CompanyContext` from `/admin/me`) to render:
+
+| RBAC Role  | Default Mode | Available Dashboards                           |
+| ---------- | ------------ | ---------------------------------------------- |
+| `admin`    | postings     | `PostingsDashboard` + `OperationsDashboard`    |
+| `manager`  | postings     | `PostingsDashboard` + `OperationsDashboard`    |
+| `vendor`   | postings     | `PostingsDashboard` only                       |
+| `marketer` | operations   | `OperationsDashboard` only (department-scoped) |
 
 ---
 
@@ -136,31 +181,45 @@ The shell host loads this remote entry at `http://localhost:3001/remoteEntry.js`
   - **Shareable profile URL** — displays `{origin}/resume/{username}` with a "Copy" button (clipboard integration)
   - Plan badge + poke counter
 
-### Candidate Portal — Vendor Section
+### Candidate Portal — Jobs Section
 
-Shows forwarded openings grouped by sub-category (C2C, C2H, W2, 1099, Direct Hire, Salary). Each sub-category is displayed in a collapsible panel with a count badge.
+- **Matched Jobs** — ranked job matches with auto-refresh flash animations
+- **Forwarded Openings** — job openings forwarded by the candidate's employer, grouped by sub-category (C2C, C2H, W2, 1099, Direct Hire, Salary) in collapsible panels with count badges
+- **Pokes Sent / Received** — poke interaction history
+- **Mail Sent / Received** — email interaction history
 
 ### Candidate Portal — Employer Section
 
-- **Forwarded Openings** — job openings forwarded by the candidate's marketer
-- **Financial (read-only)** — view project financial data (bill rate, pay rate, margins) computed by the marketer
+- **Financial (read-only)** — view project financial data (bill rate, pay rate, margins) computed by the employer
 - **Immigration** — immigration status placeholder section
 
 ---
 
-## Marketer Dashboard Features
+## Employer Dashboard Features
 
-The marketer dashboard provides a comprehensive staffing management interface with the following sections:
+### PostingsDashboard (employer/PostingsDashboard.tsx)
 
+Job postings, candidate matching, and hiring interface. Available to employer users with `job_postings` permission (admin, manager, vendor roles):
+
+- **Job Postings Table** — list/close/reopen posted jobs with status indicators
+- **Candidate Matches** — ranked candidate matches per job with match scoring
+- **Pokes Sent/Received** — track poke interactions between employers and candidates
+- **Interview Invites** — send and track interview invitations
+- **Financial Summary** — employer-side financial overview (bill rates, margins)
+
+### OperationsDashboard (employer/OperationsDashboard.tsx)
+
+Comprehensive staffing operations interface. Available to employer users with `candidates` permission (admin, manager, marketer roles). Sidebar navigation filtered by RBAC permissions:
+
+- **Admin** — company setup, user management, employee invitations (requires `manage_roles`)
 - **Roster** — manage rostered candidates (add, remove, invite via email link)
 - **Forwarded Openings** — forward jobs to candidates, track status, send email notifications
-- **Summary Views:**
-  - **Financial Summary** — company-wide financial metrics (total revenue, margins, tax withholdings)
-  - **Project Summary** — per-project breakdown with bill rates, pay rates, and margin calculations
-  - **Job Positions Summary** — candidates grouped by job position with financial details
-  - **Immigration Summary** — candidate immigration status overview
-- **Kebab Menus** — per-row action menus on roster entries for quick access to email, download resume, and view details
-- **Modals** — email composer modal, resume download modal with accessible backdrop buttons
+- **Financial Summary** — company-wide financial metrics (total revenue, margins, tax withholdings)
+- **Project Summary** — per-project breakdown with bill rates, pay rates, and margin calculations
+- **Job Positions Summary** — candidates grouped by job position with financial details
+- **Immigration Summary** — candidate immigration status overview (requires `immigration`)
+- **Timesheets** — timesheet approval workflow (requires `workers`)
+- **Client/Vendor Companies** — company relationship management
 
 ---
 
@@ -201,13 +260,14 @@ Poke email composer for sending poke notifications to candidates or vendors.
 
 ## Inter-MFE Events (CustomEvent)
 
-| Event Name              | Direction    | Purpose                                        |
-| ----------------------- | ------------ | ---------------------------------------------- |
-| `matchdb:subnav`        | Jobs → Shell | Send subnav groups to shell sidebar            |
-| `matchdb:breadcrumb`    | Jobs → Shell | Send breadcrumb label to shell header          |
-| `matchdb:openLogin`     | Jobs → Shell | Request login modal from shell                 |
-| `matchdb:jobTypeFilter` | Shell → Jobs | Filter jobs by type in dashboards              |
-| `matchdb:loginContext`  | Shell → Jobs | Tell PublicJobsView which login type is active |
+| Event Name              | Direction    | Purpose                                              |
+| ----------------------- | ------------ | ---------------------------------------------------- |
+| `matchdb:subnav`        | Jobs → Shell | Send subnav groups to shell sidebar                  |
+| `matchdb:breadcrumb`    | Jobs → Shell | Send breadcrumb label to shell header                |
+| `matchdb:openLogin`     | Jobs → Shell | Request login modal from shell                       |
+| `matchdb:jobTypeFilter` | Shell → Jobs | Filter jobs by type in dashboards                    |
+| `matchdb:loginContext`  | Shell → Jobs | Tell PublicJobsView which login type is active       |
+| `matchdb:dashMode`      | Shell → Jobs | Switch employer dashboard mode (postings/operations) |
 
 ---
 
@@ -244,10 +304,12 @@ Shared utility functions (`fmtCurrency`, `fmtDate`, `authHeader`, `downloadBlob`
 
 ## Hooks (`src/hooks/`)
 
-| Hook                  | Description                                                                                        |
-| --------------------- | -------------------------------------------------------------------------------------------------- |
-| `useDraftCache`       | Persists form draft state to localStorage                                                          |
-| `useAutoRefreshFlash` | Tracks data diffs on a 30 s interval, produces `flashIds` (yellow) and `deleteFlashIds` (red) Sets |
+| Hook                  | Description                                                                                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `useDraftCache`       | Persists form draft state to localStorage                                                                                                                                                        |
+| `useAutoRefreshFlash` | Tracks data diffs on a 30 s interval, produces `flashIds` (yellow) and `deleteFlashIds` (red) sets                                                                                               |
+| `useLiveRefresh`      | Polling-based live data refresh with configurable interval                                                                                                                                       |
+| `useCompanyContext`   | RBAC context via `CompanyContext` — provides `role`, `department`, `permissions`, `hasPermission()`, `hasRole()`, `companyUser`, `companyAdmin`, and seat availability from `/api/jobs/admin/me` |
 
 ---
 

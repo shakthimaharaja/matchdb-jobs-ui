@@ -127,6 +127,8 @@ interface Props {
   candidateId: string;
   candidateEmail: string;
   onSaved?: () => void;
+  /** When true, hides all edit controls. */
+  readOnly?: boolean;
 }
 
 // ─── Balance helpers ─────────────────────────────────────────────────────────
@@ -168,6 +170,7 @@ const ProjectPayTable: React.FC<Props> = ({
   candidateId,
   candidateEmail,
   onSaved,
+  readOnly = false,
 }) => {
   const { data: states = [] } = useGetStateTaxRatesQuery();
   const [upsert, { isLoading: saving }] = useUpsertProjectFinancialMutation();
@@ -186,8 +189,8 @@ const ProjectPayTable: React.FC<Props> = ({
   );
   const [notes, setNotes] = useState(fin?.notes ?? "");
 
-  const [editingSettings, setEditingSettings] = useState(!fin);
-  const [editingRows, setEditingRows] = useState(!fin);
+  const [editingSettings, setEditingSettings] = useState(!fin && !readOnly);
+  const [editingRows, setEditingRows] = useState(!fin && !readOnly);
 
   // ── Pay period rows ───────────────────────────────────────────────────────
   const [periods, setPeriods] = useState<PayPeriod[]>(() =>
@@ -464,46 +467,48 @@ const ProjectPayTable: React.FC<Props> = ({
           )}
         </div>
 
-        <div className="ppt-settings-right">
-          {editingSettings || editingRows ? (
-            <>
-              {fin && (
+        {!readOnly && (
+          <div className="ppt-settings-right">
+            {editingSettings || editingRows ? (
+              <>
+                {fin && (
+                  <Button
+                    size="xs"
+                    onClick={() => {
+                      setEditingSettings(false);
+                      setEditingRows(false);
+                      setPeriods(generatePeriods(fin));
+                      setBillRate(fin.billRate);
+                      setPayRate(fin.payRate);
+                      setStateCode(fin.stateCode);
+                      setCashPct(fin.cashPct);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
                 <Button
+                  variant="primary"
                   size="xs"
-                  onClick={() => {
-                    setEditingSettings(false);
-                    setEditingRows(false);
-                    setPeriods(generatePeriods(fin));
-                    setBillRate(fin.billRate);
-                    setPayRate(fin.payRate);
-                    setStateCode(fin.stateCode);
-                    setCashPct(fin.cashPct);
-                  }}
+                  onClick={handleSave}
+                  disabled={saving}
                 >
-                  Cancel
+                  {saving ? "Saving…" : "Save All"}
                 </Button>
-              )}
+              </>
+            ) : (
               <Button
-                variant="primary"
                 size="xs"
-                onClick={handleSave}
-                disabled={saving}
+                onClick={() => {
+                  setEditingSettings(true);
+                  setEditingRows(true);
+                }}
               >
-                {saving ? "Saving…" : "Save All"}
+                Edit
               </Button>
-            </>
-          ) : (
-            <Button
-              size="xs"
-              onClick={() => {
-                setEditingSettings(true);
-                setEditingRows(true);
-              }}
-            >
-              Edit
-            </Button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Notes (only in edit mode) ─────────────────────────────────────── */}

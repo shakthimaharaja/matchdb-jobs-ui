@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { usePostJobMutation } from "../api/jobsApi";
-import useDraftCache from "../hooks/useDraftCache";
-import { getApiErrorMessage } from "../utils";
+import { usePostJobMutation } from "../../api/jobsApi";
+import useDraftCache from "../../hooks/useDraftCache";
+import { getApiErrorMessage } from "../../utils";
 import { Button } from "matchdb-component-library";
 import {
   JOB_TYPES,
@@ -9,8 +9,8 @@ import {
   CONTRACT_SUB_TYPES_WITH_EMPTY as CONTRACT_SUB_TYPES,
   FULL_TIME_SUB_TYPES_WITH_EMPTY as FULL_TIME_SUB_TYPES,
   COUNTRIES,
-} from "../constants";
-import "../components/ResumeModal.css";
+} from "../../constants";
+import "../../components/ResumeModal.css";
 import "./PostJobPage.css";
 
 /* ── Known skills dictionary for extraction ─────────────────── */
