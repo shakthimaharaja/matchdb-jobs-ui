@@ -201,7 +201,6 @@ const PokesTable: React.FC<PokesTableProps> = ({
       keyExtractor={(p) => p.id}
       loading={loading}
       paginated
-      serialNumberColumnWidth={50}
       title={titleText}
       titleIcon={meta.icon}
       titleExtra={titleExtra}

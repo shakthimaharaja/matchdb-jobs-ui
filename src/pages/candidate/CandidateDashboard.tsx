@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+﻿import { useSearchParams } from "react-router-dom";
 import React, {
   useCallback,
   useEffect,
@@ -78,7 +78,7 @@ const CandidateDashboard: React.FC<Props> = ({
   membershipConfig,
   hasPurchasedVisibility = false,
 }) => {
-  // -- URL-driven state � all navigation, filters, and pagination live in the URL
+  // ── URL-driven state — all navigation, filters, and pagination live in the URL
   const [searchParams, setSearchParams] = useSearchParams();
   const activeView = (searchParams.get("view") as ActiveView) || "matches";
   const myDetailTab = (searchParams.get("dtab") as MyDetailTab) || "overview";
@@ -153,7 +153,7 @@ const CandidateDashboard: React.FC<Props> = ({
   // Premium profile editing unlock ($3 payment gate)
   const [premiumUnlocked, setPremiumUnlocked] = useState(false);
 
-  // -- RTK Query data hooks ---------------------------------------------------
+  // ── RTK Query data hooks ───────────────────────────────────────────────────
   // Seed initial query args from URL so a reload lands on the same filtered page
   const [matchFilters, setMatchFilters] = useState<CandidateMatchesArgs>({
     page: currentPage,
@@ -191,7 +191,7 @@ const CandidateDashboard: React.FC<Props> = ({
   const { data: forwardedOpenings = [] } =
     useGetCandidateForwardedOpeningsQuery();
 
-  // Interview invites � fetched only when interviews view is active
+  // Interview invites — fetched only when interviews view is active
   const { data: interviewInvitesData, refetch: refetchInterviews } =
     useGetInterviewInvitesReceivedQuery(undefined, {
       skip: activeView !== "interviews",
@@ -207,7 +207,7 @@ const CandidateDashboard: React.FC<Props> = ({
   >(null);
   const [respondNote, setRespondNote] = useState("");
 
-  // My Detail � only fetched when the "my-detail" view is active
+  // My Detail — only fetched when the "my-detail" view is active
   const { data: myDetail, isLoading: myDetailLoading } =
     useGetCandidateMyDetailQuery(undefined, {
       skip:
@@ -269,7 +269,7 @@ const CandidateDashboard: React.FC<Props> = ({
     [pokesSentData],
   );
 
-  // target_id ? poke created_at (for 24h mail cooldown)
+  // target_id → poke created_at (for 24h mail cooldown)
   const pokedAtMap = useMemo(
     () =>
       new Map(
@@ -362,7 +362,7 @@ const CandidateDashboard: React.FC<Props> = ({
     return Object.keys(membershipConfig);
   }, [membershipConfig]);
 
-  // Debounce search text � also syncs ?q= in URL after 350 ms idle
+  // Debounce search text — also syncs ?q= in URL after 350 ms idle
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(searchText);
@@ -397,7 +397,7 @@ const CandidateDashboard: React.FC<Props> = ({
   });
 
   // Re-fetch when any URL filter / page param changes
-  // On first mount skip � matchFilters already seeded from URL in useState init
+  // On first mount skip — matchFilters already seeded from URL in useState init
   const filtersInitialized = useRef(false);
   useEffect(() => {
     if (!filtersInitialized.current) {
@@ -457,14 +457,14 @@ const CandidateDashboard: React.FC<Props> = ({
             ? `${domain} (${subs.map((s) => s.toUpperCase()).join(", ")})`
             : domain,
         )
-        .join(" � ");
+        .join(" · ");
       parts.push(domainText);
     }
 
     if (parts.length > 0) {
       const text = `Visible in: ${parts.join(
-        " � ",
-      )} � expand your reach by adding more subdomains.`;
+        " — ",
+      )} — expand your reach by adding more subdomains.`;
       globalThis.dispatchEvent(
         new CustomEvent("matchdb:visibleIn", { detail: { text } }),
       );
@@ -541,7 +541,7 @@ const CandidateDashboard: React.FC<Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* -- Auto-refresh + flash animations (30 s cycle) -- */
+  /* ── Auto-refresh + flash animations (30 s cycle) ── */
   const refreshAll = useCallback(() => {
     refetchMatches();
     refetchPokesSent();
@@ -591,7 +591,7 @@ const CandidateDashboard: React.FC<Props> = ({
     }));
   }, [candidateMatches]);
 
-  // -- Poke / Mail handlers (before columns so they can be referenced) --
+  // ── Poke / Mail handlers (before columns so they can be referenced) ──
   const handlePoke = useCallback(
     (row: MatchRow) => {
       if (!row.pokeTargetEmail) return;
@@ -632,7 +632,7 @@ const CandidateDashboard: React.FC<Props> = ({
     [clearPokeState],
   );
 
-  // -- Sorted rows (client-side sort on current page) --
+  // ── Sorted rows (client-side sort on current page) ──
   const sortedRows = useMemo(() => {
     if (!sortKey) return rows;
     return [...rows].sort((a, b) => {
@@ -646,14 +646,14 @@ const CandidateDashboard: React.FC<Props> = ({
     });
   }, [rows, sortKey, sortDir]);
 
-  // -- Column definitions (DataTableColumn from library) --
+  // ── Column definitions (DataTableColumn from library) ──
   const matchColumns = useMemo<DataTableColumn<MatchRow>[]>(() => {
     const indicator = (key: SortKey) =>
       sortKey === key ? (
-        <span className="th-sort">{sortDir === "asc" ? "?" : "?"}</span>
+        <span className="th-sort">{sortDir === "asc" ? "▲" : "▼"}</span>
       ) : (
         <span className="th-sort" style={{ opacity: 0.3 }}>
-          ?
+          ⇅
         </span>
       );
 
@@ -827,7 +827,7 @@ const CandidateDashboard: React.FC<Props> = ({
         width: "8%",
         skeletonWidth: 70,
         thProps: {
-          title: "Actions: Poke (quick notify) � Mail Template (compose)",
+          title: "Actions: Poke (quick notify) · Mail Template (compose)",
         },
         render: (row: MatchRow) => {
           const alreadyPoked = pokedRowIds?.has(row.id) ?? false;
@@ -848,18 +848,18 @@ const CandidateDashboard: React.FC<Props> = ({
 
           let pokeTitle: string;
           if (pokeMatchTooLow) {
-            pokeTitle = `Match below ${POKE_MATCH_THRESHOLD}% � not eligible to poke`;
+            pokeTitle = `Match below ${POKE_MATCH_THRESHOLD}% — not eligible to poke`;
           } else if (alreadyEmailed) {
-            pokeTitle = `Already emailed ${row.pokeTargetName} � cannot also poke`;
+            pokeTitle = `Already emailed ${row.pokeTargetName} — cannot also poke`;
           } else if (alreadyPoked) {
             pokeTitle = `Already poked ${row.pokeTargetName}`;
           } else {
-            pokeTitle = `Quick poke � notify ${row.pokeTargetName} by email`;
+            pokeTitle = `Quick poke — notify ${row.pokeTargetName} by email`;
           }
 
           let mailTitle: string;
           if (mailMatchTooLow) {
-            mailTitle = `Match below ${MAIL_MATCH_THRESHOLD}% � not eligible to send mail template`;
+            mailTitle = `Match below ${MAIL_MATCH_THRESHOLD}% — not eligible to send mail template`;
           } else if (alreadyEmailed) {
             mailTitle = `Already sent a mail template to ${row.pokeTargetName}`;
           } else if (pokeTooRecent) {
@@ -903,8 +903,8 @@ const CandidateDashboard: React.FC<Props> = ({
                 style={{ flex: 1, ...pokeStyle }}
               >
                 {(() => {
-                  if (alreadyPoked) return "?";
-                  if (pokeLoading) return "�";
+                  if (alreadyPoked) return "✓";
+                  if (pokeLoading) return "…";
                   return "Poke";
                 })()}
               </Button>
@@ -916,7 +916,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 aria-label={mailTitle}
                 style={{ flex: 1, ...mailStyle }}
               >
-                {alreadyEmailed ? "?" : "?"}
+                {alreadyEmailed ? "✓" : "✉"}
               </Button>
             </div>
           );
@@ -1033,7 +1033,7 @@ const CandidateDashboard: React.FC<Props> = ({
     return map;
   }, [candidateMatches, candidateMatchesSubTypeCounts]);
 
-  // Grand total across all types � for the "Matched Jobs" top-level nav count
+  // Grand total across all types — for the "Matched Jobs" top-level nav count
   const grandTotal = useMemo(() => {
     const tc = candidateMatchesTypeCounts;
     if (Object.keys(tc).length > 0)
@@ -1152,13 +1152,13 @@ const CandidateDashboard: React.FC<Props> = ({
             id: "update-profile",
             label:
               isProfileLocked && !premiumUnlocked
-                ? "? Update Profile ($3)"
-                : "? Update Profile",
+                ? "✏ Update Profile ($3)"
+                : "✏ Update Profile",
             tooltip: (() => {
               if (isProfileLocked && !premiumUnlocked)
-                return "Edit company, experience & bio � costs $3, pay at billing";
+                return "Edit company, experience & bio — costs $3, pay at billing";
               if (isProfileLocked)
-                return "Premium fields unlocked � all editable";
+                return "Premium fields unlocked — all editable";
               return "Edit your profile details";
             })(),
             active: false,
@@ -1241,7 +1241,7 @@ const CandidateDashboard: React.FC<Props> = ({
           {
             id: "pokes-heading",
             label: `Pokes (${pokeCount}/${
-              Number.isFinite(pokeLimit) ? pokeLimit : "8"
+              Number.isFinite(pokeLimit) ? pokeLimit : "∞"
             })`,
             active:
               activeView === "pokes-sent" || activeView === "pokes-received",
@@ -1298,10 +1298,10 @@ const CandidateDashboard: React.FC<Props> = ({
             ? [
                 {
                   id: "mail-template",
-                  label: "? Mail Template",
+                  label: "✉ Mail Template",
                   depth: 1,
                   tooltip:
-                    "Compose a personalised email with your resume � click ? next to any row",
+                    "Compose a personalised email with your resume — click ✉ next to any row",
                   onClick: () => {
                     navParams({ view: "matches" });
                     if (rows.length > 0) handlePokeEmail(rows[0]);
@@ -1390,7 +1390,7 @@ const CandidateDashboard: React.FC<Props> = ({
             ? [
                 {
                   id: "profile-url",
-                  label: urlCopied ? "? Copied!" : "?? Copy Profile URL",
+                  label: urlCopied ? "✓ Copied!" : "🔗 Copy Profile URL",
                   tooltip: `Click to copy: ${profileUrl}`,
                   onClick: () => {
                     navigator.clipboard.writeText(profileUrl);
@@ -1415,7 +1415,7 @@ const CandidateDashboard: React.FC<Props> = ({
       filterType === "contract" ? CONTRACT_SUB_TYPES : FULL_TIME_SUB_TYPES;
     const subLabel =
       subTypes.find((st) => st.value === filterSubType)?.label || filterSubType;
-    return `${typeLabel} � ${subLabel}`;
+    return `${typeLabel} › ${subLabel}`;
   })();
 
   const myDetailTabLabel = (() => {
@@ -1443,7 +1443,7 @@ const CandidateDashboard: React.FC<Props> = ({
         "Candidate Portal",
         "Jobs",
         filterSubType
-          ? `Openings � ${filterSubType
+          ? `Openings › ${filterSubType
               .replaceAll("_", " ")
               .replaceAll(/\b\w/g, (c) => c.toUpperCase())}`
           : "Forwarded Openings",
@@ -1480,7 +1480,7 @@ const CandidateDashboard: React.FC<Props> = ({
 
     return (
       <div className="u-flex-col">
-        {/* -- Single-line profile strip -- */}
+        {/* ── Single-line profile strip ── */}
         <div
           style={{
             borderBottom: "1px solid var(--w97-border)",
@@ -1537,12 +1537,12 @@ const CandidateDashboard: React.FC<Props> = ({
                         fontWeight: 300,
                       }}
                     >
-                      �
+                      ·
                     </span>
                   )}
                 </React.Fragment>
               ))}
-            {/* Stats badges � right side */}
+            {/* Stats badges — right side */}
             <div
               style={{
                 marginLeft: "auto",
@@ -1621,7 +1621,7 @@ const CandidateDashboard: React.FC<Props> = ({
           )}
         </div>
 
-        {/* -- Financial KPI strip -- */}
+        {/* ── Financial KPI strip ── */}
         {allFins.length > 0 && (
           <div className="ov-kpi-strip" style={{ margin: "10px 14px 0" }}>
             {[
@@ -1654,7 +1654,7 @@ const CandidateDashboard: React.FC<Props> = ({
           </div>
         )}
 
-        {/* -- Marketer roster summary table -- */}
+        {/* ── Marketer roster summary table ── */}
         {myDetail.marketer_info.length > 0 && (
           <div style={{ padding: "10px 14px 0" }}>
             <table
@@ -1694,7 +1694,7 @@ const CandidateDashboard: React.FC<Props> = ({
                     }}
                   >
                     <td style={{ padding: "4px 8px", fontWeight: 500 }}>
-                      {mc.company_name || "�"}
+                      {mc.company_name || "—"}
                     </td>
                     <td style={{ padding: "4px 8px" }}>
                       <span className="matchdb-type-pill">
@@ -1757,8 +1757,8 @@ const CandidateDashboard: React.FC<Props> = ({
                 marginTop: 2,
               }}
             >
-              {proj.vendor_email} � {proj.location || "�"} � {proj.job_type}
-              {proj.job_sub_type ? ` � ${proj.job_sub_type}` : ""}
+              {proj.vendor_email} · {proj.location || "—"} · {proj.job_type}
+              {proj.job_sub_type ? ` › ${proj.job_sub_type}` : ""}
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -1883,7 +1883,7 @@ const CandidateDashboard: React.FC<Props> = ({
     );
   }
 
-  /* -- Vendor Openings -- */
+  /* ── Vendor Openings ── */
   function renderVendorOpenings() {
     const filtered = filterSubType
       ? forwardedOpenings.filter(
@@ -1916,7 +1916,7 @@ const CandidateDashboard: React.FC<Props> = ({
               header: "Vendor",
               width: "14%",
               skeletonWidth: 100,
-              render: (f) => <>{f.vendor_email || "�"}</>,
+              render: (f) => <>{f.vendor_email || "—"}</>,
             },
             {
               key: "job_title",
@@ -1940,7 +1940,7 @@ const CandidateDashboard: React.FC<Props> = ({
               render: (f) => (
                 <>
                   {f.job_type}
-                  {f.job_sub_type ? ` � ${f.job_sub_type}` : ""}
+                  {f.job_sub_type ? ` › ${f.job_sub_type}` : ""}
                 </>
               ),
             },
@@ -1949,7 +1949,7 @@ const CandidateDashboard: React.FC<Props> = ({
               header: "Location",
               width: "10%",
               skeletonWidth: 70,
-              render: (f) => <>{f.job_location || "�"}</>,
+              render: (f) => <>{f.job_location || "—"}</>,
             },
             {
               key: "skills_required",
@@ -1975,10 +1975,10 @@ const CandidateDashboard: React.FC<Props> = ({
                   {(() => {
                     if (f.pay_per_hour) return `$${f.pay_per_hour}/hr`;
                     if (f.salary_min || f.salary_max)
-                      return `$${(f.salary_min || 0) / 1000}k�$${
+                      return `$${(f.salary_min || 0) / 1000}k–$${
                         (f.salary_max || 0) / 1000
                       }k`;
-                    return "�";
+                    return "—";
                   })()}
                 </>
               ),
@@ -2007,22 +2007,21 @@ const CandidateDashboard: React.FC<Props> = ({
               ),
             },
           ]}
+          scrollableColumns
           data={filtered}
           keyExtractor={(f) => f.id}
           loading={false}
           paginated
           pageSize={PAGE_SIZE}
-          scrollableColumns
-          titleIcon="??"
-          title={`Vendor Forwarded Openings � ${subLabel}`}
+          titleIcon="🏢"
+          title={`Vendor Forwarded Openings — ${subLabel}`}
           emptyMessage="No vendor forwarded openings found for this category."
-          serialNumberColumnWidth={50}
         />
       </div>
     );
   }
 
-  /* -- Employer Forwarded Openings -- */
+  /* ── Employer Forwarded Openings ── */
   function renderEmployerOpenings() {
     return (
       <DataTable<ForwardedOpeningItem>
@@ -2032,14 +2031,14 @@ const CandidateDashboard: React.FC<Props> = ({
             header: "Employer / Company",
             width: "14%",
             skeletonWidth: 100,
-            render: (f) => <>{f.company_name || "�"}</>,
+            render: (f) => <>{f.company_name || "—"}</>,
           },
           {
             key: "marketer_email",
             header: "Marketer",
             width: "14%",
             skeletonWidth: 100,
-            render: (f) => <>{f.marketer_email || "�"}</>,
+            render: (f) => <>{f.marketer_email || "—"}</>,
           },
           {
             key: "job_title",
@@ -2056,7 +2055,7 @@ const CandidateDashboard: React.FC<Props> = ({
             render: (f) => (
               <>
                 {f.job_type}
-                {f.job_sub_type ? ` � ${f.job_sub_type}` : ""}
+                {f.job_sub_type ? ` › ${f.job_sub_type}` : ""}
               </>
             ),
           },
@@ -2065,7 +2064,7 @@ const CandidateDashboard: React.FC<Props> = ({
             header: "Location",
             width: "10%",
             skeletonWidth: 70,
-            render: (f) => <>{f.job_location || "�"}</>,
+            render: (f) => <>{f.job_location || "—"}</>,
           },
           {
             key: "skills_required",
@@ -2091,10 +2090,10 @@ const CandidateDashboard: React.FC<Props> = ({
                 {(() => {
                   if (f.pay_per_hour) return `$${f.pay_per_hour}/hr`;
                   if (f.salary_min || f.salary_max)
-                    return `$${(f.salary_min || 0) / 1000}k�$${
+                    return `$${(f.salary_min || 0) / 1000}k–$${
                       (f.salary_max || 0) / 1000
                     }k`;
-                  return "�";
+                  return "—";
                 })()}
               </>
             ),
@@ -2123,21 +2122,20 @@ const CandidateDashboard: React.FC<Props> = ({
             ),
           },
         ]}
+        scrollableColumns
         data={forwardedOpenings}
         keyExtractor={(f) => f.id}
         loading={false}
         paginated
         pageSize={PAGE_SIZE}
-        scrollableColumns
-        titleIcon="??"
+        titleIcon="🏭"
         title="Employer Forwarded Openings"
         emptyMessage="No employer forwarded openings found."
-        serialNumberColumnWidth={50}
       />
     );
   }
 
-  /* -- Employer Finance (read-only) -- */
+  /* ── Employer Finance (read-only) ── */
   function renderEmployerFinance() {
     if (myDetailLoading)
       return (
@@ -2149,7 +2147,7 @@ const CandidateDashboard: React.FC<Props> = ({
             color: "var(--w97-text-secondary)",
           }}
         >
-          Loading financial data�
+          Loading financial data…
         </div>
       );
     if (!myDetail || myDetail.projects.length === 0)
@@ -2180,7 +2178,7 @@ const CandidateDashboard: React.FC<Props> = ({
 
     return (
       <div style={{ display: "flex", flexDirection: "column" }}>
-        {/* -- Read-only badge -- */}
+        {/* ── Read-only badge ── */}
         <div
           style={{
             padding: "8px 14px",
@@ -2193,14 +2191,14 @@ const CandidateDashboard: React.FC<Props> = ({
             gap: 6,
           }}
         >
-          <span style={{ fontSize: 14 }}>??</span>
+          <span style={{ fontSize: 14 }}>🔒</span>
           <span>
-            Read-only view � financial data is managed by your employer /
+            Read-only view — financial data is managed by your employer /
             marketer.
           </span>
         </div>
 
-        {/* -- Financial KPI strip -- */}
+        {/* ── Financial KPI strip ── */}
         <div className="ov-kpi-strip" style={{ margin: "10px 14px 0" }}>
           {[
             {
@@ -2228,7 +2226,7 @@ const CandidateDashboard: React.FC<Props> = ({
           ))}
         </div>
 
-        {/* -- Per-project financial breakdown -- */}
+        {/* ── Per-project financial breakdown ── */}
         <div style={{ padding: "10px 14px" }}>
           {myDetail.projects.map((proj) => (
             <div
@@ -2262,9 +2260,9 @@ const CandidateDashboard: React.FC<Props> = ({
                       marginTop: 2,
                     }}
                   >
-                    {proj.vendor_email} � {proj.location || "�"} �{" "}
+                    {proj.vendor_email} · {proj.location || "—"} ·{" "}
                     {proj.job_type}
-                    {proj.job_sub_type ? ` � ${proj.job_sub_type}` : ""}
+                    {proj.job_sub_type ? ` › ${proj.job_sub_type}` : ""}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -2353,7 +2351,7 @@ const CandidateDashboard: React.FC<Props> = ({
     );
   }
 
-  /* -- Employer Immigration (read-only placeholder) -- */
+  /* ── Employer Immigration (read-only placeholder) ── */
   function renderEmployerImmigration() {
     return (
       <div>
@@ -2369,9 +2367,9 @@ const CandidateDashboard: React.FC<Props> = ({
             gap: 6,
           }}
         >
-          <span style={{ fontSize: 14 }}>??</span>
+          <span style={{ fontSize: 14 }}>🔒</span>
           <span>
-            Read-only view � immigration data is managed by your employer /
+            Read-only view — immigration data is managed by your employer /
             marketer.
           </span>
         </div>
@@ -2383,7 +2381,7 @@ const CandidateDashboard: React.FC<Props> = ({
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 32, marginBottom: 12 }}>??</div>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🛂</div>
           <h3
             style={{
               margin: "0 0 8px",
@@ -2420,7 +2418,7 @@ const CandidateDashboard: React.FC<Props> = ({
             color: "var(--w97-text-secondary)",
           }}
         >
-          Loading your dashboard�
+          Loading your dashboard…
         </div>
       );
     if (!myDetail)
@@ -2442,12 +2440,12 @@ const CandidateDashboard: React.FC<Props> = ({
           activeKey={myDetailTab}
           onSelect={(key) => navParams({ dtab: key }, false)}
           tabs={[
-            { key: "overview", label: "?? Overview" },
+            { key: "overview", label: "👤 Overview" },
             {
               key: "projects",
               label: (
                 <>
-                  ?? Projects{" "}
+                  📋 Projects{" "}
                   <span className="matchdb-tab-badge">
                     {myDetail.projects.length}
                   </span>
@@ -2458,7 +2456,7 @@ const CandidateDashboard: React.FC<Props> = ({
               key: "marketer-activity",
               label: (
                 <>
-                  ?? Employer Activity{" "}
+                  📊 Employer Activity{" "}
                   <span className="matchdb-tab-badge">
                     {myDetail.vendor_activity.length}
                   </span>
@@ -2469,7 +2467,7 @@ const CandidateDashboard: React.FC<Props> = ({
               key: "forwarded-openings",
               label: (
                 <>
-                  ?? Forwarded Openings{" "}
+                  📤 Forwarded Openings{" "}
                   <span className="matchdb-tab-badge">
                     {myDetail.forwarded_openings.length}
                   </span>
@@ -2479,13 +2477,13 @@ const CandidateDashboard: React.FC<Props> = ({
           ]}
         />
 
-        {/* -- Tab: Overview -- */}
+        {/* ── Tab: Overview ── */}
         {myDetailTab === "overview" && renderOverviewTab()}
 
-        {/* -- Tab: Projects -- */}
+        {/* ── Tab: Projects ── */}
         {myDetailTab === "projects" && renderProjectsTab()}
 
-        {/* -- Tab: Employer Activity -- */}
+        {/* ── Tab: Employer Activity ── */}
         {myDetailTab === "marketer-activity" && (
           <div
             style={{
@@ -2545,7 +2543,7 @@ const CandidateDashboard: React.FC<Props> = ({
                         }}
                       >
                         <td style={{ padding: "5px 8px", fontWeight: 500 }}>
-                          {mc.company_name || "�"}
+                          {mc.company_name || "—"}
                         </td>
                         <td style={{ padding: "5px 8px" }}>
                           <span className="matchdb-type-pill">
@@ -2608,21 +2606,21 @@ const CandidateDashboard: React.FC<Props> = ({
                   header: "Kind",
                   width: "7%",
                   skeletonWidth: 50,
-                  render: (r) => <>{r.is_email ? "? Email" : "?? Poke"}</>,
+                  render: (r) => <>{r.is_email ? "✉ Email" : "👋 Poke"}</>,
                 },
                 {
                   key: "subject",
                   header: "Subject",
                   width: "22%",
                   skeletonWidth: 140,
-                  render: (r) => <>{r.subject || "�"}</>,
+                  render: (r) => <>{r.subject || "—"}</>,
                 },
                 {
                   key: "job_title",
                   header: "Job",
                   width: "18%",
                   skeletonWidth: 110,
-                  render: (r) => <>{r.job_title || "�"}</>,
+                  render: (r) => <>{r.job_title || "—"}</>,
                 },
                 {
                   key: "created_at",
@@ -2640,20 +2638,20 @@ const CandidateDashboard: React.FC<Props> = ({
                   ),
                 },
               ]}
+              scrollableColumns
               data={myDetail.vendor_activity}
               keyExtractor={(r) => r.id}
               loading={myDetailLoading}
               paginated
               pageSize={PAGE_SIZE}
-              titleIcon="??"
+              titleIcon="📊"
               title="Employer Interactions (Pokes & Emails Sent to You)"
               emptyMessage="No employer activity recorded yet."
-              serialNumberColumnWidth={50}
             />
           </div>
         )}
 
-        {/* -- Tab: Forwarded Openings -- */}
+        {/* ── Tab: Forwarded Openings ── */}
         {myDetailTab === "forwarded-openings" && (
           <div style={{ padding: 16 }}>
             <DataTable<(typeof myDetail.forwarded_openings)[number]>
@@ -2670,7 +2668,7 @@ const CandidateDashboard: React.FC<Props> = ({
                   header: "From Company",
                   width: "14%",
                   skeletonWidth: 100,
-                  render: (f) => <>{f.company_name || "�"}</>,
+                  render: (f) => <>{f.company_name || "—"}</>,
                 },
                 {
                   key: "marketer_email",
@@ -2694,7 +2692,7 @@ const CandidateDashboard: React.FC<Props> = ({
                   render: (f) => (
                     <>
                       {f.job_type}
-                      {f.job_sub_type ? ` � ${f.job_sub_type}` : ""}
+                      {f.job_sub_type ? ` › ${f.job_sub_type}` : ""}
                     </>
                   ),
                 },
@@ -2703,14 +2701,14 @@ const CandidateDashboard: React.FC<Props> = ({
                   header: "Location",
                   width: "10%",
                   skeletonWidth: 70,
-                  render: (f) => <>{f.job_location || "�"}</>,
+                  render: (f) => <>{f.job_location || "—"}</>,
                 },
                 {
                   key: "vendor_email",
                   header: "Vendor",
                   width: "14%",
                   skeletonWidth: 90,
-                  render: (f) => <>{f.vendor_email || "�"}</>,
+                  render: (f) => <>{f.vendor_email || "—"}</>,
                 },
                 {
                   key: "note",
@@ -2718,7 +2716,7 @@ const CandidateDashboard: React.FC<Props> = ({
                   width: "9%",
                   skeletonWidth: 60,
                   render: (f) => (
-                    <span style={{ fontSize: 10 }}>{f.note || "�"}</span>
+                    <span style={{ fontSize: 10 }}>{f.note || "—"}</span>
                   ),
                 },
                 {
@@ -2745,16 +2743,15 @@ const CandidateDashboard: React.FC<Props> = ({
                   ),
                 },
               ]}
+              scrollableColumns
               data={myDetail.forwarded_openings}
               keyExtractor={(f) => f.id}
               loading={myDetailLoading}
               paginated
               pageSize={PAGE_SIZE}
-              scrollableColumns
-              titleIcon="??"
+              titleIcon="📤"
               title="Job Openings Forwarded to You by Your Marketing Company"
               emptyMessage="No openings have been forwarded to you yet."
-              serialNumberColumnWidth={50}
             />
           </div>
         )}
@@ -2810,7 +2807,7 @@ const CandidateDashboard: React.FC<Props> = ({
         header: "Position",
         width: "14%",
         skeletonWidth: 100,
-        render: (r) => <>{r.jobTitle || "�"}</>,
+        render: (r) => <>{r.jobTitle || "—"}</>,
       },
       {
         key: "proposed",
@@ -2835,7 +2832,7 @@ const CandidateDashboard: React.FC<Props> = ({
               Join Meet
             </a>
           ) : (
-            <span style={{ color: "#aaa", fontSize: 12 }}>�</span>
+            <span style={{ color: "#aaa", fontSize: 12 }}>—</span>
           ),
       },
       {
@@ -2843,7 +2840,7 @@ const CandidateDashboard: React.FC<Props> = ({
         header: "Message",
         width: "13%",
         skeletonWidth: 90,
-        render: (r) => <>{r.message || "�"}</>,
+        render: (r) => <>{r.message || "—"}</>,
         tooltip: (r) => r.message || "",
       },
       {
@@ -2870,7 +2867,7 @@ const CandidateDashboard: React.FC<Props> = ({
         skeletonWidth: 100,
         render: (r) => {
           if (r.status !== "pending")
-            return <span style={{ color: "#aaa", fontSize: 11 }}>�</span>;
+            return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
           return (
             <div className="matchdb-action-row">
               <Button
@@ -2938,8 +2935,8 @@ const CandidateDashboard: React.FC<Props> = ({
                 rows={3}
                 placeholder={
                   respondAction === "accept"
-                    ? "Optional note to the recruiter�"
-                    : "Reason for declining�"
+                    ? "Optional note to the recruiter…"
+                    : "Reason for declining…"
                 }
                 value={respondNote}
                 onChange={(e) => setRespondNote(e.target.value)}
@@ -2971,7 +2968,7 @@ const CandidateDashboard: React.FC<Props> = ({
                   onClick={handleRespondConfirm}
                   disabled={respondingInvite}
                 >
-                  {respondingInvite ? "Saving�" : "Confirm"}
+                  {respondingInvite ? "Saving…" : "Confirm"}
                 </Button>
               </div>
             </div>
@@ -2987,8 +2984,7 @@ const CandidateDashboard: React.FC<Props> = ({
           pageSize={PAGE_SIZE}
           emptyMessage="No interview invites received yet."
           title="Interview Invites"
-          titleIcon="??"
-          serialNumberColumnWidth={50}
+          titleIcon="📞"
         />
       </>
     );
@@ -3004,18 +3000,18 @@ const CandidateDashboard: React.FC<Props> = ({
             role="alert"
             aria-live="assertive"
           >
-            ? Failed to load matches: {error}
+            ⚠ Failed to load matches: {error}
             <Button
               aria-label="Retry loading matches"
               onClick={() => refetchMatches()}
               size="xs"
             >
-              ? Retry
+              ↺ Retry
             </Button>
           </div>
         )}
 
-        {/* -- Dashboard stat rectangles -- */}
+        {/* ── Dashboard stat rectangles ── */}
         <div className="matchdb-stat-bar">
           {[
             {
@@ -3163,7 +3159,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 render: (f) => (
                   <>
                     {f.job_type}
-                    {f.job_sub_type ? ` � ${f.job_sub_type}` : ""}
+                    {f.job_sub_type ? ` › ${f.job_sub_type}` : ""}
                   </>
                 ),
               },
@@ -3172,7 +3168,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 header: "Location",
                 width: "10%",
                 skeletonWidth: 70,
-                render: (f) => <>{f.job_location || "�"}</>,
+                render: (f) => <>{f.job_location || "—"}</>,
               },
               {
                 key: "skills_required",
@@ -3198,10 +3194,10 @@ const CandidateDashboard: React.FC<Props> = ({
                     {(() => {
                       if (f.pay_per_hour) return `$${f.pay_per_hour}/hr`;
                       if (f.salary_min || f.salary_max)
-                        return `$${(f.salary_min || 0) / 1000}k�$${
+                        return `$${(f.salary_min || 0) / 1000}k–$${
                           (f.salary_max || 0) / 1000
                         }k`;
-                      return "�";
+                      return "—";
                     })()}
                   </>
                 ),
@@ -3212,7 +3208,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 width: "10%",
                 skeletonWidth: 80,
                 render: (f) => (
-                  <span style={{ fontSize: 10 }}>{f.note || "�"}</span>
+                  <span style={{ fontSize: 10 }}>{f.note || "—"}</span>
                 ),
               },
               {
@@ -3244,15 +3240,13 @@ const CandidateDashboard: React.FC<Props> = ({
             loading={false}
             paginated
             pageSize={PAGE_SIZE}
-            scrollableColumns
-            titleIcon="??"
+            titleIcon="📤"
             title="Forwarded Openings from Your Marketing Company"
             emptyMessage="No openings have been forwarded to you yet."
-            serialNumberColumnWidth={50}
           />
         )}
 
-        {/* My Dashboard view � 4 tabs */}
+        {/* My Dashboard view — 4 tabs */}
         {activeView === "my-detail" && (
           <div
             style={{
@@ -3309,7 +3303,7 @@ const CandidateDashboard: React.FC<Props> = ({
             alertSuccess={pokeSent ? "Poke sent successfully!" : undefined}
             alertErrors={[pokeError ? "Failed to send poke." : null, error]}
             title="Related Job Openings"
-            titleIcon="??"
+            titleIcon="📌"
             titleExtra={
               <div className="matchdb-title-toolbar">
                 <Input
@@ -3390,7 +3384,7 @@ const CandidateDashboard: React.FC<Props> = ({
                     setMatchFilters(buildFilterArgs(1, currentPageSize));
                   }}
                 >
-                  ?
+                  ↻
                 </Button>
               </div>
             }
@@ -3419,7 +3413,7 @@ const CandidateDashboard: React.FC<Props> = ({
           margin: "40px auto",
         }}
       >
-        <div style={{ fontSize: 52, marginBottom: 16 }}>??</div>
+        <div style={{ fontSize: 52, marginBottom: 16 }}>🔒</div>
         <h2 style={{ margin: "0 0 12px", fontSize: 18, fontWeight: 700 }}>
           Purchase a Visibility Package to See Job Matches
         </h2>
@@ -3436,7 +3430,7 @@ const CandidateDashboard: React.FC<Props> = ({
           by recruiters and you&apos;ll see your personalized matches here.
         </p>
         <p style={{ margin: "0 0 24px", fontSize: 12, color: "#888" }}>
-          Packages start at <strong>$13</strong> � one-time payment, no
+          Packages start at <strong>$13</strong> — one-time payment, no
           subscription required.
         </p>
         <Button
@@ -3444,7 +3438,7 @@ const CandidateDashboard: React.FC<Props> = ({
           style={{ fontSize: 14, padding: "10px 28px" }}
           onClick={openPricingModal}
         >
-          View Visibility Packages ?
+          View Visibility Packages →
         </Button>
       </div>
     );
@@ -3472,9 +3466,9 @@ const CandidateDashboard: React.FC<Props> = ({
           }}
         >
           <div className="rm-titlebar">
-            <span className="rm-titlebar-icon">??</span>
+            <span className="rm-titlebar-icon">👤</span>
             <span className="rm-titlebar-title">
-              My Profile � Candidate Resume
+              My Profile — Candidate Resume
             </span>
             {profileRequired ? (
               <span
@@ -3494,13 +3488,13 @@ const CandidateDashboard: React.FC<Props> = ({
                 title="Close"
                 size="xs"
               >
-                ?
+                ✕
               </Button>
             )}
           </div>
           <div className="rm-statusbar">
             {profileRequired
-              ? "Please complete your profile below and click Save � you'll then see your matched job openings."
+              ? "Please complete your profile below and click Save — you'll then see your matched job openings."
               : "Complete your profile to improve job match accuracy. The more detail you provide, the better your matches."}
           </div>
           <CandidateProfile

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import { DataTable } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 
@@ -487,12 +487,11 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
   return (
     <DataTable<MatchRow>
       columns={columns}
+      scrollableColumns
       data={sortedRows}
       keyExtractor={(r) => r.id}
       loading={loading}
       paginated
-      serialNumberColumnWidth={50}
-      scrollableColumns
       emptyMessage="MySQL returned an empty result set (i.e. zero rows)."
       alertSuccess={pokeSuccessMessage}
       alertErrors={[pokeError, error]}

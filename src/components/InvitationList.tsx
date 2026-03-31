@@ -17,17 +17,17 @@ import {
 } from "../api/jobsApi";
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#e68a00",
-  accepted: "#2e7d32",
-  expired: "#c62828",
-  revoked: "#888",
+  pending: "#ffaa44",
+  accepted: "#6bb700",
+  expired: "#8a8886",
+  revoked: "#c4314b",
 };
 
 const STATUS_ICONS: Record<string, string> = {
-  pending: "🟡",
-  accepted: "🟢",
-  expired: "🔴",
-  revoked: "⛔",
+  pending: "●",
+  accepted: "●",
+  expired: "○",
+  revoked: "⊘",
 };
 
 export function InvitationList() {
@@ -131,7 +131,6 @@ export function InvitationList() {
       keyExtractor={(r) => r.id}
       loading={isLoading}
       paginated
-      serialNumberColumnWidth={50}
       emptyMessage="No invitations sent yet."
       title="Employee Invitations"
       titleIcon="📧"

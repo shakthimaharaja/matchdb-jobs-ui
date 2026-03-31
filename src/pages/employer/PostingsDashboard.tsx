@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import MatchDataTable, { MatchRow } from "../../components/MatchDataTable";
 import DBLayout, { NavGroup } from "../../components/DBLayout";
@@ -1721,7 +1721,6 @@ const PostingsDashboard: React.FC<Props> = ({
         keyExtractor={(r) => r.id}
         loading={false}
         paginated
-        serialNumberColumnWidth={50}
         emptyMessage="No interview invites sent yet. Click 📞 on any matched candidate to send one."
         title="Interview Invites Sent"
         titleIcon="📞"
@@ -2176,7 +2175,6 @@ const PostingsDashboard: React.FC<Props> = ({
                 titleIcon={isActiveView ? "🔓" : "📋"}
                 flashIds={jobsFlash.flashIds}
                 deleteFlashIds={jobsFlash.deleteFlashIds}
-                serialNumberColumnWidth={50}
               />
             );
           })()}

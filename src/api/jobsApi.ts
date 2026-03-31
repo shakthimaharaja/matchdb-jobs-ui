@@ -937,6 +937,332 @@ export interface PaymentSessionResponse {
   url: string;
 }
 
+// ─── Payroll Types ────────────────────────────────────────────────────────────
+
+export type PayPeriodStatus =
+  | "DRAFT"
+  | "IN_REVIEW"
+  | "APPROVED"
+  | "PROCESSED"
+  | "VOIDED";
+export type PayFrequency = "WEEKLY" | "BI_WEEKLY" | "SEMI_MONTHLY" | "MONTHLY";
+
+export interface PayPeriod {
+  _id: string;
+  companyId: string;
+  periodStart: string;
+  periodEnd: string;
+  frequency: PayFrequency;
+  status: PayPeriodStatus;
+  totalGrossPay: number;
+  totalNetPay: number;
+  totalEmployerCost: number;
+  employeeCount: number;
+  submittedBy?: string;
+  submittedAt?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  processedAt?: string;
+  processedBy?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayrollRecord {
+  _id: string;
+  payPeriodId: string;
+  companyId: string;
+  personId: string;
+  personName?: string;
+  regularHours: number;
+  overtimeHours: number;
+  ptoHours: number;
+  sickHours: number;
+  holidayHours: number;
+  grossPay: number;
+  federalTax: number;
+  stateTax: number;
+  socialSecurity: number;
+  medicare: number;
+  otherDeductions: number;
+  netPay: number;
+  employerSSMatch: number;
+  employerMedicareMatch: number;
+  employerFUTA: number;
+  employerSUTA: number;
+  employerBenefits: number;
+  totalEmployerCost: number;
+  status: string;
+  paymentDate?: string;
+  timesheetIds: string[];
+  createdAt: string;
+}
+
+export interface PayStub {
+  _id: string;
+  payrollRecordId: string;
+  personId: string;
+  personName?: string;
+  stubNumber: string;
+  periodStart: string;
+  periodEnd: string;
+  grossPay: number;
+  netPay: number;
+  pdfUrl?: string;
+  isViewed: boolean;
+  createdAt: string;
+}
+
+// ─── Client/Invoice Types ─────────────────────────────────────────────────────
+
+export interface ClientCompanyEnhanced {
+  _id: string;
+  name: string;
+  legalName?: string;
+  companyId?: string;
+  billingEmail?: string;
+  billingContact?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  paymentTerms: number;
+  creditLimit: number;
+  taxId?: string;
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "PROSPECT";
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientRateCard {
+  _id: string;
+  companyId: string;
+  clientCompanyId: string;
+  personId: string;
+  personName?: string;
+  jobTitle?: string;
+  billRate: number;
+  payRate: number;
+  overtimeBillRate: number;
+  overtimePayRate: number;
+  currency: string;
+  effectiveDate: string;
+  endDate?: string;
+  margin: number;
+  marginPercent: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface InvoiceLineItem {
+  timesheetId?: string;
+  description: string;
+  hours: number;
+  rate: number;
+  amount: number;
+}
+
+export type InvoiceStatus =
+  | "DRAFT"
+  | "SENT"
+  | "VIEWED"
+  | "PARTIAL"
+  | "PAID"
+  | "OVERDUE"
+  | "VOID"
+  | "WRITE_OFF";
+
+export interface Invoice {
+  _id: string;
+  companyId: string;
+  clientCompanyId: string;
+  clientName?: string;
+  invoiceNumber: string;
+  periodStart: string;
+  periodEnd: string;
+  lineItems: InvoiceLineItem[];
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  totalAmount: number;
+  balanceDue: number;
+  status: InvoiceStatus;
+  dueDate: string;
+  sentAt?: string;
+  paidAt?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoicePayment {
+  _id: string;
+  invoiceId: string;
+  amount: number;
+  method: "ACH" | "WIRE" | "CHECK" | "CREDIT_CARD";
+  referenceNumber?: string;
+  paidAt: string;
+  notes?: string;
+}
+
+export interface InvoiceAgingBucket {
+  label: string;
+  count: number;
+  total: number;
+  invoices: Invoice[];
+}
+
+// ─── Vendor/Bill Types ────────────────────────────────────────────────────────
+
+export interface VendorCompanyEnhanced {
+  _id: string;
+  name: string;
+  companyId?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  paymentTerms: number;
+  taxId?: string;
+  category: "STAFFING" | "TECHNOLOGY" | "CONSULTING" | "OTHER";
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BillStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "SCHEDULED"
+  | "PAID"
+  | "OVERDUE"
+  | "VOID";
+
+export interface VendorBill {
+  _id: string;
+  companyId: string;
+  vendorCompanyId: string;
+  vendorName?: string;
+  billNumber: string;
+  periodStart: string;
+  periodEnd: string;
+  description?: string;
+  totalAmount: number;
+  balanceDue: number;
+  status: BillStatus;
+  dueDate: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  paidAt?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BillAgingBucket {
+  label: string;
+  count: number;
+  total: number;
+  bills: VendorBill[];
+}
+
+// ─── Finance Types ────────────────────────────────────────────────────────────
+
+export interface FinanceDashboard {
+  totalAR: number;
+  totalAP: number;
+  netPosition: number;
+  recentPayrolls: PayPeriod[];
+  pendingTimesheets: number;
+  overdueInvoices: number;
+  overdueBills: number;
+}
+
+export interface ProfitLossReport {
+  period: { start: string; end: string };
+  revenue: number;
+  payroll: number;
+  expenses: number;
+  netIncome: number;
+}
+
+export interface CashFlowMonth {
+  month: string;
+  inflows: number;
+  outflows: number;
+  net: number;
+}
+
+export interface MarginReportItem {
+  personId: string;
+  personName: string;
+  totalBilled: number;
+  totalPaid: number;
+  margin: number;
+  marginPercent: number;
+}
+
+export interface ExpenseCategory {
+  _id: string;
+  companyId: string;
+  name: string;
+  code?: string;
+  type: "REVENUE" | "EXPENSE" | "PAYROLL" | "TAX";
+  parentId?: string;
+  isActive: boolean;
+}
+
+// ─── Fieldglass/Leave Types ───────────────────────────────────────────────────
+
+export interface TimeEntry {
+  _id: string;
+  timesheetId: string;
+  entryDate: string;
+  hours: number;
+  breakHours: number;
+  totalHours: number;
+  entryType: "REGULAR" | "OVERTIME" | "PTO" | "SICK" | "HOLIDAY";
+  notes?: string;
+}
+
+export type LeaveType =
+  | "PTO"
+  | "SICK"
+  | "VACATION"
+  | "PERSONAL"
+  | "UNPAID";
+
+export interface LeaveBalance {
+  _id: string;
+  companyId: string;
+  personId: string;
+  personName?: string;
+  leaveType: LeaveType;
+  year: number;
+  totalAllotted: number;
+  used: number;
+  remaining: number;
+}
+
+export interface TimesheetAuditLog {
+  _id: string;
+  timesheetId: string;
+  action: string;
+  actorId: string;
+  actorName?: string;
+  details?: string;
+  createdAt: string;
+}
+
 // ─── RTK Query API ────────────────────────────────────────────────────────────
 
 type StateWithAuth = { auth: { token: string | null } };
@@ -983,6 +1309,20 @@ export const jobsApi = createApi({
     "CompanyDetails",
     "CandidateInvitations",
     "CandidatePlans",
+    "PayPeriods",
+    "PayrollRecords",
+    "PayStubs",
+    "Clients",
+    "RateCards",
+    "Invoices",
+    "InvoicePayments",
+    "Vendors",
+    "Bills",
+    "BillPayments",
+    "FinanceDashboard",
+    "ExpenseCategories",
+    "TimeEntries",
+    "LeaveBalances",
   ],
   endpoints: (builder) => ({
     // ── Jobs ──────────────────────────────────────────────────────────────────
@@ -1664,6 +2004,448 @@ export const jobsApi = createApi({
       }),
       invalidatesTags: ["CandidatePlans"],
     }),
+
+    // ── Payroll ─────────────────────────────────────────────────────────────
+
+    getPayPeriods: builder.query<
+      { data: PayPeriod[] },
+      { status?: string; page?: number; limit?: number }
+    >({
+      query: (params) => ({ url: "api/jobs/payroll/periods", params }),
+      providesTags: ["PayPeriods"],
+    }),
+
+    createPayPeriod: builder.mutation<
+      PayPeriod,
+      { periodStart: string; periodEnd: string; frequency: PayFrequency; notes?: string }
+    >({
+      query: (body) => ({ url: "api/jobs/payroll/periods", method: "POST", body }),
+      invalidatesTags: ["PayPeriods"],
+    }),
+
+    getPayPeriod: builder.query<PayPeriod, string>({
+      query: (id) => `api/jobs/payroll/periods/${id}`,
+      providesTags: ["PayPeriods"],
+    }),
+
+    updatePayPeriod: builder.mutation<
+      PayPeriod,
+      { id: string } & Partial<PayPeriod>
+    >({
+      query: ({ id, ...body }) => ({
+        url: `api/jobs/payroll/periods/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["PayPeriods"],
+    }),
+
+    submitPayPeriod: builder.mutation<PayPeriod, string>({
+      query: (id) => ({
+        url: `api/jobs/payroll/periods/${id}/submit`,
+        method: "PATCH",
+        body: {},
+      }),
+      invalidatesTags: ["PayPeriods", "PayrollRecords"],
+    }),
+
+    approvePayPeriod: builder.mutation<PayPeriod, string>({
+      query: (id) => ({
+        url: `api/jobs/payroll/periods/${id}/approve`,
+        method: "PATCH",
+        body: {},
+      }),
+      invalidatesTags: ["PayPeriods"],
+    }),
+
+    processPayPeriod: builder.mutation<PayPeriod, string>({
+      query: (id) => ({
+        url: `api/jobs/payroll/periods/${id}/process`,
+        method: "PATCH",
+        body: {},
+      }),
+      invalidatesTags: ["PayPeriods", "PayStubs", "Timesheets"],
+    }),
+
+    voidPayPeriod: builder.mutation<PayPeriod, string>({
+      query: (id) => ({
+        url: `api/jobs/payroll/periods/${id}/void`,
+        method: "PATCH",
+        body: {},
+      }),
+      invalidatesTags: ["PayPeriods", "PayrollRecords", "PayStubs"],
+    }),
+
+    getPayStubs: builder.query<
+      { data: PayStub[] },
+      { personId: string; page?: number; limit?: number }
+    >({
+      query: ({ personId, ...params }) => ({
+        url: `api/jobs/payroll/stubs/${personId}`,
+        params,
+      }),
+      providesTags: ["PayStubs"],
+    }),
+
+    getMyPayStubs: builder.query<
+      { data: PayStub[] },
+      { page?: number; limit?: number }
+    >({
+      query: (params) => ({ url: "api/jobs/payroll/my-stubs", params }),
+      providesTags: ["PayStubs"],
+    }),
+
+    // ── Clients ─────────────────────────────────────────────────────────────
+
+    getClients: builder.query<
+      { data: ClientCompanyEnhanced[] },
+      { status?: string; search?: string; page?: number; limit?: number }
+    >({
+      query: (params) => ({ url: "api/jobs/clients", params }),
+      providesTags: ["Clients"],
+    }),
+
+    createClient: builder.mutation<ClientCompanyEnhanced, Partial<ClientCompanyEnhanced>>({
+      query: (body) => ({ url: "api/jobs/clients", method: "POST", body }),
+      invalidatesTags: ["Clients"],
+    }),
+
+    getClient: builder.query<ClientCompanyEnhanced, string>({
+      query: (id) => `api/jobs/clients/${id}`,
+      providesTags: ["Clients"],
+    }),
+
+    updateClient: builder.mutation<
+      ClientCompanyEnhanced,
+      { id: string } & Partial<ClientCompanyEnhanced>
+    >({
+      query: ({ id, ...body }) => ({
+        url: `api/jobs/clients/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Clients"],
+    }),
+
+    getClientRateCards: builder.query<{ data: ClientRateCard[] }, string>({
+      query: (clientId) => `api/jobs/clients/${clientId}/rate-cards`,
+      providesTags: ["RateCards"],
+    }),
+
+    createRateCard: builder.mutation<
+      ClientRateCard,
+      { clientId: string } & Partial<ClientRateCard>
+    >({
+      query: ({ clientId, ...body }) => ({
+        url: `api/jobs/clients/${clientId}/rate-cards`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["RateCards"],
+    }),
+
+    // ── Invoices ────────────────────────────────────────────────────────────
+
+    getInvoices: builder.query<
+      { data: Invoice[] },
+      { status?: string; clientCompanyId?: string; page?: number; limit?: number }
+    >({
+      query: (params) => ({ url: "api/jobs/invoices", params }),
+      providesTags: ["Invoices"],
+    }),
+
+    createInvoice: builder.mutation<Invoice, Partial<Invoice>>({
+      query: (body) => ({ url: "api/jobs/invoices", method: "POST", body }),
+      invalidatesTags: ["Invoices"],
+    }),
+
+    getInvoice: builder.query<Invoice, string>({
+      query: (id) => `api/jobs/invoices/${id}`,
+      providesTags: ["Invoices"],
+    }),
+
+    updateInvoice: builder.mutation<Invoice, { id: string } & Partial<Invoice>>({
+      query: ({ id, ...body }) => ({
+        url: `api/jobs/invoices/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Invoices"],
+    }),
+
+    sendInvoice: builder.mutation<Invoice, string>({
+      query: (id) => ({
+        url: `api/jobs/invoices/${id}/send`,
+        method: "PATCH",
+        body: {},
+      }),
+      invalidatesTags: ["Invoices"],
+    }),
+
+    recordInvoicePayment: builder.mutation<
+      InvoicePayment,
+      { invoiceId: string; amount: number; method: string; referenceNumber?: string; notes?: string }
+    >({
+      query: ({ invoiceId, ...body }) => ({
+        url: `api/jobs/invoices/${invoiceId}/payments`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Invoices", "InvoicePayments"],
+    }),
+
+    getInvoiceAging: builder.query<{ buckets: InvoiceAgingBucket[] }, void>({
+      query: () => "api/jobs/invoices/aging",
+      providesTags: ["Invoices"],
+    }),
+
+    generateInvoiceFromTimesheets: builder.mutation<
+      Invoice,
+      { clientCompanyId: string; periodStart: string; periodEnd: string }
+    >({
+      query: (body) => ({
+        url: "api/jobs/invoices/generate-from-timesheets",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Invoices", "Timesheets"],
+    }),
+
+    // ── Vendors (enhanced) ──────────────────────────────────────────────────
+
+    getVendors: builder.query<
+      { data: VendorCompanyEnhanced[] },
+      { status?: string; search?: string; page?: number; limit?: number }
+    >({
+      query: (params) => ({ url: "api/jobs/vendors", params }),
+      providesTags: ["Vendors"],
+    }),
+
+    createVendor: builder.mutation<VendorCompanyEnhanced, Partial<VendorCompanyEnhanced>>({
+      query: (body) => ({ url: "api/jobs/vendors", method: "POST", body }),
+      invalidatesTags: ["Vendors"],
+    }),
+
+    getVendor: builder.query<VendorCompanyEnhanced, string>({
+      query: (id) => `api/jobs/vendors/${id}`,
+      providesTags: ["Vendors"],
+    }),
+
+    updateVendor: builder.mutation<
+      VendorCompanyEnhanced,
+      { id: string } & Partial<VendorCompanyEnhanced>
+    >({
+      query: ({ id, ...body }) => ({
+        url: `api/jobs/vendors/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Vendors"],
+    }),
+
+    // ── Bills ───────────────────────────────────────────────────────────────
+
+    getBills: builder.query<
+      { data: VendorBill[] },
+      { status?: string; vendorCompanyId?: string; page?: number; limit?: number }
+    >({
+      query: (params) => ({ url: "api/jobs/bills", params }),
+      providesTags: ["Bills"],
+    }),
+
+    createBill: builder.mutation<VendorBill, Partial<VendorBill>>({
+      query: (body) => ({ url: "api/jobs/bills", method: "POST", body }),
+      invalidatesTags: ["Bills"],
+    }),
+
+    getBill: builder.query<VendorBill, string>({
+      query: (id) => `api/jobs/bills/${id}`,
+      providesTags: ["Bills"],
+    }),
+
+    updateBill: builder.mutation<VendorBill, { id: string } & Partial<VendorBill>>({
+      query: ({ id, ...body }) => ({
+        url: `api/jobs/bills/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Bills"],
+    }),
+
+    approveBill: builder.mutation<VendorBill, string>({
+      query: (id) => ({
+        url: `api/jobs/bills/${id}/approve`,
+        method: "PATCH",
+        body: {},
+      }),
+      invalidatesTags: ["Bills"],
+    }),
+
+    payBill: builder.mutation<
+      VendorBill,
+      { id: string; amount: number; method: string; referenceNumber?: string; notes?: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `api/jobs/bills/${id}/pay`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Bills", "BillPayments"],
+    }),
+
+    getBillAging: builder.query<{ buckets: BillAgingBucket[] }, void>({
+      query: () => "api/jobs/bills/aging",
+      providesTags: ["Bills"],
+    }),
+
+    // ── Finance ─────────────────────────────────────────────────────────────
+
+    getFinanceDashboard: builder.query<FinanceDashboard, void>({
+      query: () => "api/jobs/finance/dashboard",
+      providesTags: ["FinanceDashboard"],
+    }),
+
+    getProfitLoss: builder.query<
+      ProfitLossReport,
+      { start?: string; end?: string }
+    >({
+      query: (params) => ({ url: "api/jobs/finance/profit-loss", params }),
+      providesTags: ["FinanceDashboard"],
+    }),
+
+    getCashFlow: builder.query<
+      { data: CashFlowMonth[] },
+      { months?: number }
+    >({
+      query: (params) => ({ url: "api/jobs/finance/cash-flow", params }),
+      providesTags: ["FinanceDashboard"],
+    }),
+
+    getMarginReport: builder.query<{ data: MarginReportItem[] }, void>({
+      query: () => "api/jobs/finance/margin-report",
+      providesTags: ["FinanceDashboard"],
+    }),
+
+    getExpenseCategories: builder.query<{ data: ExpenseCategory[] }, void>({
+      query: () => "api/jobs/finance/expense-categories",
+      providesTags: ["ExpenseCategories"],
+    }),
+
+    createExpenseCategory: builder.mutation<ExpenseCategory, Partial<ExpenseCategory>>({
+      query: (body) => ({
+        url: "api/jobs/finance/expense-categories",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["ExpenseCategories"],
+    }),
+
+    // ── Fieldglass (enhanced timesheets) ────────────────────────────────────
+
+    getTimeEntries: builder.query<{ data: TimeEntry[] }, string>({
+      query: (timesheetId) => `api/jobs/fieldglass/${timesheetId}/entries`,
+      providesTags: ["TimeEntries"],
+    }),
+
+    upsertTimeEntries: builder.mutation<
+      { entries: TimeEntry[] },
+      { timesheetId: string; entries: { entryDate: string; hours: number; breakHours?: number; entryType?: string; notes?: string }[] }
+    >({
+      query: ({ timesheetId, entries }) => ({
+        url: `api/jobs/fieldglass/${timesheetId}/entries`,
+        method: "PUT",
+        body: { entries },
+      }),
+      invalidatesTags: ["TimeEntries", "Timesheets"],
+    }),
+
+    submitFieldglassTimesheet: builder.mutation<Timesheet, string>({
+      query: (id) => ({
+        url: `api/jobs/fieldglass/${id}/submit`,
+        method: "PATCH",
+        body: {},
+      }),
+      invalidatesTags: ["Timesheets", "MarketerTimesheets"],
+    }),
+
+    approveFieldglassTimesheet: builder.mutation<
+      Timesheet,
+      { id: string; notes?: string }
+    >({
+      query: ({ id, notes }) => ({
+        url: `api/jobs/fieldglass/${id}/approve`,
+        method: "PATCH",
+        body: { notes },
+      }),
+      invalidatesTags: ["Timesheets", "MarketerTimesheets", "LeaveBalances"],
+    }),
+
+    rejectFieldglassTimesheet: builder.mutation<
+      Timesheet,
+      { id: string; notes?: string }
+    >({
+      query: ({ id, notes }) => ({
+        url: `api/jobs/fieldglass/${id}/reject`,
+        method: "PATCH",
+        body: { notes },
+      }),
+      invalidatesTags: ["Timesheets", "MarketerTimesheets"],
+    }),
+
+    getPendingApprovals: builder.query<
+      { data: Timesheet[] },
+      { page?: number; limit?: number }
+    >({
+      query: (params) => ({ url: "api/jobs/fieldglass/pending-approval", params }),
+      providesTags: ["MarketerTimesheets"],
+    }),
+
+    // ── Leave Management ────────────────────────────────────────────────────
+
+    getLeaveBalances: builder.query<
+      { data: LeaveBalance[] },
+      { personId: string }
+    >({
+      query: ({ personId }) => `api/jobs/fieldglass/leave/balances/${personId}`,
+      providesTags: ["LeaveBalances"],
+    }),
+
+    getMyLeaveBalances: builder.query<{ data: LeaveBalance[] }, void>({
+      query: () => "api/jobs/fieldglass/leave/my-balances",
+      providesTags: ["LeaveBalances"],
+    }),
+
+    requestLeave: builder.mutation<
+      LeaveBalance,
+      { leaveType: LeaveType; hours: number; startDate: string; endDate: string; notes?: string }
+    >({
+      query: (body) => ({
+        url: "api/jobs/fieldglass/leave/request",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["LeaveBalances"],
+    }),
+
+    setLeaveBalance: builder.mutation<
+      LeaveBalance,
+      { personId: string; leaveType: LeaveType; year: number; totalAllotted: number }
+    >({
+      query: (body) => ({
+        url: "api/jobs/fieldglass/leave/balances",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["LeaveBalances"],
+    }),
+
+    getLeaveCalendar: builder.query<
+      { data: LeaveBalance[] },
+      { year?: number; month?: number }
+    >({
+      query: (params) => ({ url: "api/jobs/fieldglass/leave/calendar", params }),
+      providesTags: ["LeaveBalances"],
+    }),
   }),
 });
 
@@ -1768,4 +2550,64 @@ export const {
   useGetCandidatePlansQuery,
   useCreateCandidatePlanMutation,
   useUpdateCandidatePlanMutation,
+  // Payroll
+  useGetPayPeriodsQuery,
+  useCreatePayPeriodMutation,
+  useGetPayPeriodQuery,
+  useUpdatePayPeriodMutation,
+  useSubmitPayPeriodMutation,
+  useApprovePayPeriodMutation,
+  useProcessPayPeriodMutation,
+  useVoidPayPeriodMutation,
+  useGetPayStubsQuery,
+  useGetMyPayStubsQuery,
+  // Clients (enhanced)
+  useGetClientsQuery,
+  useCreateClientMutation,
+  useGetClientQuery,
+  useUpdateClientMutation,
+  useGetClientRateCardsQuery,
+  useCreateRateCardMutation,
+  // Invoices
+  useGetInvoicesQuery,
+  useCreateInvoiceMutation,
+  useGetInvoiceQuery,
+  useUpdateInvoiceMutation,
+  useSendInvoiceMutation,
+  useRecordInvoicePaymentMutation,
+  useGetInvoiceAgingQuery,
+  useGenerateInvoiceFromTimesheetsMutation,
+  // Vendors (enhanced)
+  useGetVendorsQuery,
+  useCreateVendorMutation,
+  useGetVendorQuery,
+  useUpdateVendorMutation,
+  // Bills
+  useGetBillsQuery,
+  useCreateBillMutation,
+  useGetBillQuery,
+  useUpdateBillMutation,
+  useApproveBillMutation,
+  usePayBillMutation,
+  useGetBillAgingQuery,
+  // Finance
+  useGetFinanceDashboardQuery,
+  useGetProfitLossQuery,
+  useGetCashFlowQuery,
+  useGetMarginReportQuery,
+  useGetExpenseCategoriesQuery,
+  useCreateExpenseCategoryMutation,
+  // Fieldglass
+  useGetTimeEntriesQuery,
+  useUpsertTimeEntriesMutation,
+  useSubmitFieldglassTimesheetMutation,
+  useApproveFieldglassTimesheetMutation,
+  useRejectFieldglassTimesheetMutation,
+  useGetPendingApprovalsQuery,
+  // Leave
+  useGetLeaveBalancesQuery,
+  useGetMyLeaveBalancesQuery,
+  useRequestLeaveMutation,
+  useSetLeaveBalanceMutation,
+  useGetLeaveCalendarQuery,
 } = jobsApi;

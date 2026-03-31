@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PublicJobsView — rendered in Jobs-UI when user is NOT logged in.
  *
  * Three views selected by URL path:

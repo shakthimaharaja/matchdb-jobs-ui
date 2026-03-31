@@ -41,7 +41,16 @@ export type ActiveView =
   | "admin-users"
   | "admin-invitations"
   | "admin-active-users"
-  | "admin-candidate-tracking";
+  | "admin-candidate-tracking"
+  // ── Three-pillar views ──
+  | "payroll"
+  | "clients-mgmt"
+  | "invoices"
+  | "vendors-mgmt"
+  | "bills"
+  | "finance-dashboard"
+  | "fieldglass-timesheets"
+  | "leave-management";
 
 export interface ImmigrationDependant {
   name: string;
@@ -472,6 +481,15 @@ export function getBreadcrumb(
     "admin-invitations": ["Jobs", "Marketer", "Admin", "Invitations"],
     "admin-active-users": ["Jobs", "Marketer", "Admin", "Active Users"],
     "admin-candidate-tracking": ["Jobs", "Marketer", "Admin", "Candidates"],
+    // ── Three-pillar breadcrumbs ──
+    payroll: ["Jobs", "Marketer", "ADP People", "Payroll"],
+    "clients-mgmt": ["Jobs", "Marketer", "QuickBooks", "Clients"],
+    invoices: ["Jobs", "Marketer", "QuickBooks", "Invoices"],
+    "vendors-mgmt": ["Jobs", "Marketer", "QuickBooks", "Vendors"],
+    bills: ["Jobs", "Marketer", "QuickBooks", "Bills"],
+    "finance-dashboard": ["Jobs", "Marketer", "QuickBooks", "Finance"],
+    "fieldglass-timesheets": ["Jobs", "Marketer", "Fieldglass", "Timesheets"],
+    "leave-management": ["Jobs", "Marketer", "Fieldglass", "Leave"],
   };
   return map[activeView] ?? ["Jobs", "Marketer"];
 }

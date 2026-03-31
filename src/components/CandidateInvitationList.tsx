@@ -21,11 +21,11 @@ const STATUS_MAP: Record<
   string,
   { icon: string; color: string; label: string }
 > = {
-  pending: { icon: "🟡", color: "#e68a00", label: "Pending" },
-  payment_pending: { icon: "🔵", color: "#1565c0", label: "Payment Pending" },
-  active: { icon: "🟢", color: "#2e7d32", label: "Active" },
-  expired: { icon: "🔴", color: "#c62828", label: "Expired" },
-  revoked: { icon: "⛔", color: "#888", label: "Revoked" },
+  pending: { icon: "●", color: "#ffaa44", label: "Pending" },
+  payment_pending: { icon: "●", color: "#b4009e", label: "Payment Pending" },
+  active: { icon: "●", color: "#6bb700", label: "Active" },
+  expired: { icon: "○", color: "#8a8886", label: "Expired" },
+  revoked: { icon: "⊘", color: "#c4314b", label: "Revoked" },
 };
 
 const PAYMENT_COLORS: Record<string, string> = {
@@ -259,7 +259,6 @@ export function CandidateInvitationList() {
         keyExtractor={(r) => r.id}
         loading={isLoading}
         paginated
-        serialNumberColumnWidth={50}
         emptyMessage="No candidate invitations found."
         title="Invited Candidates"
         titleIcon="🎯"

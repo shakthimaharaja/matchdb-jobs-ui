@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TimesheetView — Candidate timesheet entry, history and download.
  *
  * Layout:

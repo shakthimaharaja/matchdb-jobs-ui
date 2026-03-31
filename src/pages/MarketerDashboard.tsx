@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+﻿import { useSearchParams } from "react-router-dom";
 import React, {
   useCallback,
   useEffect,
@@ -90,7 +90,7 @@ import { ActiveUsersPanel } from "../components/ActiveUsersPanel";
 import { CandidateInvitationList } from "../components/CandidateInvitationList";
 import { useGetAdminDashboardQuery } from "../api/jobsApi";
 
-// -- Click-to-open Popover (used in client table columns) ----------------------
+// ── Click-to-open Popover (used in client table columns) ──────────────────────
 function ClickPopover({
   label,
   children,
@@ -170,7 +170,7 @@ function ClickPopover({
   );
 }
 
-// -- Mock LCA wage data for H-1B candidates -----------------------------------
+// ── Mock LCA wage data for H-1B candidates ───────────────────────────────────
 interface LcaWageEntry {
   caseNumber: string;
   jobTitle: string;
@@ -220,7 +220,7 @@ function getLcaWages(candidateId: string): LcaWageEntry[] {
   return MOCK_LCA_WAGES[candidateId] || MOCK_LCA_WAGES.default;
 }
 
-// -- H-1B LCA Wage Popover -----------------------------------------------------
+// ── H-1B LCA Wage Popover ─────────────────────────────────────────────────────
 function LcaWagePopover({
   candidateName,
   candidateId,
@@ -278,14 +278,14 @@ function LcaWagePopover({
           >
             <div className="lca-wage-header">
               <span className="lca-wage-title">
-                LCA Wages � {candidateName}
+                LCA Wages — {candidateName}
               </span>
               <button
                 type="button"
                 className="lca-wage-close"
                 onClick={() => setOpen(false)}
               >
-                ?
+                ✕
               </button>
             </div>
             <table className="lca-wage-table">
@@ -308,7 +308,7 @@ function LcaWagePopover({
                     <td>{e.jobTitle}</td>
                     <td>{e.wageLevel}</td>
                     <td>
-                      {fmtW(e.wageFrom)} � {fmtW(e.wageTo)}
+                      {fmtW(e.wageFrom)} – {fmtW(e.wageTo)}
                       <span className="lca-wage-unit">/{e.wageUnit}</span>
                     </td>
                     <td>{fmtW(e.prevailingWage)}</td>
@@ -334,13 +334,13 @@ function LcaWagePopover({
   );
 }
 
-// --- Component ----------------------------------------------------------------
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const MarketerDashboard: React.FC<Props> = () => {
-  // -- RBAC context � used to filter sidebar nav items by permission
+  // ── RBAC context — used to filter sidebar nav items by permission
   const { hasPermission, role: companyRole } = useCompanyContext();
 
-  // -- URL-driven state � view, sub-filter, selected candidate, and detail tab
+  // ── URL-driven state — view, sub-filter, selected candidate, and detail tab
   const [searchParams, setSearchParams] = useSearchParams();
   const activeView =
     (searchParams.get("view") as ActiveView) || "company-candidates";
@@ -484,7 +484,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     };
   }, [kebabOpen]);
 
-  // -- RTK Query ---------------------------------------------------------------
+  // ── RTK Query ───────────────────────────────────────────────────────────────
 
   const { data: statsData } = useGetMarketerStatsQuery();
 
@@ -535,10 +535,10 @@ const MarketerDashboard: React.FC<Props> = () => {
     useForwardOpeningWithEmailMutation();
   const [updateForwardedStatus] = useUpdateForwardedStatusMutation();
 
-  // -- Immigration state -------------------------------------------------------
+  // ── Immigration state ───────────────────────────────────────────────────────
   const [immigrationSearch, setImmigrationSearch] = useState("");
 
-  // -- Timesheet hooks ---------------------------------------------------------
+  // ── Timesheet hooks ─────────────────────────────────────────────────────────
   const [tsStatusFilter, setTsStatusFilter] = useState<string>("submitted");
   const [approveNotes, setApproveNotes] = useState("");
   const [rejectNotes, setRejectNotes] = useState("");
@@ -571,7 +571,7 @@ const MarketerDashboard: React.FC<Props> = () => {
   const jobsTotal = jobsData?.total ?? 0;
   const profilesTotal = profilesData?.total ?? 0;
 
-  // -- Auto-refresh flash ------------------------------------------------------
+  // ── Auto-refresh flash ──────────────────────────────────────────────────────
 
   const refreshAll = useCallback(() => {
     refetchJobs();
@@ -622,7 +622,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     prevProfileFlashSize.current = n;
   }, [profilesFlash.flashIds.size, activeView]);
 
-  // -- Nav helpers -------------------------------------------------------------
+  // ── Nav helpers ─────────────────────────────────────────────────────────────
 
   const navigateTo = (view: ActiveView) => {
     navParams({ view, filter: null, cid: null, tab: null });
@@ -630,7 +630,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     if (view === "candidate-created") setNewProfilesBadge(0);
   };
 
-  // -- Admin modals state ------------------------------------------------------
+  // ── Admin modals state ──────────────────────────────────────────────────────
   const [inviteEmployeeOpen, setInviteEmployeeOpen] = useState(false);
   const [inviteCandidateOpen, setInviteCandidateOpen] = useState(false);
   const { data: adminDashboard } = useGetAdminDashboardQuery(undefined, {
@@ -644,7 +644,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     ),
   });
 
-  // -- Open detail modal -------------------------------------------------------
+  // ── Open detail modal ───────────────────────────────────────────────────────
 
   const openJobDetail = (j: MarketerJob) => {
     setDetailType("job");
@@ -660,7 +660,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     setDetailOpen(true);
   };
 
-  // -- Download helpers --------------------------------------------------------
+  // ── Download helpers ────────────────────────────────────────────────────────
 
   const handleDownloadJobsCSV = () => {
     const rows = jobs.map((j) => ({
@@ -671,7 +671,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       Location: j.location,
       Type: `${TYPE_LABELS[j.job_type] || j.job_type} ${
         j.job_sub_type
-          ? `� ${SUB_LABELS[j.job_sub_type] || j.job_sub_type}`
+          ? `› ${SUB_LABELS[j.job_sub_type] || j.job_sub_type}`
           : ""
       }`.trim(),
       Skills: (j.skills_required || []).join("; "),
@@ -703,7 +703,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     downloadExcel(rows, "candidate_profiles.xls");
   };
 
-  // -- Filtered data based on sub-nav selection --------------------------------
+  // ── Filtered data based on sub-nav selection ────────────────────────────────
 
   const filteredJobs = useMemo(() => {
     if (!subFilter) return jobs;
@@ -721,7 +721,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     return profiles;
   }, [profiles, subFilter]);
 
-  // -- Company / candidate / forwarding handlers -------------------------------
+  // ── Company / candidate / forwarding handlers ───────────────────────────────
 
   const handleRegisterCompany = async () => {
     if (!companyName.trim()) return;
@@ -771,7 +771,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     }
   };
 
-  // -- Invite candidate handler ------------------------------------------------
+  // ── Invite candidate handler ────────────────────────────────────────────────
 
   const openInviteModal = (c: MarketerCandidateItem) => {
     setInviteTarget(c);
@@ -794,7 +794,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     }
   };
 
-  // -- Send Job Opening via email handler --------------------------------------
+  // ── Send Job Opening via email handler ──────────────────────────────────────
 
   const openSendJobModal = (candidateEmail: string, candidateName: string) => {
     setSendJobCandidate({ email: candidateEmail, name: candidateName });
@@ -819,7 +819,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     }
   };
 
-  // -- Update forwarded opening status handler ---------------------------------
+  // ── Update forwarded opening status handler ─────────────────────────────────
 
   const handleUpdateForwardedStatus = async (id: string, status: string) => {
     try {
@@ -840,7 +840,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [jobs],
   );
 
-  // -- DBLayout nav groups -----------------------------------------------------
+  // ── DBLayout nav groups ─────────────────────────────────────────────────────
 
   const companyLabel = myCompany?.name ?? "My Company";
 
@@ -1066,8 +1066,8 @@ const MarketerDashboard: React.FC<Props> = () => {
         label: "Active Sessions",
         icon: ICONS.GREEN_CIRCLE,
         items: [
-          { id: "session-1", label: "Profile 1 � Local" },
-          { id: "session-2", label: "Profile 2 � (available)" },
+          { id: "session-1", label: "Profile 1 — Local" },
+          { id: "session-2", label: "Profile 2 — (available)" },
         ],
       },
     ],
@@ -1085,8 +1085,8 @@ const MarketerDashboard: React.FC<Props> = () => {
     ],
   );
 
-  // -- RBAC: filter sidebar items by permission --------------------------------
-  // Maps nav item IDs ? required permission. Items without a mapping are visible
+  // ── RBAC: filter sidebar items by permission ────────────────────────────────
+  // Maps nav item IDs → required permission. Items without a mapping are visible
   // to everyone. Admin role bypasses all checks (handled in hasPermission).
   const NAV_PERM_MAP: Record<string, string> = {
     "admin-users": "manage_roles",
@@ -1125,7 +1125,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     candidateDetail?.roster?.candidate_name,
   );
 
-  // -- Jobs table columns ------------------------------------------------------
+  // ── Jobs table columns ──────────────────────────────────────────────────────
 
   const jobColumns = useMemo<DataTableColumn<MarketerJob>[]>(
     () => [
@@ -1161,10 +1161,10 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 70,
         render: (j) => (
           <span style={{ fontWeight: 600 }}>
-            {j.client_company_name || "�"}
+            {j.client_company_name || "—"}
           </span>
         ),
-        tooltip: (j) => j.client_company_name || "�",
+        tooltip: (j) => j.client_company_name || "—",
       },
       {
         key: "vendor",
@@ -1174,10 +1174,10 @@ const MarketerDashboard: React.FC<Props> = () => {
         render: (j) => {
           const company = j.vendor_email
             ? j.vendor_email.split("@")[1]?.split(".")[0] || j.vendor_email
-            : j.recruiter_name || "�";
+            : j.recruiter_name || "—";
           return <span title={j.vendor_email}>{company}</span>;
         },
-        tooltip: (j) => j.vendor_email || j.recruiter_name || "�",
+        tooltip: (j) => j.vendor_email || j.recruiter_name || "—",
       },
       {
         key: "email",
@@ -1186,10 +1186,10 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 90,
         render: (j) => (
           <span style={{ fontSize: 10 }} title={j.vendor_email}>
-            {j.vendor_email || "�"}
+            {j.vendor_email || "—"}
           </span>
         ),
-        tooltip: (j) => j.vendor_email || "�",
+        tooltip: (j) => j.vendor_email || "—",
       },
       {
         key: "phone",
@@ -1198,7 +1198,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 65,
         render: (j) => (
           <span style={{ fontSize: 10 }} title={j.recruiter_phone}>
-            {j.recruiter_phone || "�"}
+            {j.recruiter_phone || "—"}
           </span>
         ),
       },
@@ -1207,8 +1207,8 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Location",
         width: "8%",
         skeletonWidth: 70,
-        render: (j) => <>{j.location || j.job_country || "�"}</>,
-        tooltip: (j) => j.location || "�",
+        render: (j) => <>{j.location || j.job_country || "—"}</>,
+        tooltip: (j) => j.location || "—",
       },
       {
         key: "type",
@@ -1216,9 +1216,9 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "10%",
         skeletonWidth: 85,
         render: (j) => {
-          const t = TYPE_LABELS[j.job_type] || j.job_type || "�";
+          const t = TYPE_LABELS[j.job_type] || j.job_type || "—";
           const s = j.job_sub_type
-            ? ` � ${SUB_LABELS[j.job_sub_type] || j.job_sub_type.toUpperCase()}`
+            ? ` › ${SUB_LABELS[j.job_sub_type] || j.job_sub_type.toUpperCase()}`
             : "";
           return (
             <span className="matchdb-type-pill">
@@ -1337,7 +1337,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               j.is_active ? "-active" : "-closed"
             }`}
           >
-            {j.is_active ? "? ACTIVE" : "? Closed"}
+            {j.is_active ? "● ACTIVE" : "● Closed"}
           </span>
         ),
       },
@@ -1353,7 +1353,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [],
   );
 
-  // -- Profiles table columns --------------------------------------------------
+  // ── Profiles table columns ──────────────────────────────────────────────────
 
   const profileColumns = useMemo<DataTableColumn<MarketerProfile>[]>(
     () => [
@@ -1377,10 +1377,10 @@ const MarketerDashboard: React.FC<Props> = () => {
             onClick={() => openProfileDetail(p)}
             title="Click to view profile"
           >
-            {p.name || "�"}
+            {p.name || "—"}
           </button>
         ),
-        tooltip: (p) => p.name || "�",
+        tooltip: (p) => p.name || "—",
       },
       {
         key: "email",
@@ -1389,10 +1389,10 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 90,
         render: (p) => (
           <span style={{ fontSize: 10 }} title={p.email}>
-            {p.email || "�"}
+            {p.email || "—"}
           </span>
         ),
-        tooltip: (p) => p.email || "�",
+        tooltip: (p) => p.email || "—",
       },
       {
         key: "phone",
@@ -1401,7 +1401,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 65,
         render: (p) => (
           <span style={{ fontSize: 10 }} title={p.phone}>
-            {p.phone || "�"}
+            {p.phone || "—"}
           </span>
         ),
       },
@@ -1410,16 +1410,16 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Role",
         width: "10%",
         skeletonWidth: 100,
-        render: (p) => <>{p.current_role || "�"}</>,
-        tooltip: (p) => p.current_role || "�",
+        render: (p) => <>{p.current_role || "—"}</>,
+        tooltip: (p) => p.current_role || "—",
       },
       {
         key: "company",
         header: "Company",
         width: "9%",
         skeletonWidth: 90,
-        render: (p) => <>{p.current_company || "�"}</>,
-        tooltip: (p) => p.current_company || "�",
+        render: (p) => <>{p.current_company || "—"}</>,
+        tooltip: (p) => p.current_company || "—",
       },
       {
         key: "type",
@@ -1428,7 +1428,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 70,
         render: (p) => (
           <span className="matchdb-type-pill">
-            {TYPE_LABELS[p.preferred_job_type] || p.preferred_job_type || "�"}
+            {TYPE_LABELS[p.preferred_job_type] || p.preferred_job_type || "—"}
           </span>
         ),
       },
@@ -1460,8 +1460,8 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Location",
         width: "7%",
         skeletonWidth: 70,
-        render: (p) => <>{p.location || "�"}</>,
-        tooltip: (p) => p.location || "�",
+        render: (p) => <>{p.location || "—"}</>,
+        tooltip: (p) => p.location || "—",
       },
       {
         key: "exp",
@@ -1470,7 +1470,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         align: "center" as const,
         skeletonWidth: 35,
         render: (p) => (
-          <>{p.experience_years ? `${p.experience_years}y` : "�"}</>
+          <>{p.experience_years ? `${p.experience_years}y` : "—"}</>
         ),
       },
       {
@@ -1534,7 +1534,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [],
   );
 
-  // -- Company Candidates table columns ----------------------------------------
+  // ── Company Candidates table columns ────────────────────────────────────────
 
   const candidateColumns = useMemo<DataTableColumn<MarketerCandidateItem>[]>(
     () => [
@@ -1565,7 +1565,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               });
             }}
           >
-            {c.candidate_name || "�"}
+            {c.candidate_name || "—"}
           </button>
         ),
       },
@@ -1584,7 +1584,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "14%",
         skeletonWidth: 100,
         render: (c) => (
-          <span style={{ fontSize: 10 }}>{c.current_role || "�"}</span>
+          <span style={{ fontSize: 10 }}>{c.current_role || "—"}</span>
         ),
       },
       {
@@ -1603,12 +1603,12 @@ const MarketerDashboard: React.FC<Props> = () => {
             invited: "#fffde6",
           };
           const STATUS_LABELS: Record<string, string> = {
-            accepted: "? Accepted",
-            invited: "? Invited",
+            accepted: "✓ Accepted",
+            invited: "⏳ Invited",
           };
           const color = STATUS_COLORS[s] ?? "var(--w97-text-secondary)";
           const bg = STATUS_BGS[s] ?? "var(--w97-sky)";
-          const label = STATUS_LABELS[s] ?? "�";
+          const label = STATUS_LABELS[s] ?? "—";
           return (
             <span
               style={{
@@ -1685,7 +1685,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 onClick={() => openInviteModal(c)}
                 title="Invite"
               >
-                ?
+                ✉
               </Button>
             )}
             <Button
@@ -1697,7 +1697,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               }
               title="Send Job"
             >
-              ??
+              📧
             </Button>
             <Button
               variant="close"
@@ -1705,7 +1705,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               onClick={() => handleRemoveCandidate(c.id)}
               title="Remove"
             >
-              ?
+              ✕
             </Button>
           </div>
         ),
@@ -1715,7 +1715,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [],
   );
 
-  // -- Forwarded Openings table columns ----------------------------------------
+  // ── Forwarded Openings table columns ────────────────────────────────────────
 
   const forwardedColumns = useMemo<DataTableColumn<ForwardedOpeningItem>[]>(
     () => [
@@ -1751,7 +1751,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           <>
             {TYPE_LABELS[f.job_type] || f.job_type}
             {f.job_sub_type
-              ? ` � ${SUB_LABELS[f.job_sub_type] || f.job_sub_type}`
+              ? ` › ${SUB_LABELS[f.job_sub_type] || f.job_sub_type}`
               : ""}
           </>
         ),
@@ -1761,7 +1761,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Location",
         width: "10%",
         skeletonWidth: 70,
-        render: (f) => <>{f.job_location || "�"}</>,
+        render: (f) => <>{f.job_location || "—"}</>,
       },
       {
         key: "status",
@@ -1799,11 +1799,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                 cursor: "pointer",
               }}
             >
-              <option value="pending">? Pending</option>
-              <option value="applied">?? Applied</option>
-              <option value="hired">? Hired</option>
-              <option value="declined">? Declined</option>
-              <option value="rejected">?? Rejected</option>
+              <option value="pending">⏳ Pending</option>
+              <option value="applied">📝 Applied</option>
+              <option value="hired">✅ Hired</option>
+              <option value="declined">❌ Declined</option>
+              <option value="rejected">🚫 Rejected</option>
             </Select>
           );
         },
@@ -1813,7 +1813,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Note",
         width: "12%",
         skeletonWidth: 80,
-        render: (f) => <span style={{ fontSize: 10 }}>{f.note || "�"}</span>,
+        render: (f) => <span style={{ fontSize: 10 }}>{f.note || "—"}</span>,
       },
       {
         key: "created_at",
@@ -1827,7 +1827,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [],
   );
 
-  // -- Render -------------------------------------------------------------------
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   // Stat chips data
   const stats = statsData;
@@ -1898,7 +1898,7 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderVendorPostedView() {
     const displayedJobs = subFilter ? filteredJobs : jobs;
     const jobsCountDisplay = jobsLoading
-      ? "�"
+      ? "…"
       : `${displayedJobs.length} / ${jobsTotal}`;
     return (
       <DataTable<MarketerJob>
@@ -1907,13 +1907,12 @@ const MarketerDashboard: React.FC<Props> = () => {
         keyExtractor={(j) => j.id}
         loading={jobsLoading}
         paginated
-        serialNumberColumnWidth={50}
         flashIds={jobsFlash.flashIds}
         deleteFlashIds={jobsFlash.deleteFlashIds}
-        titleIcon="??"
+        titleIcon="💼"
         title={
           subFilter
-            ? `Job Openings � ${
+            ? `Job Openings — ${
                 TYPE_LABELS[subFilter] ?? subFilter.toUpperCase()
               }`
             : "Job Openings"
@@ -1925,7 +1924,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             onClick={handleDownloadJobsCSV}
             title="Download all job openings as CSV"
           >
-            ? CSV
+            ⬇ CSV
           </Button>
         }
         titleExtra={
@@ -1934,7 +1933,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               className="matchdb-title-search"
               value={jobSearch}
               onChange={(e) => setJobSearch(e.target.value)}
-              placeholder="Search title, skills, location, client�"
+              placeholder="Search title, skills, location, client…"
             />
             <Button
               size="xs"
@@ -1949,7 +1948,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               className="matchdb-title-btn"
               onClick={() => refetchJobs()}
             >
-              ? Refresh
+              ↻ Refresh
             </Button>
             {Boolean(jobsFlash.lastSync) && (
               <span className="matchdb-title-sync">
@@ -1965,7 +1964,7 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderCandidateCreatedView() {
     const displayedProfiles = subFilter ? filteredProfiles : profiles;
     const profilesCountDisplay = profilesLoading
-      ? "�"
+      ? "…"
       : `${displayedProfiles.length} / ${profilesTotal}`;
     return (
       <DataTable<MarketerProfile>
@@ -1974,13 +1973,12 @@ const MarketerDashboard: React.FC<Props> = () => {
         keyExtractor={(p) => p.id}
         loading={profilesLoading}
         paginated
-        serialNumberColumnWidth={50}
         flashIds={profilesFlash.flashIds}
         deleteFlashIds={profilesFlash.deleteFlashIds}
-        titleIcon="??"
+        titleIcon="👤"
         title={
           subFilter
-            ? `Candidate Profiles � ${
+            ? `Candidate Profiles — ${
                 TYPE_LABELS[subFilter] ?? subFilter.toUpperCase()
               }`
             : "Candidate Profiles"
@@ -1992,7 +1990,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             onClick={handleDownloadProfilesExcel}
             title="Download all candidate profiles as Excel"
           >
-            ? Excel
+            ⬇ Excel
           </Button>
         }
         titleExtra={
@@ -2001,7 +1999,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               className="matchdb-title-search"
               value={profileSearch}
               onChange={(e) => setProfileSearch(e.target.value)}
-              placeholder="Search name, role, skills, location�"
+              placeholder="Search name, role, skills, location…"
             />
             <Button
               size="xs"
@@ -2016,7 +2014,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               className="matchdb-title-btn"
               onClick={() => refetchProfiles()}
             >
-              ? Refresh
+              ↻ Refresh
             </Button>
             {Boolean(profilesFlash.lastSync) && (
               <span className="matchdb-title-sync">
@@ -2040,7 +2038,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             style={{ marginBottom: 12, padding: 12 }}
           >
             <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>
-              ?? Register Your Company
+              🏢 Register Your Company
             </h3>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <Input
@@ -2064,7 +2062,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               color: "var(--w97-text-secondary)",
             }}
           >
-            ?? <strong>{myCompany.name}</strong> � {myCompany.marketer_email}
+            🏢 <strong>{myCompany.name}</strong> — {myCompany.marketer_email}
           </div>
         )}
 
@@ -2076,11 +2074,10 @@ const MarketerDashboard: React.FC<Props> = () => {
           loading={false}
           paginated
           pageSize={25}
-          serialNumberColumnWidth={50}
-          titleIcon="??"
+          titleIcon="🏢"
           title={
             myCompany?.name
-              ? `${myCompany.name} � Candidates`
+              ? `${myCompany.name} — Candidates`
               : "Company Candidates"
           }
           titleExtra={
@@ -2106,14 +2103,13 @@ const MarketerDashboard: React.FC<Props> = () => {
         keyExtractor={(f) => f.id}
         loading={false}
         paginated
-        titleIcon="??"
+        titleIcon="📤"
         title="Forwarded Openings"
-        serialNumberColumnWidth={50}
       />
     );
   }
 
-  // -- Shared Export Helpers ---------------------------------------------------
+  // ── Shared Export Helpers ───────────────────────────────────────────────────
 
   const fmtDollar = (v: number) =>
     `$${v.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
@@ -2166,10 +2162,10 @@ const MarketerDashboard: React.FC<Props> = () => {
     const body = rows.map((p) => [
       p.candidateName,
       p.jobTitle || "Untitled",
-      p.vendorEmail || "�",
+      p.vendorEmail || "—",
       p.isActive ? "Active" : "Closed",
-      p.financials ? `$${p.financials.billRate}` : "�",
-      p.financials ? `$${p.financials.payRate}` : "�",
+      p.financials ? `$${p.financials.billRate}` : "—",
+      p.financials ? `$${p.financials.payRate}` : "—",
       p.financials ? String(p.financials.hoursWorked) : "0",
       p.financials ? p.financials.totalBilled.toFixed(2) : "0",
       p.financials ? p.financials.netPayable.toFixed(2) : "0",
@@ -2271,7 +2267,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     const { name, data, context } = emailModalTarget;
     const lines = Object.entries(data).map(([k, v]) => `${k}: ${v}`);
     const body = [
-      `${contextLabel(context)} Report � ${name}`,
+      `${contextLabel(context)} Report — ${name}`,
       "",
       ...lines,
       "",
@@ -2279,7 +2275,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       `Generated: ${new Date().toLocaleDateString()}`,
     ].join("%0D%0A");
     const subject = encodeURIComponent(
-      `${contextLabel(context)} Report � ${name}`,
+      `${contextLabel(context)} Report — ${name}`,
     );
     window.open(
       `mailto:${encodeURIComponent(
@@ -2323,14 +2319,14 @@ const MarketerDashboard: React.FC<Props> = () => {
   const buildProjData = (p: CompanySummaryProject): Record<string, string> => ({
     Candidate: p.candidateName,
     Project: p.jobTitle || "Untitled",
-    Client: p.vendorEmail || "�",
+    Client: p.vendorEmail || "—",
     Status: p.isActive ? "Active" : "Closed",
-    Billed: p.financials ? fmtDollar(p.financials.totalBilled) : "�",
-    "Net Pay": p.financials ? fmtDollar(p.financials.netPayable) : "�",
-    Paid: p.financials ? fmtDollar(p.financials.amountPaid) : "�",
+    Billed: p.financials ? fmtDollar(p.financials.totalBilled) : "—",
+    "Net Pay": p.financials ? fmtDollar(p.financials.netPayable) : "—",
+    Paid: p.financials ? fmtDollar(p.financials.amountPaid) : "—",
     Balance: p.financials
       ? fmtDollar(Math.max(0, p.financials.amountPending))
-      : "�",
+      : "—",
   });
 
   // Reusable kebab component render
@@ -2360,7 +2356,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         }}
         title="Actions"
       >
-        ?
+        ⋮
       </button>
       {kebabOpen === id && (
         <div
@@ -2396,7 +2392,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f4ff")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
           >
-            ?? Email Report
+            📧 Email Report
           </button>
           <button
             type="button"
@@ -2417,14 +2413,14 @@ const MarketerDashboard: React.FC<Props> = () => {
             onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f4ff")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
           >
-            ? Download
+            ⬇ Download
           </button>
         </div>
       )}
     </div>
   );
 
-  // -- Financial Summary View --------------------------------------------------
+  // ── Financial Summary View ──────────────────────────────────────────────────
 
   function renderFinancialSummaryView() {
     const cands = companySummary?.candidates ?? [];
@@ -2473,7 +2469,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               color: "var(--w97-text-secondary)",
             }}
           >
-            Loading financial summary�
+            Loading financial summary…
           </div>
         )}
 
@@ -2530,7 +2526,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               <div className="ov-kpi-div" />
               <div className="ov-kpi" style={{ flex: 1, minWidth: 120 }}>
                 <span className="ov-kpi-label">
-                  Payment Progress � {paidPct}%
+                  Payment Progress — {paidPct}%
                 </span>
                 <div
                   style={{
@@ -2559,9 +2555,9 @@ const MarketerDashboard: React.FC<Props> = () => {
             <div style={{ display: "flex", gap: 0, marginBottom: 0 }}>
               {(
                 [
-                  { key: "table", label: "?? Table View" },
-                  { key: "chart", label: "?? Chart View" },
-                  { key: "graph", label: "?? Graph View" },
+                  { key: "table", label: "📊 Table View" },
+                  { key: "chart", label: "📈 Chart View" },
+                  { key: "graph", label: "📉 Graph View" },
                 ] as const
               ).map((t, i) => (
                 <button
@@ -2597,17 +2593,16 @@ const MarketerDashboard: React.FC<Props> = () => {
             {/* Table View */}
             {finViewTab === "table" && (
               <DataTable<CompanySummaryCandidate>
-                title="Financial Summary � By Candidate"
-                titleIcon="??"
+                title="Financial Summary — By Candidate"
+                titleIcon="💰"
                 className="matchdb-auto-height"
-                scrollableColumns
                 titleExtra={
                   <div
                     style={{ display: "flex", gap: 6, alignItems: "center" }}
                   >
                     <input
                       type="text"
-                      placeholder="?? Search candidate�"
+                      placeholder="🔍 Search candidate…"
                       value={finSearch}
                       onChange={(e) => setFinSearch(e.target.value)}
                       style={{
@@ -2799,6 +2794,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     },
                   ] as DataTableColumn<CompanySummaryCandidate>[]
                 }
+                scrollableColumns
                 data={cands.filter((c) => {
                   const q = finSearch.toLowerCase();
                   const matchesSearch =
@@ -2814,14 +2810,13 @@ const MarketerDashboard: React.FC<Props> = () => {
                 })}
                 keyExtractor={(c) => c.id}
                 showSerialNumber
-                serialNumberColumnWidth={50}
                 paginated
                 pageSize={50}
-                emptyMessage="No financial data yet. Add financials in candidate detail ? Projects tab."
+                emptyMessage="No financial data yet. Add financials in candidate detail → Projects tab."
               />
             )}
 
-            {/* Chart View � horizontal bar chart */}
+            {/* Chart View — horizontal bar chart */}
             {finViewTab === "chart" && (
               <div
                 style={{
@@ -2831,7 +2826,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 }}
               >
                 <h3 style={{ margin: "0 0 12px", fontSize: 13 }}>
-                  ?? Revenue by Candidate (Top 10)
+                  💰 Revenue by Candidate (Top 10)
                 </h3>
                 {topCands.length === 0 && (
                   <div
@@ -2894,7 +2889,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               </div>
             )}
 
-            {/* Graph View � margin vs billed donut */}
+            {/* Graph View — margin vs billed donut */}
             {finViewTab === "graph" && (
               <div
                 style={{
@@ -2954,10 +2949,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                     </text>
                   </svg>
                   <div style={{ fontSize: 11, marginTop: 6 }}>
-                    <span className="matchdb-legend-green">�</span> Paid:{" "}
+                    <span className="matchdb-legend-green">■</span> Paid:{" "}
                     {fmtC(totals.amountPaid)} &nbsp;
                     <span style={{ color: "var(--w97-border-light)" }}>
-                      �
+                      ■
                     </span>{" "}
                     Outstanding: {fmtC(Math.max(0, totals.amountPending))}
                   </div>
@@ -3018,9 +3013,9 @@ const MarketerDashboard: React.FC<Props> = () => {
                           </text>
                         </svg>
                         <div style={{ fontSize: 11, marginTop: 6 }}>
-                          <span className="matchdb-legend-teal">�</span> Margin:{" "}
+                          <span className="matchdb-legend-teal">■</span> Margin:{" "}
                           {fmtC(grandMargin)} &nbsp;
-                          <span style={{ color: "#e0f2f1" }}>�</span> Pay:{" "}
+                          <span style={{ color: "#e0f2f1" }}>■</span> Pay:{" "}
                           {fmtC(totals.totalPay)}
                         </div>
                       </>
@@ -3115,7 +3110,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // -- Project Summary View ----------------------------------------------------
+  // ── Project Summary View ────────────────────────────────────────────────────
 
   function renderProjectSummaryView() {
     const projects = companySummary?.projects ?? [];
@@ -3128,7 +3123,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             day: "numeric",
             year: "numeric",
           })
-        : "�";
+        : "—";
 
     return (
       <div
@@ -3148,20 +3143,19 @@ const MarketerDashboard: React.FC<Props> = () => {
               color: "var(--w97-text-secondary)",
             }}
           >
-            Loading project summary�
+            Loading project summary…
           </div>
         )}
 
         {!summaryLoading && (
           <DataTable<CompanySummaryProject>
-            title="Project Summary � All Candidates"
-            titleIcon="??"
+            title="Project Summary — All Candidates"
+            titleIcon="📋"
             serialNumberColumnWidth="2%"
-            scrollableColumns
             titleExtra={
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <span style={{ fontSize: 10, opacity: 0.7 }}>
-                  {projects.length} total �{" "}
+                  {projects.length} total ·{" "}
                   {projects.filter((p) => p.isActive).length} active
                 </span>
                 <Button
@@ -3170,7 +3164,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   onClick={() => handleDownloadAll("project", "pdf")}
                   title="Download as CSV"
                 >
-                  ? CSV
+                  ⬇ CSV
                 </Button>
                 <Button
                   variant="download"
@@ -3178,7 +3172,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   onClick={() => handleDownloadAll("project", "excel")}
                   title="Download as Excel"
                 >
-                  ? Excel
+                  ⬇ Excel
                 </Button>
               </div>
             }
@@ -3258,9 +3252,9 @@ const MarketerDashboard: React.FC<Props> = () => {
                         }}
                       >
                         {p.jobType}
-                        {p.jobSubType ? ` � ${p.jobSubType.toUpperCase()}` : ""}
+                        {p.jobSubType ? ` · ${p.jobSubType.toUpperCase()}` : ""}
                         {p.financials?.stateCode
-                          ? ` � ${p.financials.stateCode}`
+                          ? ` · ${p.financials.stateCode}`
                           : ""}
                       </div>
                     </>
@@ -3271,7 +3265,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   header: "Client (Vendor)",
                   width: "14%",
                   render: (p) => (
-                    <span style={{ fontSize: 11 }}>{p.vendorEmail || "�"}</span>
+                    <span style={{ fontSize: 11 }}>{p.vendorEmail || "—"}</span>
                   ),
                 },
                 {
@@ -3279,7 +3273,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   header: "Location",
                   width: "10%",
                   render: (p) => (
-                    <span style={{ fontSize: 11 }}>{p.location || "�"}</span>
+                    <span style={{ fontSize: 11 }}>{p.location || "—"}</span>
                   ),
                 },
                 {
@@ -3292,18 +3286,18 @@ const MarketerDashboard: React.FC<Props> = () => {
                         p.isActive ? "ov-proj-active" : "ov-proj-closed"
                       }`}
                     >
-                      {p.isActive ? "? Active" : "? Closed"}
+                      {p.isActive ? "● Active" : "✓ Closed"}
                     </span>
                   ),
                 },
                 {
                   key: "dates",
-                  header: "Start � End",
+                  header: "Start — End",
                   width: "12%",
                   render: (p) => (
                     <span style={{ fontSize: 10, fontFamily: "monospace" }}>
                       {fmtD(p.financials?.projectStart ?? null)}
-                      {" � "}
+                      {" — "}
                       {fmtD(p.financials?.projectEnd ?? null)}
                     </span>
                   ),
@@ -3324,7 +3318,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         </span>
                       </span>
                     ) : (
-                      <span style={{ color: "var(--w97-border-dark)" }}>�</span>
+                      <span style={{ color: "var(--w97-border-dark)" }}>—</span>
                     ),
                 },
                 {
@@ -3333,7 +3327,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   align: "right" as const,
                   render: (p) => (
                     <span className="ov-mono ov-val-green">
-                      {p.financials ? fmtC(p.financials.totalBilled) : "�"}
+                      {p.financials ? fmtC(p.financials.totalBilled) : "—"}
                     </span>
                   ),
                 },
@@ -3343,7 +3337,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   align: "right" as const,
                   render: (p) => (
                     <span className="ov-mono ov-val-blue">
-                      {p.financials ? fmtC(p.financials.netPayable) : "�"}
+                      {p.financials ? fmtC(p.financials.netPayable) : "—"}
                     </span>
                   ),
                 },
@@ -3353,7 +3347,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   align: "right" as const,
                   render: (p) => (
                     <span className="ov-mono ov-val-green">
-                      {p.financials ? fmtC(p.financials.amountPaid) : "�"}
+                      {p.financials ? fmtC(p.financials.amountPaid) : "—"}
                     </span>
                   ),
                 },
@@ -3363,7 +3357,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   align: "right" as const,
                   render: (p) => {
                     if (!p.financials)
-                      return <span className="ov-mono">�</span>;
+                      return <span className="ov-mono">—</span>;
                     const bal = Math.max(0, p.financials.amountPending);
                     return (
                       <span
@@ -3378,6 +3372,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 },
               ] as DataTableColumn<CompanySummaryProject>[]
             }
+            scrollableColumns
             data={projects}
             keyExtractor={(p) => p.applicationId}
             emptyMessage="No projects found."
@@ -3387,7 +3382,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // -- Job Positions Summary View ----------------------------------------------
+  // ── Job Positions Summary View ──────────────────────────────────────────────
 
   function renderJobPositionsSummaryView() {
     const domains = companySummary?.domainCounts ?? [];
@@ -3429,7 +3424,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               color: "var(--w97-text-secondary)",
             }}
           >
-            Loading job positions summary�
+            Loading job positions summary…
           </div>
         )}
 
@@ -3450,7 +3445,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 onClick={() => handleDownloadAll("positions", "pdf")}
                 title="Download as CSV"
               >
-                ? CSV
+                ⬇ CSV
               </Button>
               <Button
                 variant="download"
@@ -3458,7 +3453,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 onClick={() => handleDownloadAll("positions", "excel")}
                 title="Download as Excel"
               >
-                ? Excel
+                ⬇ Excel
               </Button>
             </div>
 
@@ -3506,7 +3501,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 }}
               >
                 <h3 style={{ margin: "0 0 12px", fontSize: 13 }}>
-                  ?? Resources by Domain / Role
+                  👥 Resources by Domain / Role
                 </h3>
                 {domains.length === 0 && (
                   <div
@@ -3613,7 +3608,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   }}
                 >
                   <h3 style={{ margin: "0 0 10px", fontSize: 13 }}>
-                    ?? By Job Type
+                    📊 By Job Type
                   </h3>
                   {typeCounts.map((t) => (
                     <div
@@ -3659,7 +3654,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   }}
                 >
                   <h3 style={{ margin: "0 0 10px", fontSize: 13 }}>
-                    ?? Top Skills in Roster
+                    🎯 Top Skills in Roster
                   </h3>
                   <div className="u-flex-wrap u-gap-4">
                     {topSkills.map((s) => (
@@ -3698,7 +3693,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // -- Immigration View -------------------------------------------------------
+  // ── Immigration View ───────────────────────────────────────────────────────
 
   function renderImmigrationView() {
     const immigrationData = buildImmigrationData(companyCandidates);
@@ -3868,7 +3863,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 80,
         render: (r) => {
           if (r.dependants.length === 0)
-            return <span style={{ color: "#aaa", fontSize: 11 }}>�</span>;
+            return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
           return (
             <span style={{ fontSize: 11 }}>
               {r.dependants.map((d) => d.workAuthorization).join(", ")}
@@ -3890,7 +3885,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           }}
         >
           <Input
-            placeholder="Search by name, email, or visa status�"
+            placeholder="Search by name, email, or visa status…"
             value={immigrationSearch}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setImmigrationSearch(e.target.value)
@@ -3920,14 +3915,13 @@ const MarketerDashboard: React.FC<Props> = () => {
           paginated
           emptyMessage="No immigration records found."
           title="Immigration Tracking"
-          titleIcon="??"
-          serialNumberColumnWidth={50}
+          titleIcon="🛂"
         />
       </div>
     );
   }
 
-  // -- Immigration Detail View ------------------------------------------------
+  // ── Immigration Detail View ────────────────────────────────────────────────
 
   function renderImmigrationDetailView() {
     const immigrationData = buildImmigrationData(companyCandidates);
@@ -3950,7 +3944,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             size="sm"
             onClick={() => navParams({ view: "immigration", cid: null })}
           >
-            ? Back
+            ← Back
           </Button>
         </div>
       );
@@ -3975,7 +3969,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     const visaHistory = [
       {
         date: fmtDate(joinDate.toISOString()),
-        event: `Joined � Initial ${record.immigrationStatus} approved`,
+        event: `Joined — Initial ${record.immigrationStatus} approved`,
         status: "completed" as const,
       },
       ...(record.immigrationStatus === "H-1B"
@@ -3984,7 +3978,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               date: fmtDate(
                 new Date(joinDate.getTime() + 365 * 24 * 3600000).toISOString(),
               ),
-              event: "H-1B Amendment � New worksite",
+              event: "H-1B Amendment — New worksite",
               status: "completed" as const,
             },
             {
@@ -4084,7 +4078,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   })
                 }
               >
-                ? Back
+                ← Back
               </Button>
               <h2
                 style={{
@@ -4094,7 +4088,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   color: "var(--w97-titlebar-from)",
                 }}
               >
-                ?? {record.candidateName}
+                🛂 {record.candidateName}
               </h2>
             </div>
           }
@@ -4120,7 +4114,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 color: "var(--w97-titlebar-from)",
               }}
             >
-              ?? Immigration Information
+              📋 Immigration Information
             </h3>
             <div
               style={{
@@ -4180,7 +4174,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 color: "var(--w97-titlebar-from)",
               }}
             >
-              ?? Visa History
+              📅 Visa History
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {visaHistory.map((entry) => (
@@ -4233,7 +4227,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               color: "var(--w97-titlebar-from)",
             }}
           >
-            ??????????? Dependants ({record.dependants.length})
+            👨‍👩‍👧‍👦 Dependants ({record.dependants.length})
           </h3>
           {record.dependants.length === 0 ? (
             <div
@@ -4252,7 +4246,6 @@ const MarketerDashboard: React.FC<Props> = () => {
               keyExtractor={(d) => d.name}
               emptyMessage="No dependants."
               title=""
-              serialNumberColumnWidth={50}
             />
           )}
         </div>
@@ -4260,7 +4253,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // -- Vendor Summary & Detail Views ------------------------------------------
+  // ── Vendor Summary & Detail Views ──────────────────────────────────────────
 
   interface VendorRow {
     vendor: string;
@@ -4384,7 +4377,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               color: "var(--w97-text-secondary)",
             }}
           >
-            Loading vendor summary�
+            Loading vendor summary…
           </div>
         )}
 
@@ -4427,7 +4420,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     grandPending > 0 ? "ov-kv-orange" : "ov-kv-green"
                   }`}
                 >
-                  {grandPending > 0 ? fmtC(grandPending) : "? Settled"}
+                  {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
                 </span>
               </div>
               <div className="ov-kpi-div" />
@@ -4441,13 +4434,13 @@ const MarketerDashboard: React.FC<Props> = () => {
 
             {/* Table */}
             <DataTable<VendorRow>
-              title={`Vendors � ${vendorRows.length} total`}
-              titleIcon="??"
+              title={`Vendors — ${vendorRows.length} total`}
+              titleIcon="🏢"
               className="matchdb-auto-height"
               titleExtra={
                 <input
                   type="text"
-                  placeholder="?? Search vendor�"
+                  placeholder="🔍 Search vendor…"
                   value={vendorSearch}
                   onChange={(e) => setVendorSearch(e.target.value)}
                   style={{
@@ -4561,7 +4554,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           r.pending > 0 ? "ov-val-orange" : "ov-val-green"
                         }`}
                       >
-                        {r.pending > 0 ? fmtC(r.pending) : "? Settled"}
+                        {r.pending > 0 ? fmtC(r.pending) : "✓ Settled"}
                       </span>
                     ),
                   },
@@ -4579,13 +4572,12 @@ const MarketerDashboard: React.FC<Props> = () => {
               }
               data={filtered}
               keyExtractor={(r) => r.vendor}
-              serialNumberColumnWidth={50}
               emptyMessage="No vendor data available."
               footerRow={
                 vendorRows.length > 1 ? (
                   <tr className="ov-pt-foot">
                     <td className="ov-pt-tf" colSpan={3}>
-                      TOTAL � {vendorRows.length} vendors � {totalCandidates}{" "}
+                      TOTAL — {vendorRows.length} vendors · {totalCandidates}{" "}
                       candidates
                     </td>
                     <td
@@ -4606,7 +4598,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       }`}
                       style={{ textAlign: "right" }}
                     >
-                      {grandPending > 0 ? fmtC(grandPending) : "? Settled"}
+                      {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
                     </td>
                     <td
                       className="ov-pt-tf ov-mono"
@@ -4646,7 +4638,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
             onClick={() => navigateTo("vendor-summary")}
           >
-            ? Back to Vendors
+            ← Back to Vendors
           </button>
         </div>
       );
@@ -4689,7 +4681,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
             onClick={() => navigateTo("vendor-summary")}
           >
-            ? Back
+            ← Back
           </button>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{vendorLabel}</div>
@@ -4736,7 +4728,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 row.pending > 0 ? "ov-kv-orange" : "ov-kv-green"
               }`}
             >
-              {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
+              {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
             </span>
           </div>
           <div className="ov-kpi-div" />
@@ -4750,10 +4742,9 @@ const MarketerDashboard: React.FC<Props> = () => {
 
         {/* Candidates table */}
         <DataTable<(typeof row.candidates)[number]>
-          title={`Candidates with ${vendorLabel} � ${row.candidateCount} total`}
-          titleIcon="??"
+          title={`Candidates with ${vendorLabel} — ${row.candidateCount} total`}
+          titleIcon="👤"
           className="matchdb-auto-height"
-          denseMode
           columns={
             [
               {
@@ -4850,12 +4841,13 @@ const MarketerDashboard: React.FC<Props> = () => {
                       c.amountPending > 0 ? "ov-val-orange" : "ov-val-green"
                     }`}
                   >
-                    {c.amountPending > 0 ? fmtC(c.amountPending) : "? Settled"}
+                    {c.amountPending > 0 ? fmtC(c.amountPending) : "✓ Settled"}
                   </span>
                 ),
               },
             ] as DataTableColumn<(typeof row.candidates)[number]>[]
           }
+          denseMode
           data={row.candidates}
           keyExtractor={(c) => c.email}
           emptyMessage="No candidates found for this vendor."
@@ -4863,7 +4855,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             row.candidates.length > 1 ? (
               <tr className="ov-pt-foot">
                 <td className="ov-pt-tf" colSpan={3}>
-                  TOTAL � {row.candidateCount} candidates
+                  TOTAL — {row.candidateCount} candidates
                 </td>
                 <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>
                   {row.hours.toLocaleString()}
@@ -4886,18 +4878,17 @@ const MarketerDashboard: React.FC<Props> = () => {
                   }`}
                   style={{ textAlign: "right" }}
                 >
-                  {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
+                  {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
                 </td>
               </tr>
             ) : undefined
           }
-          serialNumberColumnWidth={50}
         />
       </div>
     );
   }
 
-  // -- Client Summary & Detail Views ------------------------------------------
+  // ── Client Summary & Detail Views ──────────────────────────────────────────
 
   interface ClientRow {
     client: string;
@@ -5049,7 +5040,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               color: "var(--w97-text-secondary)",
             }}
           >
-            Loading client summary�
+            Loading client summary…
           </div>
         )}
 
@@ -5092,7 +5083,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     grandPending > 0 ? "ov-kv-orange" : "ov-kv-green"
                   }`}
                 >
-                  {grandPending > 0 ? fmtC(grandPending) : "? Settled"}
+                  {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
                 </span>
               </div>
               <div className="ov-kpi-div" />
@@ -5106,13 +5097,12 @@ const MarketerDashboard: React.FC<Props> = () => {
 
             {/* Table */}
             <DataTable<ClientRow>
-              title={`Clients � ${clientRows.length} total`}
-              titleIcon="???"
-              scrollableColumns
+              title={`Clients — ${clientRows.length} total`}
+              titleIcon="🏛️"
               titleExtra={
                 <input
                   type="text"
-                  placeholder="?? Search client�"
+                  placeholder="🔍 Search client…"
                   value={clientSearch}
                   onChange={(e) => setClientSearch(e.target.value)}
                   style={{
@@ -5206,7 +5196,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                               color: "var(--w97-text-secondary)",
                             }}
                           >
-                            �
+                            —
                           </span>
                         );
                       }
@@ -5266,7 +5256,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                             color: "var(--w97-text-secondary)",
                           }}
                         >
-                          �
+                          —
                         </span>
                       ),
                   },
@@ -5282,7 +5272,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                               color: "var(--w97-text-secondary)",
                             }}
                           >
-                            �
+                            —
                           </span>
                         );
                       }
@@ -5347,7 +5337,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         >
                           {r.activeOpenings}
                         </span>
-                        {" active � "}
+                        {" active · "}
                         <span style={{ color: "var(--w97-text-secondary)" }}>
                           {r.closedOpenings}
                         </span>
@@ -5416,7 +5406,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           color: "inherit",
                         }}
                       >
-                        {r.pending > 0 ? fmtC(r.pending) : "? Settled"}
+                        {r.pending > 0 ? fmtC(r.pending) : "✓ Settled"}
                       </button>
                     ),
                   },
@@ -5446,11 +5436,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                         if (r.implementationPartners.length)
                           parts.push(r.implementationPartners[0]);
                         parts.push(r.client);
-                        return parts.join(" ? ");
+                        return parts.join(" → ");
                       });
                       const label =
                         chains.length === 1
-                          ? `${r.vendors[0]} ? �`
+                          ? `${r.vendors[0]} → …`
                           : `${r.vendors.length} vendors`;
                       return (
                         <ClickPopover label={label}>
@@ -5471,17 +5461,17 @@ const MarketerDashboard: React.FC<Props> = () => {
                   },
                 ] as DataTableColumn<ClientRow>[]
               }
+              scrollableColumns
               data={filtered}
               keyExtractor={(r) => r.client}
               paginated
               pageSize={25}
-              serialNumberColumnWidth={50}
               emptyMessage="No client data available."
               footerRow={
                 clientRows.length > 1 ? (
                   <tr className="ov-pt-foot">
                     <td className="ov-pt-tf" colSpan={7}>
-                      TOTAL � {clientRows.length} clients � {totalCandidates}{" "}
+                      TOTAL — {clientRows.length} clients · {totalCandidates}{" "}
                       candidates
                     </td>
                     <td
@@ -5502,7 +5492,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       }`}
                       style={{ textAlign: "right" }}
                     >
-                      {grandPending > 0 ? fmtC(grandPending) : "? Settled"}
+                      {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
                     </td>
                     <td className="ov-pt-tf" />
                   </tr>
@@ -5537,7 +5527,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
             onClick={() => navigateTo("client-summary")}
           >
-            ? Back to Clients
+            ← Back to Clients
           </button>
         </div>
       );
@@ -5574,18 +5564,18 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
             onClick={() => navigateTo("client-summary")}
           >
-            ? Back
+            ← Back
           </button>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{row.client}</div>
             <div style={{ fontSize: 11, color: "var(--w97-text-secondary)" }}>
               {row.vendors.length} vendor{row.vendors.length === 1 ? "" : "s"}
-              {" � "}
+              {" · "}
               {row.vendors.join(", ")}
               {row.locations.length > 0 && (
                 <>
                   {" "}
-                  {" � ?? "}
+                  {" · 📍 "}
                   {row.locations.join(", ")}
                 </>
               )}
@@ -5610,9 +5600,9 @@ const MarketerDashboard: React.FC<Props> = () => {
                     marginTop: 2,
                   }}
                 >
-                  Pipeline: {row.vendors[0]} ?{" "}
+                  Pipeline: {row.vendors[0]} →{" "}
                   {row.implementationPartners.length
-                    ? `${row.implementationPartners.join(", ")} ? `
+                    ? `${row.implementationPartners.join(", ")} → `
                     : ""}
                   {row.client}
                 </div>
@@ -5670,7 +5660,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 row.pending > 0 ? "ov-kv-orange" : "ov-kv-green"
               }`}
             >
-              {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
+              {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
             </span>
           </div>
           <div className="ov-kpi-div" />
@@ -5687,20 +5677,19 @@ const MarketerDashboard: React.FC<Props> = () => {
           activeKey={clientDetailTab}
           onSelect={(key) => setClientDetailTab(key as typeof clientDetailTab)}
           tabs={[
-            { key: "candidates", label: "?? Candidates" },
-            { key: "openings", label: "?? Openings" },
-            { key: "vendors", label: "?? Vendors" },
-            { key: "financials", label: "?? Financials" },
+            { key: "candidates", label: "👤 Candidates" },
+            { key: "openings", label: "💼 Openings" },
+            { key: "vendors", label: "🏢 Vendors" },
+            { key: "financials", label: "💰 Financials" },
           ]}
         />
 
-        {/* -- Candidates Tab -- */}
+        {/* ── Candidates Tab ── */}
         {clientDetailTab === "candidates" && (
           <DataTable<(typeof row.candidates)[number]>
-            title={`Candidates with ${row.client} � ${row.candidateCount} total`}
-            titleIcon="??"
+            title={`Candidates with ${row.client} — ${row.candidateCount} total`}
+            titleIcon="👤"
             className="matchdb-auto-height"
-            denseMode
             columns={
               [
                 {
@@ -5768,9 +5757,9 @@ const MarketerDashboard: React.FC<Props> = () => {
                     if (c.implementationPartner)
                       parts.push(c.implementationPartner);
                     parts.push(row.client);
-                    const chain = parts.join(" ? ");
+                    const chain = parts.join(" → ");
                     return (
-                      <ClickPopover label={`${c.vendor} ? �`}>
+                      <ClickPopover label={`${c.vendor} → …`}>
                         <div style={{ fontWeight: 600, marginBottom: 4 }}>
                           Pipeline
                         </div>
@@ -5821,12 +5810,13 @@ const MarketerDashboard: React.FC<Props> = () => {
                     >
                       {c.amountPending > 0
                         ? fmtC(c.amountPending)
-                        : "? Settled"}
+                        : "✓ Settled"}
                     </span>
                   ),
                 },
               ] as DataTableColumn<(typeof row.candidates)[number]>[]
             }
+            denseMode
             data={row.candidates}
             keyExtractor={(c) => c.email}
             emptyMessage="No candidates found for this client."
@@ -5834,7 +5824,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               row.candidates.length > 1 ? (
                 <tr className="ov-pt-foot">
                   <td className="ov-pt-tf" colSpan={2}>
-                    TOTAL � {row.candidateCount} candidates
+                    TOTAL — {row.candidateCount} candidates
                   </td>
                   <td
                     className="ov-pt-tf ov-mono"
@@ -5860,16 +5850,15 @@ const MarketerDashboard: React.FC<Props> = () => {
                     }`}
                     style={{ textAlign: "right" }}
                   >
-                    {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
+                    {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
                   </td>
                 </tr>
               ) : undefined
             }
-            serialNumberColumnWidth={50}
           />
         )}
 
-        {/* -- Openings Tab -- */}
+        {/* ── Openings Tab ── */}
         {clientDetailTab === "openings" &&
           (() => {
             const projects = (companySummary?.projects ?? []).filter(
@@ -5877,8 +5866,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             );
             const openingRows = projects.map((p) => ({
               jobTitle: p.jobTitle,
-              location: p.location || "�",
-              type: p.jobType || "�",
+              location: p.location || "—",
+              type: p.jobType || "—",
               vendor: p.vendorCompanyName || p.vendorEmail || "Direct",
               candidate: p.candidateName,
               isActive: p.isActive,
@@ -5889,10 +5878,9 @@ const MarketerDashboard: React.FC<Props> = () => {
             const closedCount = openingRows.length - activeCount;
             return (
               <DataTable<OpeningRow>
-                title={`Openings at ${row.client} � ${activeCount} active � ${closedCount} closed`}
-                titleIcon="??"
+                title={`Openings at ${row.client} — ${activeCount} active · ${closedCount} closed`}
+                titleIcon="💼"
                 className="matchdb-auto-height"
-                denseMode
                 columns={
                   [
                     {
@@ -5936,7 +5924,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                               fontSize: 11,
                             }}
                           >
-                            ? Active
+                            ● Active
                           </span>
                         ) : (
                           <span
@@ -5945,7 +5933,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                               fontSize: 11,
                             }}
                           >
-                            ? Closed
+                            ○ Closed
                           </span>
                         ),
                     },
@@ -5969,17 +5957,17 @@ const MarketerDashboard: React.FC<Props> = () => {
                     },
                   ] as DataTableColumn<OpeningRow>[]
                 }
+                denseMode
                 data={openingRows}
                 keyExtractor={(o) =>
                   `${o.jobTitle}::${o.candidate}::${o.appliedAt}`
                 }
                 emptyMessage="No openings found for this client."
-                serialNumberColumnWidth={50}
               />
             );
           })()}
 
-        {/* -- Vendors Tab -- */}
+        {/* ── Vendors Tab ── */}
         {clientDetailTab === "vendors" &&
           (() => {
             const projects = (companySummary?.projects ?? []).filter(
@@ -6002,7 +5990,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               if (!vendorMap.has(v)) {
                 vendorMap.set(v, {
                   vendor: v,
-                  implementationPartner: p.implementationPartner || "�",
+                  implementationPartner: p.implementationPartner || "—",
                   candidateCount: 0,
                   revenue: 0,
                   credited: 0,
@@ -6027,10 +6015,9 @@ const MarketerDashboard: React.FC<Props> = () => {
             type ClientVendorRow = (typeof vendorRows)[number];
             return (
               <DataTable<ClientVendorRow>
-                title={`Vendors for ${row.client} � ${vendorRows.length} total`}
-                titleIcon="??"
+                title={`Vendors for ${row.client} — ${vendorRows.length} total`}
+                titleIcon="🏢"
                 className="matchdb-auto-height"
-                denseMode
                 columns={
                   [
                     {
@@ -6099,12 +6086,13 @@ const MarketerDashboard: React.FC<Props> = () => {
                             v.pending > 0 ? "ov-val-orange" : "ov-val-green"
                           }`}
                         >
-                          {v.pending > 0 ? fmtC(v.pending) : "? Settled"}
+                          {v.pending > 0 ? fmtC(v.pending) : "✓ Settled"}
                         </span>
                       ),
                     },
                   ] as DataTableColumn<ClientVendorRow>[]
                 }
+                denseMode
                 data={vendorRows}
                 keyExtractor={(v) => v.vendor}
                 emptyMessage="No vendor data for this client."
@@ -6112,7 +6100,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   vendorRows.length > 1 ? (
                     <tr className="ov-pt-foot">
                       <td className="ov-pt-tf" colSpan={3}>
-                        TOTAL � {vendorRows.length} vendors
+                        TOTAL — {vendorRows.length} vendors
                       </td>
                       <td
                         className="ov-pt-tf ov-mono ov-val-green"
@@ -6132,17 +6120,16 @@ const MarketerDashboard: React.FC<Props> = () => {
                         }`}
                         style={{ textAlign: "right" }}
                       >
-                        {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
+                        {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
                       </td>
                     </tr>
                   ) : undefined
                 }
-                serialNumberColumnWidth={50}
               />
             );
           })()}
 
-        {/* -- Financials Tab -- */}
+        {/* ── Financials Tab ── */}
         {clientDetailTab === "financials" &&
           (() => {
             const projects = (companySummary?.projects ?? []).filter(
@@ -6172,14 +6159,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                     month: "short",
                     year: "numeric",
                   })
-                : "�";
+                : "—";
             return (
               <DataTable<FinRow>
-                title={`Financial Summary � ${row.client}`}
-                titleIcon="??"
+                title={`Financial Summary — ${row.client}`}
+                titleIcon="💰"
                 className="matchdb-auto-height"
-                denseMode
-                scrollableColumns
                 columns={
                   [
                     {
@@ -6274,7 +6259,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                             f.pending > 0 ? "ov-val-orange" : "ov-val-green"
                           }`}
                         >
-                          {f.pending > 0 ? fmtC(f.pending) : "? Settled"}
+                          {f.pending > 0 ? fmtC(f.pending) : "✓ Settled"}
                         </span>
                       ),
                     },
@@ -6288,7 +6273,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                             color: "var(--w97-text-secondary)",
                           }}
                         >
-                          {fmtD(f.projectStart)} � {fmtD(f.projectEnd)}
+                          {fmtD(f.projectStart)} – {fmtD(f.projectEnd)}
                         </span>
                       ),
                     },
@@ -6304,7 +6289,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                               fontSize: 11,
                             }}
                           >
-                            ? Active
+                            ● Active
                           </span>
                         ) : (
                           <span
@@ -6313,12 +6298,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                               fontSize: 11,
                             }}
                           >
-                            ? Closed
+                            ○ Closed
                           </span>
                         ),
                     },
                   ] as DataTableColumn<FinRow>[]
                 }
+                denseMode
+                scrollableColumns
                 data={finRows}
                 keyExtractor={(f) => `${f.candidate}::${f.vendor}::${f.role}`}
                 emptyMessage="No financial data for this client."
@@ -6326,7 +6313,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   finRows.length > 1 ? (
                     <tr className="ov-pt-foot">
                       <td className="ov-pt-tf" colSpan={4}>
-                        TOTAL � {finRows.length} projects
+                        TOTAL — {finRows.length} projects
                       </td>
                       <td
                         className="ov-pt-tf ov-mono"
@@ -6352,13 +6339,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                         }`}
                         style={{ textAlign: "right" }}
                       >
-                        {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
+                        {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
                       </td>
                       <td className="ov-pt-tf" colSpan={2} />
                     </tr>
                   ) : undefined
                 }
-                serialNumberColumnWidth={50}
               />
             );
           })()}
@@ -6366,7 +6352,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // -- Timesheets View --------------------------------------------------------
+  // ── Timesheets View ────────────────────────────────────────────────────────
 
   function renderTimesheetsView() {
     const fmtWeek = (iso: string) => {
@@ -6384,7 +6370,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             month: "short",
             day: "numeric",
           })
-        : "�";
+        : "—";
 
     const columns: DataTableColumn<Timesheet>[] = [
       {
@@ -6411,7 +6397,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Company",
         width: "12%",
         skeletonWidth: 90,
-        render: (r) => <>{r.companyName || "�"}</>,
+        render: (r) => <>{r.companyName || "—"}</>,
       },
       {
         key: "hours",
@@ -6464,7 +6450,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Remarks",
         width: "13%",
         skeletonWidth: 90,
-        render: (r) => <>{r.approverNotes || "�"}</>,
+        render: (r) => <>{r.approverNotes || "—"}</>,
         tooltip: (r) => r.approverNotes || "",
       },
       {
@@ -6474,7 +6460,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 100,
         render: (r) => {
           if (r.status !== "submitted")
-            return <span style={{ color: "#aaa", fontSize: 11 }}>�</span>;
+            return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
           return (
             <div style={{ display: "flex", gap: 4 }}>
               <Button
@@ -6541,8 +6527,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             >
               <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>
                 {tsActionType === "approve"
-                  ? "? Approve Timesheet"
-                  : "? Reject Timesheet"}
+                  ? "✅ Approve Timesheet"
+                  : "❌ Reject Timesheet"}
               </h3>
               <div
                 style={{
@@ -6560,8 +6546,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                 rows={3}
                 placeholder={
                   tsActionType === "approve"
-                    ? "Optional note�"
-                    : "Reason for rejection�"
+                    ? "Optional note…"
+                    : "Reason for rejection…"
                 }
                 value={tsActionType === "approve" ? approveNotes : rejectNotes}
                 onChange={(e) =>
@@ -6595,7 +6581,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   onClick={handleConfirm}
                   disabled={approvingTs || rejectingTs}
                 >
-                  {approvingTs || rejectingTs ? "Saving�" : "Confirm"}
+                  {approvingTs || rejectingTs ? "Saving…" : "Confirm"}
                 </Button>
               </div>
             </div>
@@ -6632,8 +6618,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           paginated
           emptyMessage="No timesheets found for the selected status."
           title="Candidate Timesheets"
-          titleIcon="???"
-          serialNumberColumnWidth={50}
+          titleIcon="🗂️"
         />
       </div>
     );
@@ -6641,9 +6626,9 @@ const MarketerDashboard: React.FC<Props> = () => {
 
   function renderCandidateDetailView() {
     return (
-      /* -- Candidate Detail � Tabbed Center Content -- */
+      /* ── Candidate Detail — Tabbed Center Content ── */
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        {/* -- Top Bar: Back + Name + Print -- */}
+        {/* ── Top Bar: Back + Name + Print ── */}
         <Toolbar
           left={
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -6657,7 +6642,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   })
                 }
               >
-                ? Back
+                ← Back
               </Button>
               {candidateDetail?.roster && (
                 <h2
@@ -6692,7 +6677,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       } as MarketerCandidateItem)
                     }
                   >
-                    ? Invite
+                    ✉ Invite
                   </Button>
                 )}
               {candidateDetail?.roster && (
@@ -6707,7 +6692,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     )
                   }
                 >
-                  ?? Send Job
+                  📧 Send Job
                 </Button>
               )}
               {candidateDetail?.profile && (
@@ -6733,7 +6718,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     } as MarketerProfile);
                   }}
                 >
-                  ?? Resume
+                  📥 Resume
                 </Button>
               )}
             </div>
@@ -6750,13 +6735,13 @@ const MarketerDashboard: React.FC<Props> = () => {
               fontSize: 13,
             }}
           >
-            Loading candidate details�
+            Loading candidate details…
           </div>
         )}
 
         {!detailLoading && candidateDetail && (
           <>
-            {/* -- Horizontal Tab Bar -- */}
+            {/* ── Horizontal Tab Bar ── */}
             <Tabs
               activeKey={detailTab}
               onSelect={(key) => {
@@ -6764,12 +6749,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                 if (key !== "projects") setSelectedProjectId(null);
               }}
               tabs={[
-                { key: "overview", label: "?? Overview" },
+                { key: "overview", label: "👤 Overview" },
                 {
                   key: "projects",
                   label: (
                     <>
-                      ?? Projects{" "}
+                      📋 Projects{" "}
                       <span className="matchdb-tab-badge">
                         {candidateDetail.projects.length}
                       </span>
@@ -6780,7 +6765,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   key: "vendor-activity",
                   label: (
                     <>
-                      ?? Employer Activity{" "}
+                      📊 Employer Activity{" "}
                       <span className="matchdb-tab-badge">
                         {candidateDetail.vendor_activity.length}
                       </span>
@@ -6791,7 +6776,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   key: "forwarded",
                   label: (
                     <>
-                      ?? Forwarded Openings{" "}
+                      📤 Forwarded Openings{" "}
                       <span className="matchdb-tab-badge">
                         {candidateDetail.forwarded_openings.length}
                       </span>
@@ -6801,16 +6786,16 @@ const MarketerDashboard: React.FC<Props> = () => {
               ]}
             />
 
-            {/* ------------ TAB: Overview ------------ */}
+            {/* ════════════ TAB: Overview ════════════ */}
             {detailTab === "overview" && renderOverviewTab()}
 
-            {/* ------------ TAB: Projects ------------ */}
+            {/* ════════════ TAB: Projects ════════════ */}
             {detailTab === "projects" && renderProjectsTab()}
 
-            {/* ------------ TAB: Employer Activity ------------ */}
+            {/* ════════════ TAB: Employer Activity ════════════ */}
             {detailTab === "vendor-activity" && renderVendorActivityTab()}
 
-            {/* ------------ TAB: Forwarded Openings ------------ */}
+            {/* ════════════ TAB: Forwarded Openings ════════════ */}
             {detailTab === "forwarded" && renderForwardedTab()}
           </>
         )}
@@ -6838,7 +6823,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   })
                 }
               >
-                ? Go Back
+                ← Go Back
               </Button>
             </div>
           </div>
@@ -6871,7 +6856,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     const inviteAccepted = candidateDetail.roster.invite_status === "accepted";
     const inviteBadgeBg = inviteAccepted ? "#e8f5e9" : "#fff3e0";
     const inviteBadgeColor = inviteAccepted ? "#2e7d32" : "#b8860b";
-    const inviteBadgeText = inviteAccepted ? "? Accepted" : "? Pending";
+    const inviteBadgeText = inviteAccepted ? "✓ Accepted" : "⏳ Pending";
     const pendingClass = totalPending > 0 ? "ov-kv-orange" : "ov-kv-green";
     const payPct =
       totalNet > 0 ? ((totalPaid / totalNet) * 100).toFixed(0) : "0";
@@ -6937,12 +6922,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                         fontWeight: 300,
                       }}
                     >
-                      �
+                      ·
                     </span>
                   )}
                 </React.Fragment>
               ))}
-            {/* Stats badges � right side */}
+            {/* Stats badges — right side */}
             <div
               style={{
                 marginLeft: "auto",
@@ -7044,7 +7029,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       <div className="ov-root">
         {renderProfileStrip()}
 
-        {/* -- ROW 2 � Modern financial KPI strip (only when financials exist) -- */}
+        {/* ══ ROW 2 — Modern financial KPI strip (only when financials exist) ══ */}
         {allFins.length > 0 && (
           <div className="ov-kpi-strip" style={{ margin: "14px 16px 0" }}>
             <button
@@ -7139,7 +7124,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             {/* Inline progress bar in the KPI strip */}
             <div className="ov-kpi" style={{ flex: 1, minWidth: 120 }}>
               <span className="ov-kpi-label">
-                Payment Progress � {payPct}% paid
+                Payment Progress — {payPct}% paid
               </span>
               <div
                 style={{
@@ -7165,7 +7150,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           </div>
         )}
 
-        {/* -- ROW 3 � Subtabs: Financial Summary / Monthly Pay -- */}
+        {/* ══ ROW 3 — Subtabs: Financial Summary / Monthly Pay ══ */}
         {(candidateDetail.projects.length > 0 || monthRows.length > 0) && (
           <div style={{ margin: "14px 16px 16px" }}>
             {/* Subtab bar */}
@@ -7175,14 +7160,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                 onClick={() => setOverviewSubTab("financial")}
                 style={subtabStyle(overviewSubTab === "financial")}
               >
-                ?? Financial Summary
+                💼 Financial Summary
               </button>
               <button
                 type="button"
                 onClick={() => setOverviewSubTab("monthly")}
                 style={subtabStyle(overviewSubTab === "monthly", false)}
               >
-                ?? Monthly Pay Summary
+                📅 Monthly Pay Summary
               </button>
             </div>
 
@@ -7190,12 +7175,12 @@ const MarketerDashboard: React.FC<Props> = () => {
             {overviewSubTab === "financial" &&
               candidateDetail.projects.length > 0 && (
                 <DataTable
-                  title="Projects � Financial Summary"
-                  titleIcon="??"
+                  title="Projects — Financial Summary"
+                  titleIcon="💼"
                   className="matchdb-auto-height"
                   titleExtra={
                     <span style={{ fontSize: 10, opacity: 0.7 }}>
-                      {candidateDetail.projects.length} total �{" "}
+                      {candidateDetail.projects.length} total ·{" "}
                       {
                         candidateDetail.projects.filter((p) => p.is_active)
                           .length
@@ -7204,7 +7189,6 @@ const MarketerDashboard: React.FC<Props> = () => {
                     </span>
                   }
                   showSerialNumber={false}
-                  scrollableColumns
                   columns={
                     [
                       {
@@ -7225,10 +7209,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                             >
                               {p.job_type}
                               {p.job_sub_type
-                                ? ` � ${p.job_sub_type.toUpperCase()}`
+                                ? ` · ${p.job_sub_type.toUpperCase()}`
                                 : ""}
                               {p.vendor_email
-                                ? ` � ${
+                                ? ` · ${
                                     p.vendor_email
                                       .split("@")[1]
                                       ?.split(".")[0] || p.vendor_email
@@ -7248,7 +7232,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                               p.is_active ? "ov-proj-active" : "ov-proj-closed"
                             }`}
                           >
-                            {p.is_active ? "? Active" : "? Closed"}
+                            {p.is_active ? "● Active" : "✓ Closed"}
                           </span>
                         ),
                       },
@@ -7303,7 +7287,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           >
                             {p.financials
                               ? p.financials.hoursWorked.toLocaleString()
-                              : "�"}
+                              : "—"}
                           </button>
                         ),
                       },
@@ -7333,7 +7317,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           >
                             {p.financials
                               ? fmtC(p.financials.totalBilled)
-                              : "�"}
+                              : "—"}
                           </button>
                         ),
                       },
@@ -7343,7 +7327,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         align: "right",
                         render: (p) => {
                           const f = p.financials;
-                          if (!f) return "�";
+                          if (!f) return "—";
                           const m = f.totalBilled - f.totalPay;
                           return (
                             <button
@@ -7382,7 +7366,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         align: "right",
                         render: (p) => (
                           <span className="ov-mono ov-val-blue">
-                            {p.financials ? fmtC(p.financials.netPayable) : "�"}
+                            {p.financials ? fmtC(p.financials.netPayable) : "—"}
                           </span>
                         ),
                       },
@@ -7392,7 +7376,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         align: "right",
                         render: (p) => (
                           <span className="ov-mono ov-val-green">
-                            {p.financials ? fmtC(p.financials.amountPaid) : "�"}
+                            {p.financials ? fmtC(p.financials.amountPaid) : "—"}
                           </span>
                         ),
                       },
@@ -7402,7 +7386,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         align: "right",
                         render: (p) => {
                           if (!p.financials)
-                            return <span className="ov-mono">�</span>;
+                            return <span className="ov-mono">—</span>;
                           const bal = Math.max(0, p.financials.amountPending);
                           return (
                             <span
@@ -7410,7 +7394,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                                 bal > 0 ? "ov-val-orange" : "ov-val-green"
                               }`}
                             >
-                              {bal <= 0 ? "? Settled" : fmtC(bal)}
+                              {bal <= 0 ? "✓ Settled" : fmtC(bal)}
                             </span>
                           );
                         },
@@ -7419,6 +7403,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       (typeof candidateDetail.projects)[number]
                     >[]
                   }
+                  scrollableColumns
                   data={[
                     ...candidateDetail.projects.filter((p) => p.is_active),
                     ...candidateDetail.projects.filter((p) => !p.is_active),
@@ -7431,7 +7416,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         className={`ov-pt-foot ${footerRowClass(totalMargin)}`}
                       >
                         <td className="ov-pt-tf" colSpan={2}>
-                          TOTAL � {allFins.length} projects with financials
+                          TOTAL — {allFins.length} projects with financials
                         </td>
                         <td
                           className="ov-pt-tf"
@@ -7473,7 +7458,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           }`}
                           style={{ textAlign: "right" }}
                         >
-                          {totalPending > 0 ? fmtC(totalPending) : "? Settled"}
+                          {totalPending > 0 ? fmtC(totalPending) : "✓ Settled"}
                         </td>
                       </tr>
                     ) : undefined
@@ -7484,8 +7469,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             {/* Monthly Pay Summary subtab */}
             {overviewSubTab === "monthly" && monthRows.length > 0 && (
               <DataTable
-                title="Monthly Pay Summary � All Projects Combined"
-                titleIcon="??"
+                title="Monthly Pay Summary — All Projects Combined"
+                titleIcon="📅"
                 className="matchdb-auto-height"
                 titleExtra={
                   <span style={{ fontSize: 10, opacity: 0.7 }}>
@@ -7493,7 +7478,6 @@ const MarketerDashboard: React.FC<Props> = () => {
                   </span>
                 }
                 showSerialNumber={false}
-                scrollableColumns
                 columns={
                   [
                     {
@@ -7552,7 +7536,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       align: "right",
                       render: (row) => (
                         <span className="ov-mono ov-val-green">
-                          {row.paid > 0 ? fmtF(row.paid) : "�"}
+                          {row.paid > 0 ? fmtF(row.paid) : "—"}
                         </span>
                       ),
                     },
@@ -7602,6 +7586,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     },
                   ] as DataTableColumn<MonthRow>[]
                 }
+                scrollableColumns
                 data={monthRows}
                 keyExtractor={(row) => row.label}
                 emptyMessage="No monthly data."
@@ -7648,7 +7633,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       }`}
                       style={{ textAlign: "right" }}
                     >
-                      {totalPending > 0.01 ? fmtF(totalPending) : "?"}
+                      {totalPending > 0.01 ? fmtF(totalPending) : "✓"}
                     </td>
                     <td className="ov-mt-tf" />
                   </tr>
@@ -7667,7 +7652,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     if (allProjects.length === 0) {
       return (
         <div className="pf-empty">
-          <div className="pf-empty-icon">??</div>
+          <div className="pf-empty-icon">📋</div>
           <div className="pf-empty-text">
             No projects on record for this candidate
           </div>
@@ -7837,15 +7822,15 @@ const MarketerDashboard: React.FC<Props> = () => {
       },
     );
 
-    const taxDisplay = totals.stateTax > 0 ? `-${fmtF(totals.stateTax)}` : "�";
+    const taxDisplay = totals.stateTax > 0 ? `−${fmtF(totals.stateTax)}` : "—";
     const withholdDisplay =
-      totals.withholding > 0 ? `-${fmtF(totals.withholding)}` : "�";
+      totals.withholding > 0 ? `−${fmtF(totals.withholding)}` : "—";
     const balanceDisplayCls =
       totals.balance > 0.01 ? "ov-val-orange" : "ov-val-green";
 
     return (
       <div>
-        {/* -- Candidate + Project Info Line -- */}
+        {/* ── Candidate + Project Info Line ── */}
         {activeProject && (
           <div
             style={{
@@ -7862,26 +7847,26 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
           >
             <span>
-              ??{" "}
+              👤{" "}
               <strong style={{ color: "var(--w97-text)" }}>
                 {candidateDetail.roster.candidate_name}
               </strong>
-              {" � "}
+              {" · "}
               {candidateDetail.roster.candidate_email}
             </span>
             <span style={{ opacity: 0.4 }}>|</span>
             <span>
-              ??{" "}
+              💼{" "}
               <strong style={{ color: "var(--w97-titlebar-from)" }}>
                 {activeProject.job_title || "Untitled"}
               </strong>
-              {" � "}
+              {" · "}
               {activeProject.job_type}
               {activeProject.job_sub_type
-                ? ` � ${activeProject.job_sub_type.toUpperCase()}`
+                ? ` · ${activeProject.job_sub_type.toUpperCase()}`
                 : ""}
               {activeProject.vendor_email
-                ? ` � ${
+                ? ` · ${
                     activeProject.vendor_email.split("@")[1]?.split(".")[0] ||
                     activeProject.vendor_email
                   }`
@@ -7899,7 +7884,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 fontWeight: 600,
               }}
             >
-              {activeProject.is_active ? "? Active" : "? Closed"}
+              {activeProject.is_active ? "● Active" : "✓ Closed"}
             </span>
             {activeProject.financials && (
               <>
@@ -7919,7 +7904,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           </div>
         )}
 
-        {/* -- Project Tabs -- */}
+        {/* ── Project Tabs ── */}
         <div style={{ display: "flex", gap: 0, margin: "0 14px" }}>
           {sorted.map((proj) => (
             <button
@@ -7935,16 +7920,16 @@ const MarketerDashboard: React.FC<Props> = () => {
                 whiteSpace: "nowrap",
               }}
             >
-              {proj.is_active ? "? " : ""}
+              {proj.is_active ? "● " : ""}
               {proj.job_title || "Untitled"}
             </button>
           ))}
         </div>
 
-        {/* -- Pay Periods DataTable for selected project -- */}
+        {/* ── Pay Periods DataTable for selected project ── */}
         <DataTable
-          title={`${activeProject?.job_title || "Project"} � Pay Periods`}
-          titleIcon="??"
+          title={`${activeProject?.job_title || "Project"} — Pay Periods`}
+          titleIcon="💼"
           className="matchdb-auto-height"
           titleExtra={
             <span style={{ fontSize: 10, opacity: 0.7 }}>
@@ -7994,7 +7979,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 align: "right" as const,
                 render: (r) => (
                   <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
-                    {r.stateTax > 0 ? `-${fmtF(r.stateTax)}` : "�"}
+                    {r.stateTax > 0 ? `−${fmtF(r.stateTax)}` : "—"}
                   </span>
                 ),
               },
@@ -8004,7 +7989,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 align: "right" as const,
                 render: (r) => (
                   <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
-                    {r.withholding > 0 ? `-${fmtF(r.withholding)}` : "�"}
+                    {r.withholding > 0 ? `−${fmtF(r.withholding)}` : "—"}
                   </span>
                 ),
               },
@@ -8024,7 +8009,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   <span
                     className={`ov-mono ${r.paid > 0 ? "ov-val-green" : ""}`}
                   >
-                    {r.paid > 0 ? fmtF(r.paid) : "�"}
+                    {r.paid > 0 ? fmtF(r.paid) : "—"}
                   </span>
                 ),
               },
@@ -8164,7 +8149,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 color: "var(--w97-titlebar-from)",
               }}
             >
-              ?? Employer Activity
+              📊 Employer Activity
             </h3>
           }
           right={
@@ -8190,20 +8175,20 @@ const MarketerDashboard: React.FC<Props> = () => {
               fontSize: 13,
             }}
           >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>??</div>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
             No employer interactions recorded yet
           </div>
         )}
         {total > 0 && (
           <>
-            {/* -- Subtab Bar -- */}
+            {/* ── Subtab Bar ── */}
             <div style={{ display: "flex", gap: 0, margin: "0 0 0 14px" }}>
               <button
                 type="button"
                 onClick={() => setVendorActivitySubTab("summary")}
                 style={subtabStyle(vendorActivitySubTab === "summary")}
               >
-                ?? Summary
+                📊 Summary
               </button>
               {yearTabs.map((yr) => (
                 <button
@@ -8212,12 +8197,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                   onClick={() => setVendorActivitySubTab(yr)}
                   style={subtabStyle(vendorActivitySubTab === yr, false)}
                 >
-                  ?? {yr}
+                  📅 {yr}
                 </button>
               ))}
             </div>
 
-            {/* -- Summary subtab: Charts -- */}
+            {/* ── Summary subtab: Charts ── */}
             {vendorActivitySubTab === "summary" && (
               <div
                 style={{
@@ -8430,14 +8415,14 @@ const MarketerDashboard: React.FC<Props> = () => {
               </div>
             )}
 
-            {/* -- Activity List (shown for both summary and year tabs) -- */}
+            {/* ── Activity List (shown for both summary and year tabs) ── */}
             <DataTable
               title={
                 vendorActivitySubTab === "summary"
                   ? "All Employer Activity"
-                  : `Employer Activity � ${vendorActivitySubTab}`
+                  : `Employer Activity — ${vendorActivitySubTab}`
               }
-              titleIcon="??"
+              titleIcon="📋"
               showSerialNumber={false}
               titleExtra={
                 <span style={{ fontSize: 10, opacity: 0.7 }}>
@@ -8480,7 +8465,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     header: "Subject / Job",
                     render: (v) => (
                       <span style={{ color: "var(--w97-text-secondary)" }}>
-                        {v.subject || v.job_title || "�"}
+                        {v.subject || v.job_title || "—"}
                       </span>
                     ),
                   },
@@ -8526,7 +8511,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 color: "var(--w97-titlebar-from)",
               }}
             >
-              ?? Forwarded Openings
+              📤 Forwarded Openings
             </h3>
           }
           right={
@@ -8570,13 +8555,13 @@ const MarketerDashboard: React.FC<Props> = () => {
               fontSize: 13,
             }}
           >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>??</div>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>📤</div>
             No openings forwarded to this candidate yet
           </div>
         ) : (
           <DataTable
             title="Forwarded Openings"
-            titleIcon="??"
+            titleIcon="📤"
             showSerialNumber={false}
             columns={
               [
@@ -8601,7 +8586,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   width: "14%",
                   render: (f) => (
                     <span style={{ color: "var(--w97-text-secondary)" }}>
-                      {f.job_location || "�"}
+                      {f.job_location || "—"}
                     </span>
                   ),
                 },
@@ -8610,7 +8595,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   header: "Type",
                   render: (f) => (
                     <span style={{ color: "var(--w97-text-secondary)" }}>
-                      {f.job_type || "�"}
+                      {f.job_type || "—"}
                     </span>
                   ),
                 },
@@ -8619,7 +8604,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   header: "Sub Type",
                   render: (f) => (
                     <span style={{ color: "var(--w97-text-secondary)" }}>
-                      {f.job_sub_type || "�"}
+                      {f.job_sub_type || "—"}
                     </span>
                   ),
                 },
@@ -8628,7 +8613,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   header: "Vendor",
                   render: (f) => (
                     <span style={{ color: "var(--w97-text-secondary)" }}>
-                      {f.vendor_email || "�"}
+                      {f.vendor_email || "—"}
                     </span>
                   ),
                 },
@@ -8679,13 +8664,13 @@ const MarketerDashboard: React.FC<Props> = () => {
       </div>
     );
   }
-  // -- Admin views ------------------------------------------------------------
+  // ── Admin views ────────────────────────────────────────────────────────────
 
   function renderCandidateDashboardView() {
     return (
       <div>
         <h2 style={{ fontSize: 16, margin: "0 0 14px", color: "#1d4479" }}>
-          ?? Candidate Dashboard
+          🎯 Candidate Dashboard
         </h2>
         <div
           style={{
@@ -8719,7 +8704,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
           >
             <div style={{ fontSize: 28, fontWeight: 700, color: "#2e7d32" }}>
-              {adminDashboard?.pendingInvites ?? "�"}
+              {adminDashboard?.pendingInvites ?? "—"}
             </div>
             <div style={{ fontSize: 12, color: "#888" }}>
               Pending Invitations
@@ -8753,10 +8738,10 @@ const MarketerDashboard: React.FC<Props> = () => {
             + Add Candidate
           </Button>
           <Button onClick={() => navigateTo("admin-candidate-tracking")}>
-            ?? Candidate Tracking
+            📋 Candidate Tracking
           </Button>
           <Button onClick={() => navigateTo("company-candidates")}>
-            ?? My Candidates
+            👤 My Candidates
           </Button>
         </div>
       </div>
@@ -8767,7 +8752,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     return (
       <div>
         <h2 style={{ fontSize: 16, margin: "0 0 14px", color: "#1d4479" }}>
-          ?? Workers Dashboard
+          👷 Workers Dashboard
         </h2>
         <div
           style={{
@@ -8787,7 +8772,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
           >
             <div style={{ fontSize: 28, fontWeight: 700, color: "#1d4479" }}>
-              {adminDashboard?.seatsUsed ?? "�"}
+              {adminDashboard?.seatsUsed ?? "—"}
             </div>
             <div style={{ fontSize: 12, color: "#888" }}>Total Employees</div>
           </div>
@@ -8801,7 +8786,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
           >
             <div style={{ fontSize: 28, fontWeight: 700, color: "#2e7d32" }}>
-              {adminDashboard?.activeUsers ?? "�"}
+              {adminDashboard?.activeUsers ?? "—"}
             </div>
             <div style={{ fontSize: 12, color: "#888" }}>Active Now</div>
           </div>
@@ -8815,8 +8800,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
           >
             <div style={{ fontSize: 28, fontWeight: 700, color: "#555" }}>
-              {adminDashboard?.seatsUsed ?? "�"}/
-              {adminDashboard?.seatLimit ?? "�"}
+              {adminDashboard?.seatsUsed ?? "—"}/
+              {adminDashboard?.seatLimit ?? "—"}
             </div>
             <div style={{ fontSize: 12, color: "#888" }}>Seats Used</div>
           </div>
@@ -8826,13 +8811,13 @@ const MarketerDashboard: React.FC<Props> = () => {
             + Invite Employee
           </Button>
           <Button onClick={() => navigateTo("admin-users")}>
-            ?? Manage Users
+            👥 Manage Users
           </Button>
           <Button onClick={() => navigateTo("admin-active-users")}>
-            ?? Active Users
+            🟢 Active Users
           </Button>
           <Button onClick={() => navigateTo("admin-invitations")}>
-            ? Employee Invites
+            ✉ Employee Invites
           </Button>
         </div>
       </div>
@@ -8851,7 +8836,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           }}
         >
           <h2 style={{ fontSize: 16, margin: 0, color: "#1d4479" }}>
-            ?? User Management
+            👥 User Management
           </h2>
           <Button variant="primary" onClick={() => setInviteEmployeeOpen(true)}>
             + Invite Employee
@@ -8874,7 +8859,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           }}
         >
           <h2 style={{ fontSize: 16, margin: 0, color: "#1d4479" }}>
-            ? Employee Invitations
+            ✉ Employee Invitations
           </h2>
           <Button variant="primary" onClick={() => setInviteEmployeeOpen(true)}>
             + Send Invite
@@ -8889,7 +8874,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     return (
       <div>
         <h2 style={{ fontSize: 16, margin: "0 0 14px", color: "#1d4479" }}>
-          ?? Active Users
+          🟢 Active Users
         </h2>
         <ActiveUsersPanel />
       </div>
@@ -8908,7 +8893,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           }}
         >
           <h2 style={{ fontSize: 16, margin: 0, color: "#1d4479" }}>
-            ?? Candidate Tracking
+            🎯 Candidate Tracking
           </h2>
           <Button
             variant="primary"
@@ -8929,7 +8914,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       breadcrumb={breadcrumb}
     >
       <div className="matchdb-page">
-        {/* -- Dashboard stat chips (same as vendor / candidate) -- */}
+        {/* ── Dashboard stat chips (same as vendor / candidate) ── */}
         <div className="matchdb-stat-bar">
           {statChips.map((chip) => (
             <button
@@ -8963,7 +8948,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         {renderActiveView()}
       </div>
 
-      {/* -- Detail modal for job / candidate -- */}
+      {/* ── Detail modal for job / candidate ── */}
       <DetailModal
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
@@ -8979,7 +8964,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         forwardLoading={forwardLoading}
       />
 
-      {/* -- Invite Candidate Modal -- */}
+      {/* ── Invite Candidate Modal ── */}
       {inviteModalOpen && inviteTarget && (
         <dialog open className="matchdb-modal-overlay">
           <div
@@ -8992,7 +8977,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             style={{ maxWidth: 420, padding: 20 }}
           >
             <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>
-              ? Invite Candidate
+              ✉ Invite Candidate
             </h3>
             <div
               style={{
@@ -9021,7 +9006,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               rows={4}
               value={inviteOfferNote}
               onChange={(e) => setInviteOfferNote(e.target.value)}
-              placeholder="Add a personal message or offer details�"
+              placeholder="Add a personal message or offer details…"
               style={{ width: "100%", resize: "vertical", fontSize: 11 }}
             />
             <div
@@ -9043,14 +9028,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                   cursor: inviteLoading ? "wait" : "pointer",
                 }}
               >
-                {inviteLoading ? "Sending�" : "Send Invite"}
+                {inviteLoading ? "Sending…" : "Send Invite"}
               </Button>
             </div>
           </div>
         </dialog>
       )}
 
-      {/* -- Add Candidate Modal (opened from left nav) -- */}
+      {/* ── Add Candidate Modal (opened from left nav) ── */}
       {addCandModalOpen && (
         <dialog open className="matchdb-modal-overlay">
           <div
@@ -9076,14 +9061,14 @@ const MarketerDashboard: React.FC<Props> = () => {
               }}
             >
               <h3 style={{ margin: 0, fontSize: 14 }}>
-                ?? {myCompany?.name ?? "Company"} � Add Candidate
+                🏢 {myCompany?.name ?? "Company"} — Add Candidate
               </h3>
               <Button
                 variant="close"
                 size="xs"
                 onClick={() => setAddCandModalOpen(false)}
               >
-                ?
+                ✕
               </Button>
             </div>
 
@@ -9170,14 +9155,14 @@ const MarketerDashboard: React.FC<Props> = () => {
             {/* Current candidate list */}
             <DataTable
               title={`Current Roster`}
-              titleIcon="??"
+              titleIcon="👥"
               showSerialNumber
               columns={
                 [
                   {
                     key: "name",
                     header: "Name",
-                    render: (c) => <>{c.candidate_name || "�"}</>,
+                    render: (c) => <>{c.candidate_name || "—"}</>,
                   },
                   {
                     key: "email",
@@ -9198,11 +9183,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                       > = {
                         accepted: {
                           color: "var(--w97-green)",
-                          label: "? Accepted",
+                          label: "✓ Accepted",
                         },
                         invited: {
                           color: "var(--w97-yellow)",
-                          label: "? Invited",
+                          label: "⏳ Invited",
                         },
                       };
                       const m = cfg[c.invite_status ?? ""];
@@ -9210,7 +9195,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         <span
                           style={{
                             color: m.color,
-                            fontWeight: m.label.startsWith("?")
+                            fontWeight: m.label.startsWith("✓")
                               ? 600
                               : undefined,
                           }}
@@ -9219,7 +9204,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         </span>
                       ) : (
                         <span style={{ color: "var(--w97-text-secondary)" }}>
-                          �
+                          —
                         </span>
                       );
                     },
@@ -9238,13 +9223,12 @@ const MarketerDashboard: React.FC<Props> = () => {
               data={companyCandidates}
               keyExtractor={(c) => String(c.id)}
               emptyMessage="No candidates yet. Add one above."
-              serialNumberColumnWidth={50}
             />
           </div>
         </dialog>
       )}
 
-      {/* -- Send Job Opening via Email Modal -- */}
+      {/* ── Send Job Opening via Email Modal ── */}
       {sendJobModalOpen && sendJobCandidate && (
         <dialog open className="matchdb-modal-overlay">
           <div
@@ -9257,7 +9241,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             style={{ maxWidth: 460, padding: 20 }}
           >
             <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>
-              ?? Send Job Opening to Candidate
+              📧 Send Job Opening to Candidate
             </h3>
             <div
               style={{
@@ -9287,13 +9271,13 @@ const MarketerDashboard: React.FC<Props> = () => {
               onChange={(e) => setSendJobId(e.target.value)}
               style={{ width: "100%", fontSize: 11, marginBottom: 10 }}
             >
-              <option value="">� Select a job �</option>
+              <option value="">— Select a job —</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.title} � {j.location} (
+                  {j.title} — {j.location} (
                   {TYPE_LABELS[j.job_type] || j.job_type}
                   {j.job_sub_type
-                    ? ` � ${SUB_LABELS[j.job_sub_type] || j.job_sub_type}`
+                    ? ` › ${SUB_LABELS[j.job_sub_type] || j.job_sub_type}`
                     : ""}
                   )
                 </option>
@@ -9316,7 +9300,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               rows={3}
               value={sendJobNote}
               onChange={(e) => setSendJobNote(e.target.value)}
-              placeholder="Add a note (e.g., 'Great match for your skills!')�"
+              placeholder="Add a note (e.g., 'Great match for your skills!')…"
               style={{ width: "100%", resize: "vertical", fontSize: 11 }}
             />
             <div
@@ -9342,14 +9326,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                   opacity: sendJobId ? 1 : 0.5,
                 }}
               >
-                {forwardEmailLoading ? "Sending�" : "Send via Email"}
+                {forwardEmailLoading ? "Sending…" : "Send via Email"}
               </Button>
             </div>
           </div>
         </dialog>
       )}
 
-      {/* -- Email Report Modal -- */}
+      {/* ── Email Report Modal ── */}
       {emailModalOpen && emailModalTarget && (
         <dialog open className="matchdb-modal-overlay">
           <button
@@ -9368,7 +9352,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           >
             <div className="matchdb-modal-header">
               <span>
-                ?? Email {contextLabel(emailModalTarget.context)} Report
+                📧 Email {contextLabel(emailModalTarget.context)} Report
               </span>
               <button
                 type="button"
@@ -9378,7 +9362,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   setEmailModalTarget(null);
                 }}
               >
-                ?
+                ✕
               </button>
             </div>
             <div
@@ -9477,8 +9461,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                     background: "var(--w97-window)",
                   }}
                 >
-                  <option value="pdf">?? PDF / CSV</option>
-                  <option value="excel">?? Excel</option>
+                  <option value="pdf">📄 PDF / CSV</option>
+                  <option value="excel">📊 Excel</option>
                 </select>
               </div>
             </div>
@@ -9496,14 +9480,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                 Cancel
               </Button>
               <Button variant="primary" size="sm" onClick={handleEmailSend}>
-                ?? Email Candidate
+                📧 Email Candidate
               </Button>
             </div>
           </div>
         </dialog>
       )}
 
-      {/* -- Download Report Modal -- */}
+      {/* ── Download Report Modal ── */}
       {downloadModalOpen && downloadModalTarget && (
         <dialog open className="matchdb-modal-overlay">
           <button
@@ -9521,7 +9505,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             style={{ maxWidth: 340, width: "90%" }}
           >
             <div className="matchdb-modal-header">
-              <span>? Download Report</span>
+              <span>⬇ Download Report</span>
               <button
                 type="button"
                 className="matchdb-modal-close"
@@ -9530,7 +9514,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   setDownloadModalTarget(null);
                 }}
               >
-                ?
+                ✕
               </button>
             </div>
             <div
@@ -9548,7 +9532,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   style={{ flex: 1 }}
                   onClick={() => handleDownloadSingle("pdf")}
                 >
-                  ?? PDF / CSV
+                  📄 PDF / CSV
                 </Button>
                 <Button
                   variant="primary"
@@ -9556,7 +9540,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   style={{ flex: 1 }}
                   onClick={() => handleDownloadSingle("excel")}
                 >
-                  ?? Excel
+                  📊 Excel
                 </Button>
               </div>
             </div>
@@ -9577,7 +9561,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           </div>
         </dialog>
       )}
-      {/* -- Admin: Invite Employee Modal -- */}
+      {/* ── Admin: Invite Employee Modal ── */}
       {inviteEmployeeOpen && (
         <InviteEmployeeModal
           open={inviteEmployeeOpen}
@@ -9585,7 +9569,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         />
       )}
 
-      {/* -- Admin: Invite Candidate Modal -- */}
+      {/* ── Admin: Invite Candidate Modal ── */}
       {inviteCandidateOpen && (
         <InviteCandidateModal
           open={inviteCandidateOpen}
