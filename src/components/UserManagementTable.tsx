@@ -235,7 +235,8 @@ export function UserManagementTable() {
         data={users}
         keyExtractor={(r) => r.id}
         loading={isLoading}
-        paginate
+        paginated
+        serialNumberColumnWidth={50}
         emptyMessage="No users found."
         title="Company Users"
         titleIcon="👥"

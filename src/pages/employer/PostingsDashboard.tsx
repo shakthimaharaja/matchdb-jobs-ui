@@ -1720,7 +1720,8 @@ const PostingsDashboard: React.FC<Props> = ({
         data={invitesSent}
         keyExtractor={(r) => r.id}
         loading={false}
-        paginate
+        paginated
+        serialNumberColumnWidth={50}
         emptyMessage="No interview invites sent yet. Click 📞 on any matched candidate to send one."
         title="Interview Invites Sent"
         titleIcon="📞"
@@ -2132,7 +2133,7 @@ const PostingsDashboard: React.FC<Props> = ({
                 data={tableData}
                 keyExtractor={(j) => j.id}
                 loading={jobsLoading}
-                paginate
+                paginated
                 titleExtra={
                   <div className="matchdb-title-toolbar">
                     <Input
@@ -2175,6 +2176,7 @@ const PostingsDashboard: React.FC<Props> = ({
                 titleIcon={isActiveView ? "🔓" : "📋"}
                 flashIds={jobsFlash.flashIds}
                 deleteFlashIds={jobsFlash.deleteFlashIds}
+                serialNumberColumnWidth={50}
               />
             );
           })()}

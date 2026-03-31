@@ -258,7 +258,8 @@ export function CandidateInvitationList() {
         data={filtered}
         keyExtractor={(r) => r.id}
         loading={isLoading}
-        paginate
+        paginated
+        serialNumberColumnWidth={50}
         emptyMessage="No candidate invitations found."
         title="Invited Candidates"
         titleIcon="🎯"

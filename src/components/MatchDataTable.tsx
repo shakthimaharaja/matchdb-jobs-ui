@@ -490,7 +490,9 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       data={sortedRows}
       keyExtractor={(r) => r.id}
       loading={loading}
-      paginate
+      paginated
+      serialNumberColumnWidth={50}
+      scrollableColumns
       emptyMessage="MySQL returned an empty result set (i.e. zero rows)."
       alertSuccess={pokeSuccessMessage}
       alertErrors={[pokeError, error]}

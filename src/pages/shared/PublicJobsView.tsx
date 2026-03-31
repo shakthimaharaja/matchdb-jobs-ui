@@ -742,7 +742,7 @@ const TwinView: React.FC<TwinProps> = ({
             keyExtractor={(j) => j.id}
             flashIds={flashJobIds}
             deleteFlashIds={deleteFlashJobIds}
-            rnColWidth="3%"
+            serialNumberColumnWidth="3%"
             rowCount={PAGE_SIZE}
           />
           <DataTable<ProfileWithFit>
@@ -754,7 +754,7 @@ const TwinView: React.FC<TwinProps> = ({
             keyExtractor={(p) => p.id}
             flashIds={flashProfileIds}
             deleteFlashIds={deleteFlashProfileIds}
-            rnColWidth="3%"
+            serialNumberColumnWidth="3%"
             rowCount={PAGE_SIZE}
           />
         </div>
@@ -966,7 +966,7 @@ const CandView: React.FC<CandViewProps> = ({
           keyExtractor={(j) => j.id}
           flashIds={flashJobIds}
           deleteFlashIds={deleteFlashJobIds}
-          rnColWidth="2%"
+          serialNumberColumnWidth="2%"
           rowCount={PAGE_SIZE}
         />
 
@@ -1137,7 +1137,7 @@ const VendorView: React.FC<VendorViewProps> = ({
           keyExtractor={(p) => p.id}
           flashIds={flashProfileIds}
           deleteFlashIds={deleteFlashProfileIds}
-          rnColWidth="2%"
+          serialNumberColumnWidth="2%"
           rowCount={PAGE_SIZE}
         />
 

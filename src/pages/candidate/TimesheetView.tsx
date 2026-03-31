@@ -641,13 +641,13 @@ const TimesheetView: React.FC<Props> = ({
         data={prevTimesheets}
         keyExtractor={(t) => t.id}
         loading={isFetching}
-        paginate
+        paginated
         serverTotal={Math.max(0, total - (currentWeekSheet ? 1 : 0))}
         serverPage={page}
         serverPageSize={25}
         onPageChange={(p) => setPage(p)}
         emptyMessage="No previous timesheets. Create your first timesheet above."
-        showRowNumbers={false}
+        showSerialNumber={false}
       />
 
       {/* ── Submit confirm dialog ── */}

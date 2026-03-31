@@ -130,7 +130,8 @@ export function InvitationList() {
       data={invitations}
       keyExtractor={(r) => r.id}
       loading={isLoading}
-      paginate
+      paginated
+      serialNumberColumnWidth={50}
       emptyMessage="No invitations sent yet."
       title="Employee Invitations"
       titleIcon="📧"
