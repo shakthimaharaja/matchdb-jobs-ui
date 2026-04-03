@@ -1119,35 +1119,32 @@ const MarketerDashboard: React.FC<Props> = () => {
   // Maps nav item IDs → required permission. Items without a mapping are visible
   // to everyone. Admin role bypasses all checks (handled in hasPermission).
 
-  const filteredNavGroups: NavGroup[] = useMemo(
-    () => {
-      const NAV_PERM_MAP: Record<string, string> = {
-        "admin-users": "manage_roles",
-        "admin-invitations": "invite_workers",
-        "admin-active-users": "manage_roles",
-        "admin-candidate-tracking": "candidates",
-        "admin-dashboard": "subscription",
-        "workers-dashboard": "workers",
-        "financial-summary": "finance",
-        "project-summary": "finance",
-        "job-positions-summary": "staffing",
-        immigration: "immigration",
-        timesheets: "workers",
-        "vendor-summary": "candidates",
-        "client-summary": "candidates",
-      };
-      return navGroups
-        .map((group) => ({
-          ...group,
-          items: group.items.filter((item) => {
-            const perm = NAV_PERM_MAP[item.id];
-            return !perm || hasPermission(perm);
-          }),
-        }))
-        .filter((group) => group.items.length > 0);
-    },
-    [navGroups, hasPermission],
-  );
+  const filteredNavGroups: NavGroup[] = useMemo(() => {
+    const NAV_PERM_MAP: Record<string, string> = {
+      "admin-users": "manage_roles",
+      "admin-invitations": "invite_workers",
+      "admin-active-users": "manage_roles",
+      "admin-candidate-tracking": "candidates",
+      "admin-dashboard": "subscription",
+      "workers-dashboard": "workers",
+      "financial-summary": "finance",
+      "project-summary": "finance",
+      "job-positions-summary": "staffing",
+      immigration: "immigration",
+      timesheets: "workers",
+      "vendor-summary": "candidates",
+      "client-summary": "candidates",
+    };
+    return navGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          const perm = NAV_PERM_MAP[item.id];
+          return !perm || hasPermission(perm);
+        }),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [navGroups, hasPermission]);
 
   const breadcrumb = getBreadcrumb(
     activeView,
@@ -5061,7 +5058,9 @@ const MarketerDashboard: React.FC<Props> = () => {
     vendor: string,
   ) {
     if (
-      row.candidates.some((candidate) => candidate.email === project.candidateEmail)
+      row.candidates.some(
+        (candidate) => candidate.email === project.candidateEmail,
+      )
     ) {
       return;
     }

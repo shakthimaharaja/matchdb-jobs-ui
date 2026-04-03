@@ -237,7 +237,10 @@ const ProjectTotalsStrip: React.FC<{
     <div className="ppt-ts-tile ppt-ts-progress-tile">
       <span className="ppt-ts-label">{paidPct.toFixed(0)}% Paid</span>
       <div className="ppt-ts-progress-wrap">
-        <div className="ppt-ts-progress-fill" style={{ width: `${paidPct}%` }} />
+        <div
+          className="ppt-ts-progress-fill"
+          style={{ width: `${paidPct}%` }}
+        />
       </div>
     </div>
   </div>
@@ -274,7 +277,9 @@ const PayPeriodsTable: React.FC<{
           <th className="ppt-th ppt-th-num">Hours</th>
           <th className="ppt-th ppt-th-money">
             <span>Billed</span>
-            {billRate > 0 && <span className="ppt-th-sub">@${billRate}/hr</span>}
+            {billRate > 0 && (
+              <span className="ppt-th-sub">@${billRate}/hr</span>
+            )}
           </th>
           <th className="ppt-th ppt-th-money">
             <span>Gross Pay</span>
@@ -282,7 +287,9 @@ const PayPeriodsTable: React.FC<{
           </th>
           <th className="ppt-th ppt-th-money">
             <span>State Tax</span>
-            {stateTaxPct > 0 && <span className="ppt-th-sub">{stateTaxPct}%</span>}
+            {stateTaxPct > 0 && (
+              <span className="ppt-th-sub">{stateTaxPct}%</span>
+            )}
           </th>
           <th className="ppt-th ppt-th-money">
             <span>Withholding</span>
@@ -316,15 +323,21 @@ const PayPeriodsTable: React.FC<{
                   <span>{period.hours}</span>
                 )}
               </td>
-              <td className="ppt-td ppt-td-money ppt-val-billed">{fmt(row.billed)}</td>
-              <td className="ppt-td ppt-td-money ppt-val-gross">{fmt(row.gross)}</td>
+              <td className="ppt-td ppt-td-money ppt-val-billed">
+                {fmt(row.billed)}
+              </td>
+              <td className="ppt-td ppt-td-money ppt-val-gross">
+                {fmt(row.gross)}
+              </td>
               <td className="ppt-td ppt-td-money ppt-val-deduct">
                 {row.tax > 0 ? `−${fmt(row.tax)}` : "—"}
               </td>
               <td className="ppt-td ppt-td-money ppt-val-deduct">
                 {row.withhold > 0 ? `−${fmt(row.withhold)}` : "—"}
               </td>
-              <td className="ppt-td ppt-td-money ppt-val-net">{fmt(row.net)}</td>
+              <td className="ppt-td ppt-td-money ppt-val-net">
+                {fmt(row.net)}
+              </td>
               <td className="ppt-td ppt-td-money">
                 {editingRows ? (
                   <input
@@ -336,12 +349,18 @@ const PayPeriodsTable: React.FC<{
                     step={0.01}
                   />
                 ) : (
-                  <span className={period.amountPaid > 0 ? "ppt-val-paid" : "ppt-val-zero"}>
+                  <span
+                    className={
+                      period.amountPaid > 0 ? "ppt-val-paid" : "ppt-val-zero"
+                    }
+                  >
                     {period.amountPaid > 0 ? fmt(period.amountPaid) : "—"}
                   </span>
                 )}
               </td>
-              <td className={`ppt-td ppt-td-balance ${balanceClass(row.balance)}`}>
+              <td
+                className={`ppt-td ppt-td-balance ${balanceClass(row.balance)}`}
+              >
                 {balanceDisplay(row.balance)}
               </td>
             </tr>
@@ -352,8 +371,12 @@ const PayPeriodsTable: React.FC<{
         <tr className="ppt-tfoot-row">
           <td className="ppt-tf ppt-tf-label">TOTAL</td>
           <td className="ppt-tf ppt-tf-num">{totals.hours.toLocaleString()}</td>
-          <td className="ppt-tf ppt-tf-money ppt-val-billed">{fmt(totals.billed)}</td>
-          <td className="ppt-tf ppt-tf-money ppt-val-gross">{fmt(totals.gross)}</td>
+          <td className="ppt-tf ppt-tf-money ppt-val-billed">
+            {fmt(totals.billed)}
+          </td>
+          <td className="ppt-tf ppt-tf-money ppt-val-gross">
+            {fmt(totals.gross)}
+          </td>
           <td className="ppt-tf ppt-tf-money ppt-val-deduct">
             {totals.tax > 0 ? `−${fmt(totals.tax)}` : "—"}
           </td>
@@ -361,8 +384,12 @@ const PayPeriodsTable: React.FC<{
             {totals.withhold > 0 ? `−${fmt(totals.withhold)}` : "—"}
           </td>
           <td className="ppt-tf ppt-tf-money ppt-val-net">{fmt(totals.net)}</td>
-          <td className="ppt-tf ppt-tf-money ppt-val-paid">{fmt(totals.amountPaid)}</td>
-          <td className={`ppt-tf ppt-tf-balance ${balanceClass(totals.balance)}`}>
+          <td className="ppt-tf ppt-tf-money ppt-val-paid">
+            {fmt(totals.amountPaid)}
+          </td>
+          <td
+            className={`ppt-tf ppt-tf-balance ${balanceClass(totals.balance)}`}
+          >
             {totalBalanceDisplay(totals.balance)}
           </td>
         </tr>

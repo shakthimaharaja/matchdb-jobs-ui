@@ -65,7 +65,9 @@ export function InviteEmployeeModal({
     } catch (err: unknown) {
       const apiErr = err as { data?: { error?: string; message?: string } };
       setError(
-        apiErr?.data?.error || apiErr?.data?.message || "Failed to send invitation",
+        apiErr?.data?.error ||
+          apiErr?.data?.message ||
+          "Failed to send invitation",
       );
     }
   };

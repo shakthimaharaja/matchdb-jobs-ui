@@ -99,7 +99,8 @@ const FieldglassTimesheetView: React.FC<Props> = () => {
       {
         key: "regularHours",
         header: "Regular",
-        render: (t) => fmtHours(getOptionalHours(t, "regularHours") || t.totalHours),
+        render: (t) =>
+          fmtHours(getOptionalHours(t, "regularHours") || t.totalHours),
       },
       {
         key: "overtimeHours",

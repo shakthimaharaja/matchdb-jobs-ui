@@ -98,9 +98,7 @@ function openPdfPreview(
     ? `Candidate Profile – ${candidateName}`
     : `Job Details – ${jobTitle}`;
   const matchRows: Array<[string, string]> =
-    matchPercentage === undefined
-      ? []
-      : [["Match %", `${matchPercentage}%`]];
+    matchPercentage === undefined ? [] : [["Match %", `${matchPercentage}%`]];
 
   const rows: Array<[string, string]> = isCandidate
     ? [
@@ -205,7 +203,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const isInRoster = Boolean(
     isCandidate &&
       candidateEmail &&
-        candidateOptions.some((c) => c.candidate_email === candidateEmail),
+      candidateOptions.some((c) => c.candidate_email === candidateEmail),
   );
   const canForwardToJob = Boolean(
     isCandidate && onForwardCandidateToJob && isInRoster,
@@ -258,9 +256,18 @@ const DetailModal: React.FC<DetailModalProps> = ({
         <section className="detail-section">
           <h3>Professional Details</h3>
           <div className="detail-grid">
-            <Row label="Current Role" value={toPlainString(detailData.current_role)} />
-            <Row label="Company" value={toPlainString(detailData.current_company)} />
-            <Row label="Experience" value={formatYears(detailData.experience_years)} />
+            <Row
+              label="Current Role"
+              value={toPlainString(detailData.current_role)}
+            />
+            <Row
+              label="Company"
+              value={toPlainString(detailData.current_company)}
+            />
+            <Row
+              label="Experience"
+              value={formatYears(detailData.experience_years)}
+            />
             <Row
               label="Preferred Type"
               value={toPlainString(detailData.preferred_job_type)}
@@ -325,18 +332,39 @@ const DetailModal: React.FC<DetailModalProps> = ({
           <h3>{jobTitle}</h3>
           <div className="detail-grid">
             <Row label="Job Type" value={toPlainString(detailData.job_type)} />
-            <Row label="Sub Type" value={toPlainString(detailData.job_sub_type)} />
-            <Row label="Work Mode" value={toPlainString(detailData.work_mode)} />
+            <Row
+              label="Sub Type"
+              value={toPlainString(detailData.job_sub_type)}
+            />
+            <Row
+              label="Work Mode"
+              value={toPlainString(detailData.work_mode)}
+            />
             <Row label="Location" value={toPlainString(detailData.location)} />
             <Row label="Pay/Hr" value={formatMoney(detailData.pay_per_hour)} />
             <Row
               label="Salary"
-              value={formatSalaryRange(detailData.salary_min, detailData.salary_max)}
+              value={formatSalaryRange(
+                detailData.salary_min,
+                detailData.salary_max,
+              )}
             />
-            <Row label="Exp Required" value={formatYears(detailData.experience_required)} />
-            <Row label="Recruiter" value={toPlainString(detailData.recruiter_name)} />
-            <Row label="Recruiter Ph" value={toPlainString(detailData.recruiter_phone)} />
-            <Row label="Vendor Email" value={toPlainString(detailData.vendor_email)} />
+            <Row
+              label="Exp Required"
+              value={formatYears(detailData.experience_required)}
+            />
+            <Row
+              label="Recruiter"
+              value={toPlainString(detailData.recruiter_name)}
+            />
+            <Row
+              label="Recruiter Ph"
+              value={toPlainString(detailData.recruiter_phone)}
+            />
+            <Row
+              label="Vendor Email"
+              value={toPlainString(detailData.vendor_email)}
+            />
           </div>
         </section>
         {description && (

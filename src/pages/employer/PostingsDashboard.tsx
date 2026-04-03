@@ -257,14 +257,17 @@ const PostingsDashboard: React.FC<Props> = ({
     });
   };
 
-  const navigateToViewJob = useCallback((mode: ViewMode, jobId: string) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set("view", mode);
-      next.set("job", jobId);
-      return next;
-    });
-  }, [setSearchParams]);
+  const navigateToViewJob = useCallback(
+    (mode: ViewMode, jobId: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("view", mode);
+        next.set("job", jobId);
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
   const setSelectedJobId = (id: string) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -605,25 +608,31 @@ const PostingsDashboard: React.FC<Props> = ({
   }, [searchText, vendorCandidateMatches]);
 
   /* ── Close / Reopen a job ── */
-  const handleCloseJob = useCallback(async (jobId: string) => {
-    setClosingJobId(jobId);
-    await closeJobMutation(jobId).unwrap();
-    setClosingJobId(null);
-    setSelectedJobPosting((prev) =>
-      prev?.id === jobId ? { ...prev, is_active: false } : prev,
-    );
-    refetchMatches();
-  }, [closeJobMutation, refetchMatches]);
+  const handleCloseJob = useCallback(
+    async (jobId: string) => {
+      setClosingJobId(jobId);
+      await closeJobMutation(jobId).unwrap();
+      setClosingJobId(null);
+      setSelectedJobPosting((prev) =>
+        prev?.id === jobId ? { ...prev, is_active: false } : prev,
+      );
+      refetchMatches();
+    },
+    [closeJobMutation, refetchMatches],
+  );
 
-  const handleReopenJob = useCallback(async (jobId: string) => {
-    setClosingJobId(jobId);
-    await reopenJobMutation(jobId).unwrap();
-    setClosingJobId(null);
-    setSelectedJobPosting((prev) =>
-      prev?.id === jobId ? { ...prev, is_active: true } : prev,
-    );
-    refetchMatches();
-  }, [reopenJobMutation, refetchMatches]);
+  const handleReopenJob = useCallback(
+    async (jobId: string) => {
+      setClosingJobId(jobId);
+      await reopenJobMutation(jobId).unwrap();
+      setClosingJobId(null);
+      setSelectedJobPosting((prev) =>
+        prev?.id === jobId ? { ...prev, is_active: true } : prev,
+      );
+      refetchMatches();
+    },
+    [reopenJobMutation, refetchMatches],
+  );
 
   /* ── Job postings table columns (with render functions) ── */
   const postingsColumns = useMemo<DataTableColumn<Job>[]>(
@@ -1399,7 +1408,11 @@ const PostingsDashboard: React.FC<Props> = ({
                 id="vfin-status"
                 className="vfin-select"
                 value={finStatusFilter}
-                onChange={(e) => setFinStatusFilter(e.target.value as "all" | "active" | "completed")}
+                onChange={(e) =>
+                  setFinStatusFilter(
+                    e.target.value as "all" | "active" | "completed",
+                  )
+                }
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>

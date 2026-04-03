@@ -372,7 +372,7 @@ const VendorsManagementView: React.FC<Props> = () => {
               </div>
             </div>
           </div>
-          </dialog>
+        </dialog>
       )}
     </>
   );
