@@ -1945,11 +1945,11 @@
 }
 .lca-wage-status--pending {
   background: #fff5e0;
-  color: #b8860b;
+  color: #7a5b00;
 }
 .lca-wage-status--withdrawn {
   background: #f0f0f0;
-  color: #888;
+  color: #5f5f5f;
 }
 .lca-wage-status--denied {
   background: #fde8e8;

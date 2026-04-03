@@ -221,9 +221,7 @@ const CandidateProfile: React.FC<Props> = ({
     } else if (userEmail && !form.email) {
       setForm((f) => ({ ...f, email: userEmail }));
     }
-    // Intentionally excludes clearDraft, form.email, hasDraft — they are stable or cause re-trigger loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, profileLoading, userEmail]);
+  }, [profile, profileLoading, userEmail, clearDraft, hasDraft, form.email]);
 
   // Auto-save form to localStorage while filling in (only when no confirmed server profile)
   useEffect(() => {
@@ -232,9 +230,7 @@ const CandidateProfile: React.FC<Props> = ({
     if (!profile && hasDraftableContent) {
       saveDraft(form);
     }
-    // saveDraft is stable (from useDraftCache)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, profile]);
+  }, [form, profile, saveDraft]);
 
   const restoreFromDraft = () => {
     const draft = getDraft();

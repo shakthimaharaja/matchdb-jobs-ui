@@ -20,8 +20,7 @@ interface DBLayoutProps {
   navGroups: NavGroup[];
   breadcrumb: string[];
   children: React.ReactNode;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 function serializeNavGroups(groups: NavGroup[]): string {

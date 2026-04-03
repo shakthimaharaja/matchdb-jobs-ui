@@ -37,9 +37,10 @@ export function CandidatePaymentPage({
       if (result.url) {
         globalThis.location.href = result.url;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { error?: string } };
       setError(
-        err?.data?.error || "Could not start payment. Please try again.",
+        apiErr?.data?.error || "Could not start payment. Please try again.",
       );
     }
   };

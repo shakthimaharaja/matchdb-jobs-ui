@@ -90,8 +90,9 @@ export function CandidateRegisterPage({
         planName: result.planName,
         plan: result.plan,
       });
-    } catch (err: any) {
-      setError(err?.data?.error || "Registration failed. Please try again.");
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { error?: string } };
+      setError(apiErr?.data?.error || "Registration failed. Please try again.");
     }
   };
 
@@ -111,7 +112,7 @@ export function CandidateRegisterPage({
   // ── Invalid Token ──
   if (verifyError || !tokenData?.valid) {
     const errMsg =
-      (verifyError as any)?.data?.error ||
+      (verifyError as { data?: { error?: string } })?.data?.error ||
       tokenData?.error ||
       "Invalid invitation link.";
     return (

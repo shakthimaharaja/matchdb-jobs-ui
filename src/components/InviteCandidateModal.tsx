@@ -19,7 +19,7 @@ interface InviteCandidateModalProps {
 export function InviteCandidateModal({
   open,
   onClose,
-}: InviteCandidateModalProps) {
+}: Readonly<InviteCandidateModalProps>) {
   const [candidateName, setCandidateName] = useState("");
   const [candidateEmail, setCandidateEmail] = useState("");
   const [jobTitle, setJobTitle] = useState("");
@@ -65,8 +65,9 @@ export function InviteCandidateModal({
         setSuccess("");
         onClose();
       }, 1500);
-    } catch (err: any) {
-      setError(err?.data?.error || "Failed to send invitation");
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { error?: string } };
+      setError(apiErr?.data?.error || "Failed to send invitation");
     }
   };
 
@@ -86,6 +87,7 @@ export function InviteCandidateModal({
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div>
             <label
+              htmlFor="invite-candidate-email"
               style={{
                 fontSize: 11,
                 fontWeight: 600,
@@ -96,6 +98,7 @@ export function InviteCandidateModal({
               Candidate Email *
             </label>
             <Input
+              id="invite-candidate-email"
               value={candidateEmail}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setCandidateEmail(e.target.value)
@@ -108,6 +111,7 @@ export function InviteCandidateModal({
 
           <div>
             <label
+              htmlFor="invite-candidate-name"
               style={{
                 fontSize: 11,
                 fontWeight: 600,
@@ -118,6 +122,7 @@ export function InviteCandidateModal({
               Candidate Full Name
             </label>
             <Input
+              id="invite-candidate-name"
               value={candidateName}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setCandidateName(e.target.value)
@@ -130,6 +135,7 @@ export function InviteCandidateModal({
 
           <div>
             <label
+              htmlFor="invite-candidate-job-title"
               style={{
                 fontSize: 11,
                 fontWeight: 600,
@@ -140,6 +146,7 @@ export function InviteCandidateModal({
               Job Title / Role (optional)
             </label>
             <Input
+              id="invite-candidate-job-title"
               value={jobTitle}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setJobTitle(e.target.value)
@@ -152,6 +159,7 @@ export function InviteCandidateModal({
 
           <div>
             <label
+              htmlFor="invite-candidate-plan"
               style={{
                 fontSize: 11,
                 fontWeight: 600,
@@ -162,6 +170,7 @@ export function InviteCandidateModal({
               Candidate Plan *
             </label>
             <Select
+              id="invite-candidate-plan"
               value={candidatePlan}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setCandidatePlan(e.target.value)
@@ -180,6 +189,7 @@ export function InviteCandidateModal({
 
           <div>
             <label
+              htmlFor="invite-candidate-note"
               style={{
                 fontSize: 11,
                 fontWeight: 600,
@@ -190,6 +200,7 @@ export function InviteCandidateModal({
               Personal Note (optional, shown in email)
             </label>
             <textarea
+              id="invite-candidate-note"
               className="matchdb-input"
               value={personalNote}
               onChange={(e) => setPersonalNote(e.target.value)}

@@ -34,7 +34,6 @@ import {
   type InterviewInvite,
   type VendorJobsArgs,
   type VendorCandidateMatchesArgs,
-  type VendorFinancialCandidate,
 } from "../../api/jobsApi";
 
 interface Props {
@@ -258,14 +257,14 @@ const PostingsDashboard: React.FC<Props> = ({
     });
   };
 
-  const navigateToViewJob = (mode: ViewMode, jobId: string) => {
+  const navigateToViewJob = useCallback((mode: ViewMode, jobId: string) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set("view", mode);
       next.set("job", jobId);
       return next;
     });
-  };
+  }, [setSearchParams]);
   const setSelectedJobId = (id: string) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -307,15 +306,13 @@ const PostingsDashboard: React.FC<Props> = ({
         { replace: true },
       );
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams]);
 
   const [searchText, setSearchText] = useState("");
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   const [selectedCandidate, setSelectedCandidate] = useState<Record<
     string,
-    any
+    unknown
   > | null>(null);
-  /* eslint-enable @typescript-eslint/no-explicit-any */
   const [selectedJobPosting, setSelectedJobPosting] = useState<Job | null>(
     null,
   );
@@ -331,6 +328,11 @@ const PostingsDashboard: React.FC<Props> = ({
   const [inviteProposedAt, setInviteProposedAt] = useState("");
   const [inviteMessage, setInviteMessage] = useState("");
   const [inviteSentSuccess, setInviteSentSuccess] = useState(false);
+  const invitesSent: InterviewInvite[] = invitesSentData?.data ?? [];
+  const selectedCandidateMatchPercentage =
+    typeof selectedCandidate?.match_percentage === "number"
+      ? selectedCandidate.match_percentage
+      : undefined;
 
   // Derive poke/email tracking from server-side pokesSent data
   const pokedRowIds = useMemo(
@@ -498,8 +500,6 @@ const PostingsDashboard: React.FC<Props> = ({
         new CustomEvent("matchdb:footerInfo", { detail: { text: "" } }),
       );
     };
-    // invitesSent is declared later in the component (hook ordering constraint)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     viewMode,
     vendorJobs.length,
@@ -509,6 +509,8 @@ const PostingsDashboard: React.FC<Props> = ({
     pokesReceivedOnly.length,
     mailsSentOnly.length,
     mailsReceivedOnly.length,
+    invitesSent.length,
+    vendorFinData?.totals?.totalCandidates,
   ]);
 
   useEffect(() => {
@@ -520,17 +522,13 @@ const PostingsDashboard: React.FC<Props> = ({
         limit: currentPageSize,
       });
     }
-    // currentPageSize is only used when switching to candidates view
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedJobId, viewMode]);
+  }, [selectedJobId, viewMode, currentPageSize]);
 
   useEffect(() => {
     return () => {
       clearPokeState();
     };
-    // Cleanup on unmount only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clearPokeState]);
 
   /* ── Auto-refresh + flash animations (30 s cycle) ── */
   const refreshAll = useCallback(() => {
@@ -607,7 +605,7 @@ const PostingsDashboard: React.FC<Props> = ({
   }, [searchText, vendorCandidateMatches]);
 
   /* ── Close / Reopen a job ── */
-  const handleCloseJob = async (jobId: string) => {
+  const handleCloseJob = useCallback(async (jobId: string) => {
     setClosingJobId(jobId);
     await closeJobMutation(jobId).unwrap();
     setClosingJobId(null);
@@ -615,9 +613,9 @@ const PostingsDashboard: React.FC<Props> = ({
       prev?.id === jobId ? { ...prev, is_active: false } : prev,
     );
     refetchMatches();
-  };
+  }, [closeJobMutation, refetchMatches]);
 
-  const handleReopenJob = async (jobId: string) => {
+  const handleReopenJob = useCallback(async (jobId: string) => {
     setClosingJobId(jobId);
     await reopenJobMutation(jobId).unwrap();
     setClosingJobId(null);
@@ -625,7 +623,7 @@ const PostingsDashboard: React.FC<Props> = ({
       prev?.id === jobId ? { ...prev, is_active: true } : prev,
     );
     refetchMatches();
-  };
+  }, [reopenJobMutation, refetchMatches]);
 
   /* ── Job postings table columns (with render functions) ── */
   const postingsColumns = useMemo<DataTableColumn<Job>[]>(
@@ -877,16 +875,14 @@ const PostingsDashboard: React.FC<Props> = ({
           ),
       },
     ],
-    // navigateToViewJob changes identity only when nav state changes — safe to omit
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       pokesPerJob,
       mailsPerJob,
       closingJobId,
-      setSearchParams,
       setSelectedJobPosting,
       handleCloseJob,
       handleReopenJob,
+      navigateToViewJob,
     ],
   );
 
@@ -924,7 +920,6 @@ const PostingsDashboard: React.FC<Props> = ({
       new Set((invitesSentData?.data ?? []).map((inv) => inv.candidateEmail)),
     [invitesSentData],
   );
-  const invitesSent: InterviewInvite[] = invitesSentData?.data ?? [];
 
   const handleInviteSend = async () => {
     const target = pokeEmailRow;
@@ -1404,7 +1399,7 @@ const PostingsDashboard: React.FC<Props> = ({
                 id="vfin-status"
                 className="vfin-select"
                 value={finStatusFilter}
-                onChange={(e) => setFinStatusFilter(e.target.value as any)}
+                onChange={(e) => setFinStatusFilter(e.target.value as "all" | "active" | "completed")}
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -1550,7 +1545,7 @@ const PostingsDashboard: React.FC<Props> = ({
                       </span>
                       <span className="vfin-pipeline-count">
                         {cp.candidateCount} candidate
-                        {cp.candidateCount !== 1 ? "s" : ""}
+                        {cp.candidateCount === 1 ? "" : "s"}
                       </span>
                     </div>
                     <div className="vfin-pipeline-metrics">
@@ -2195,7 +2190,7 @@ const PostingsDashboard: React.FC<Props> = ({
         onClose={() => setSelectedCandidate(null)}
         type="candidate"
         data={selectedCandidate}
-        matchPercentage={selectedCandidate?.match_percentage}
+        matchPercentage={selectedCandidateMatchPercentage}
       />
 
       {/* Job posting detail modal */}

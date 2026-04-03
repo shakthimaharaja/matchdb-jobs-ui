@@ -1234,12 +1234,7 @@ export interface TimeEntry {
   notes?: string;
 }
 
-export type LeaveType =
-  | "PTO"
-  | "SICK"
-  | "VACATION"
-  | "PERSONAL"
-  | "UNPAID";
+export type LeaveType = "PTO" | "SICK" | "VACATION" | "PERSONAL" | "UNPAID";
 
 export interface LeaveBalance {
   _id: string;
@@ -1950,7 +1945,7 @@ export const jobsApi = createApi({
       providesTags: ["CandidateInvitations"],
     }),
 
-    getCandidateProfile: builder.query<any, string>({
+    getCandidateProfile: builder.query<Record<string, unknown>, string>({
       query: (id) => `api/jobs/candidate/${id}`,
       providesTags: ["CandidateInvitations"],
     }),
@@ -2017,9 +2012,18 @@ export const jobsApi = createApi({
 
     createPayPeriod: builder.mutation<
       PayPeriod,
-      { periodStart: string; periodEnd: string; frequency: PayFrequency; notes?: string }
+      {
+        periodStart: string;
+        periodEnd: string;
+        frequency: PayFrequency;
+        notes?: string;
+      }
     >({
-      query: (body) => ({ url: "api/jobs/payroll/periods", method: "POST", body }),
+      query: (body) => ({
+        url: "api/jobs/payroll/periods",
+        method: "POST",
+        body,
+      }),
       invalidatesTags: ["PayPeriods"],
     }),
 
@@ -2105,7 +2109,10 @@ export const jobsApi = createApi({
       providesTags: ["Clients"],
     }),
 
-    createClient: builder.mutation<ClientCompanyEnhanced, Partial<ClientCompanyEnhanced>>({
+    createClient: builder.mutation<
+      ClientCompanyEnhanced,
+      Partial<ClientCompanyEnhanced>
+    >({
       query: (body) => ({ url: "api/jobs/clients", method: "POST", body }),
       invalidatesTags: ["Clients"],
     }),
@@ -2148,7 +2155,12 @@ export const jobsApi = createApi({
 
     getInvoices: builder.query<
       { data: Invoice[] },
-      { status?: string; clientCompanyId?: string; page?: number; limit?: number }
+      {
+        status?: string;
+        clientCompanyId?: string;
+        page?: number;
+        limit?: number;
+      }
     >({
       query: (params) => ({ url: "api/jobs/invoices", params }),
       providesTags: ["Invoices"],
@@ -2164,14 +2176,16 @@ export const jobsApi = createApi({
       providesTags: ["Invoices"],
     }),
 
-    updateInvoice: builder.mutation<Invoice, { id: string } & Partial<Invoice>>({
-      query: ({ id, ...body }) => ({
-        url: `api/jobs/invoices/${id}`,
-        method: "PUT",
-        body,
-      }),
-      invalidatesTags: ["Invoices"],
-    }),
+    updateInvoice: builder.mutation<Invoice, { id: string } & Partial<Invoice>>(
+      {
+        query: ({ id, ...body }) => ({
+          url: `api/jobs/invoices/${id}`,
+          method: "PUT",
+          body,
+        }),
+        invalidatesTags: ["Invoices"],
+      },
+    ),
 
     sendInvoice: builder.mutation<Invoice, string>({
       query: (id) => ({
@@ -2184,7 +2198,13 @@ export const jobsApi = createApi({
 
     recordInvoicePayment: builder.mutation<
       InvoicePayment,
-      { invoiceId: string; amount: number; method: string; referenceNumber?: string; notes?: string }
+      {
+        invoiceId: string;
+        amount: number;
+        method: string;
+        referenceNumber?: string;
+        notes?: string;
+      }
     >({
       query: ({ invoiceId, ...body }) => ({
         url: `api/jobs/invoices/${invoiceId}/payments`,
@@ -2221,7 +2241,10 @@ export const jobsApi = createApi({
       providesTags: ["Vendors"],
     }),
 
-    createVendor: builder.mutation<VendorCompanyEnhanced, Partial<VendorCompanyEnhanced>>({
+    createVendor: builder.mutation<
+      VendorCompanyEnhanced,
+      Partial<VendorCompanyEnhanced>
+    >({
       query: (body) => ({ url: "api/jobs/vendors", method: "POST", body }),
       invalidatesTags: ["Vendors"],
     }),
@@ -2247,7 +2270,12 @@ export const jobsApi = createApi({
 
     getBills: builder.query<
       { data: VendorBill[] },
-      { status?: string; vendorCompanyId?: string; page?: number; limit?: number }
+      {
+        status?: string;
+        vendorCompanyId?: string;
+        page?: number;
+        limit?: number;
+      }
     >({
       query: (params) => ({ url: "api/jobs/bills", params }),
       providesTags: ["Bills"],
@@ -2263,7 +2291,10 @@ export const jobsApi = createApi({
       providesTags: ["Bills"],
     }),
 
-    updateBill: builder.mutation<VendorBill, { id: string } & Partial<VendorBill>>({
+    updateBill: builder.mutation<
+      VendorBill,
+      { id: string } & Partial<VendorBill>
+    >({
       query: ({ id, ...body }) => ({
         url: `api/jobs/bills/${id}`,
         method: "PUT",
@@ -2283,7 +2314,13 @@ export const jobsApi = createApi({
 
     payBill: builder.mutation<
       VendorBill,
-      { id: string; amount: number; method: string; referenceNumber?: string; notes?: string }
+      {
+        id: string;
+        amount: number;
+        method: string;
+        referenceNumber?: string;
+        notes?: string;
+      }
     >({
       query: ({ id, ...body }) => ({
         url: `api/jobs/bills/${id}/pay`,
@@ -2313,10 +2350,7 @@ export const jobsApi = createApi({
       providesTags: ["FinanceDashboard"],
     }),
 
-    getCashFlow: builder.query<
-      { data: CashFlowMonth[] },
-      { months?: number }
-    >({
+    getCashFlow: builder.query<{ data: CashFlowMonth[] }, { months?: number }>({
       query: (params) => ({ url: "api/jobs/finance/cash-flow", params }),
       providesTags: ["FinanceDashboard"],
     }),
@@ -2331,7 +2365,10 @@ export const jobsApi = createApi({
       providesTags: ["ExpenseCategories"],
     }),
 
-    createExpenseCategory: builder.mutation<ExpenseCategory, Partial<ExpenseCategory>>({
+    createExpenseCategory: builder.mutation<
+      ExpenseCategory,
+      Partial<ExpenseCategory>
+    >({
       query: (body) => ({
         url: "api/jobs/finance/expense-categories",
         method: "POST",
@@ -2349,7 +2386,16 @@ export const jobsApi = createApi({
 
     upsertTimeEntries: builder.mutation<
       { entries: TimeEntry[] },
-      { timesheetId: string; entries: { entryDate: string; hours: number; breakHours?: number; entryType?: string; notes?: string }[] }
+      {
+        timesheetId: string;
+        entries: {
+          entryDate: string;
+          hours: number;
+          breakHours?: number;
+          entryType?: string;
+          notes?: string;
+        }[];
+      }
     >({
       query: ({ timesheetId, entries }) => ({
         url: `api/jobs/fieldglass/${timesheetId}/entries`,
@@ -2396,7 +2442,10 @@ export const jobsApi = createApi({
       { data: Timesheet[] },
       { page?: number; limit?: number }
     >({
-      query: (params) => ({ url: "api/jobs/fieldglass/pending-approval", params }),
+      query: (params) => ({
+        url: "api/jobs/fieldglass/pending-approval",
+        params,
+      }),
       providesTags: ["MarketerTimesheets"],
     }),
 
@@ -2417,7 +2466,13 @@ export const jobsApi = createApi({
 
     requestLeave: builder.mutation<
       LeaveBalance,
-      { leaveType: LeaveType; hours: number; startDate: string; endDate: string; notes?: string }
+      {
+        leaveType: LeaveType;
+        hours: number;
+        startDate: string;
+        endDate: string;
+        notes?: string;
+      }
     >({
       query: (body) => ({
         url: "api/jobs/fieldglass/leave/request",
@@ -2429,7 +2484,12 @@ export const jobsApi = createApi({
 
     setLeaveBalance: builder.mutation<
       LeaveBalance,
-      { personId: string; leaveType: LeaveType; year: number; totalAllotted: number }
+      {
+        personId: string;
+        leaveType: LeaveType;
+        year: number;
+        totalAllotted: number;
+      }
     >({
       query: (body) => ({
         url: "api/jobs/fieldglass/leave/balances",
@@ -2443,7 +2503,10 @@ export const jobsApi = createApi({
       { data: LeaveBalance[] },
       { year?: number; month?: number }
     >({
-      query: (params) => ({ url: "api/jobs/fieldglass/leave/calendar", params }),
+      query: (params) => ({
+        url: "api/jobs/fieldglass/leave/calendar",
+        params,
+      }),
       providesTags: ["LeaveBalances"],
     }),
   }),

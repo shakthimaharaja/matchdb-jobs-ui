@@ -58,7 +58,7 @@ interface Props {
   navigateTo: (view: ActiveView) => void;
 }
 
-const PayrollView: React.FC<Props> = ({ navigateTo }) => {
+const PayrollView: React.FC<Props> = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [newPeriod, setNewPeriod] = useState({
@@ -67,8 +67,6 @@ const PayrollView: React.FC<Props> = ({ navigateTo }) => {
     frequency: "BI_WEEKLY" as const,
     notes: "",
   });
-  const [selectedPeriod, setSelectedPeriod] = useState<PayPeriod | null>(null);
-
   const { data: periodsData, isLoading } = useGetPayPeriodsQuery({
     status: statusFilter || undefined,
   });
@@ -106,7 +104,6 @@ const PayrollView: React.FC<Props> = ({ navigateTo }) => {
         if (action === "approve") await approvePayPeriod(id).unwrap();
         if (action === "process") await processPayPeriod(id).unwrap();
         if (action === "void") await voidPayPeriod(id).unwrap();
-        setSelectedPeriod(null);
       } catch (err) {
         alert(getApiErrorMessage(err, "Action failed"));
       }
@@ -222,7 +219,11 @@ const PayrollView: React.FC<Props> = ({ navigateTo }) => {
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{ width: 160 }}
             >
-              {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {STATUS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </Select>
             <Button onClick={() => setShowCreate(true)}>+ New Period</Button>
           </div>
@@ -230,32 +231,48 @@ const PayrollView: React.FC<Props> = ({ navigateTo }) => {
       />
 
       {showCreate && (
-        <div
+        <dialog
+          open
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.4)",
+            background: "transparent",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
+            border: "none",
+            padding: 0,
           }}
-          onClick={() => setShowCreate(false)}
         >
+          <button
+            type="button"
+            aria-label="Close create pay period dialog"
+            onClick={() => setShowCreate(false)}
+            style={{
+              position: "absolute",
+              inset: 0,
+              border: "none",
+              background: "rgba(0,0,0,0.4)",
+              padding: 0,
+              cursor: "pointer",
+            }}
+          />
           <div
             style={{
+              position: "relative",
+              zIndex: 1,
               background: "var(--rm-card-bg, #fff)",
               borderRadius: 8,
               padding: 24,
               minWidth: 400,
               maxWidth: 500,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ marginTop: 0 }}>Create Pay Period</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <label>
-                Period Start
+                <span>Period Start</span>
                 <input
                   type="date"
                   value={newPeriod.periodStart}
@@ -269,7 +286,7 @@ const PayrollView: React.FC<Props> = ({ navigateTo }) => {
                 />
               </label>
               <label>
-                Period End
+                <span>Period End</span>
                 <input
                   type="date"
                   value={newPeriod.periodEnd}
@@ -280,11 +297,14 @@ const PayrollView: React.FC<Props> = ({ navigateTo }) => {
                 />
               </label>
               <label>
-                Frequency
+                <span>Frequency</span>
                 <select
                   value={newPeriod.frequency}
                   onChange={(e) =>
-                    setNewPeriod((p) => ({ ...p, frequency: e.target.value as "BI_WEEKLY" }))
+                    setNewPeriod((p) => ({
+                      ...p,
+                      frequency: e.target.value as "BI_WEEKLY",
+                    }))
                   }
                   style={{ display: "block", width: "100%" }}
                 >
@@ -295,7 +315,7 @@ const PayrollView: React.FC<Props> = ({ navigateTo }) => {
                 </select>
               </label>
               <label>
-                Notes
+                <span>Notes</span>
                 <textarea
                   value={newPeriod.notes}
                   onChange={(e) =>
@@ -305,7 +325,9 @@ const PayrollView: React.FC<Props> = ({ navigateTo }) => {
                   rows={2}
                 />
               </label>
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <div
+                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+              >
                 <Button variant="default" onClick={() => setShowCreate(false)}>
                   Cancel
                 </Button>
@@ -320,7 +342,7 @@ const PayrollView: React.FC<Props> = ({ navigateTo }) => {
               </div>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
     </>
   );

@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from "react";
+﻿import React, { useCallback, useMemo, useState } from "react";
 import { DataTable } from "matchdb-component-library";
 import type { DataTableColumn } from "matchdb-component-library";
 
@@ -191,7 +191,8 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
     });
   }, [rows, sortKey, sortDir]);
 
-  function renderActions(row: MatchRow) {
+  const renderActions = useCallback(
+    (row: MatchRow) => {
     const alreadyPoked = pokedRowIds?.has(row.id) ?? false;
     const alreadyEmailed = emailedRowIds?.has(row.id) ?? false;
 
@@ -277,7 +278,9 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         </button>
       </div>
     );
-  }
+    },
+    [pokedRowIds, emailedRowIds, isVendor, pokeLoading, pokedAtMap, onPoke, onPokeEmail],
+  );
 
   // Build column definitions with sort-aware headers and per-column render
   const columns = useMemo<DataTableColumn<MatchRow>[]>(() => {
@@ -469,19 +472,11 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         render: renderActions,
       },
     ];
-    // renderActions is defined in the same render scope — including it would bloat the array
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     sortKey,
     sortDir,
-    pokeLoading,
-    pokedRowIds,
-    emailedRowIds,
-    pokedAtMap,
-    isVendor,
-    onPoke,
-    onPokeEmail,
     onRowClick,
+    renderActions,
   ]);
 
   return (

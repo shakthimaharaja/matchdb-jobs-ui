@@ -129,8 +129,9 @@ export async function generateResumePDF(
     }
 
     // Footer on each page
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const totalPages = (doc.internal as any).getNumberOfPages();
+    const totalPages = (
+      doc.internal as unknown as { getNumberOfPages: () => number }
+    ).getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       doc.setFontSize(8);

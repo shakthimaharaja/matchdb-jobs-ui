@@ -254,7 +254,7 @@
   font-weight: 600 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.04em !important;
+  letter-spacing: 0.04em;
   border-bottom: 2px solid var(--modern-border) !important;
   font-family: "Inter", sans-serif !important;
 }

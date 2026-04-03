@@ -13,12 +13,13 @@ export interface ForwardableJob {
   vendor_email: string;
 }
 
+type DetailData = Record<string, unknown>;
+
 interface DetailModalProps {
   open: boolean;
   onClose: () => void;
   type: "job" | "candidate";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: Record<string, any> | null;
+  data: Record<string, unknown> | null;
   matchPercentage?: number;
   /** Company roster candidates (for job modals — pick candidate to forward) */
   companyCandidates?: SendToCandidateOption[];
@@ -39,24 +40,69 @@ interface DetailModalProps {
   forwardLoading?: boolean;
 }
 
-const fmtList = (arr?: string[]) => (arr?.length ? arr.join(", ") : "—");
+const toPlainString = (value: unknown): string | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    const items = value
+      .map((entry) => toPlainString(entry))
+      .filter((entry): entry is string => Boolean(entry));
+    return items.length ? items.join(", ") : undefined;
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return undefined;
+};
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fmtVal = (v: any) =>
-  v !== undefined && v !== null && v !== "" ? String(v) : "—";
+const toStringList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => toPlainString(entry))
+    .filter((entry): entry is string => Boolean(entry));
+};
+
+const fmtList = (arr: string[]) => (arr.length ? arr.join(", ") : "—");
+
+const fmtVal = (value: unknown) => toPlainString(value) ?? "—";
+
+const formatMoney = (value: unknown, suffix = "") => {
+  const amount = toPlainString(value);
+  return amount ? `$${amount}${suffix}` : "—";
+};
+
+const formatSalaryRange = (minValue: unknown, maxValue: unknown) => {
+  const min = toPlainString(minValue);
+  const max = toPlainString(maxValue);
+  if (!min && !max) return "—";
+  return `$${min ?? "?"} – $${max ?? "?"}`;
+};
+
+const formatYears = (value: unknown) => `${toPlainString(value) ?? "0"} yrs`;
 
 function openPdfPreview(
   type: "job" | "candidate",
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: Record<string, any>,
+  data: DetailData,
   matchPercentage?: number,
 ) {
   const isCandidate = type === "candidate";
+  const candidateName = toPlainString(data.name) ?? "";
+  const jobTitle = toPlainString(data.title) ?? "";
   const title = isCandidate
-    ? `Candidate Profile – ${data.name || ""}`
-    : `Job Details – ${data.title || ""}`;
+    ? `Candidate Profile – ${candidateName}`
+    : `Job Details – ${jobTitle}`;
+  const matchRows: Array<[string, string]> =
+    matchPercentage === undefined
+      ? []
+      : [["Match %", `${matchPercentage}%`]];
 
-  const rows = isCandidate
+  const rows: Array<[string, string]> = isCandidate
     ? [
         ["Name", fmtVal(data.name)],
         ["Email", fmtVal(data.email)],
@@ -64,21 +110,16 @@ function openPdfPreview(
         ["Location", fmtVal(data.location)],
         ["Current Role", fmtVal(data.current_role)],
         ["Current Company", fmtVal(data.current_company)],
-        ["Experience", `${fmtVal(data.experience_years)} yrs`],
+        ["Experience", formatYears(data.experience_years)],
         ["Preferred Type", fmtVal(data.preferred_job_type)],
-        [
-          "Expected Rate",
-          data.expected_hourly_rate ? `$${data.expected_hourly_rate}/hr` : "—",
-        ],
-        ["Skills", fmtList(data.skills)],
+        ["Expected Rate", formatMoney(data.expected_hourly_rate, "/hr")],
+        ["Skills", fmtList(toStringList(data.skills))],
         ["Summary", fmtVal(data.resume_summary)],
         ["Experience Detail", fmtVal(data.resume_experience)],
         ["Education", fmtVal(data.resume_education)],
         ["Achievements", fmtVal(data.resume_achievements)],
         ["Bio", fmtVal(data.bio)],
-        ...(matchPercentage === undefined
-          ? []
-          : [["Match %", `${matchPercentage}%`]]),
+        ...matchRows,
       ]
     : [
         ["Title", fmtVal(data.title)],
@@ -87,21 +128,14 @@ function openPdfPreview(
         ["Job Type", fmtVal(data.job_type)],
         ["Sub Type", fmtVal(data.job_sub_type)],
         ["Work Mode", fmtVal(data.work_mode)],
-        ["Pay/Hr", data.pay_per_hour ? `$${data.pay_per_hour}` : "—"],
-        [
-          "Salary Range",
-          data.salary_min || data.salary_max
-            ? `$${data.salary_min || "?"} – $${data.salary_max || "?"}`
-            : "—",
-        ],
-        ["Experience Required", `${fmtVal(data.experience_required)} yrs`],
-        ["Skills Required", fmtList(data.skills_required)],
+        ["Pay/Hr", formatMoney(data.pay_per_hour)],
+        ["Salary Range", formatSalaryRange(data.salary_min, data.salary_max)],
+        ["Experience Required", formatYears(data.experience_required)],
+        ["Skills Required", fmtList(toStringList(data.skills_required))],
         ["Recruiter", fmtVal(data.recruiter_name)],
         ["Recruiter Phone", fmtVal(data.recruiter_phone)],
         ["Vendor Email", fmtVal(data.vendor_email)],
-        ...(matchPercentage === undefined
-          ? []
-          : [["Match %", `${matchPercentage}%`]]),
+        ...matchRows,
       ];
 
   const tableRows = rows
@@ -157,26 +191,35 @@ const DetailModal: React.FC<DetailModalProps> = ({
 
   const isJobType = type === "job";
   const isCandidate = type === "candidate";
-  const hasCandidates = companyCandidates && companyCandidates.length > 0;
-  const hasJobs = forwardableJobs && forwardableJobs.length > 0;
+  const detailData = data as DetailData;
+  const candidateOptions = companyCandidates ?? [];
+  const jobOptions = forwardableJobs ?? [];
+  const dataId = toPlainString(detailData.id);
+  const candidateEmail = toPlainString(detailData.email);
+  const hasCandidates = candidateOptions.length > 0;
+  const hasJobs = jobOptions.length > 0;
 
   // Job modal: forward a company candidate to this job's vendor
-  const canForwardCandidate = isJobType && onForwardToCandidate;
+  const canForwardCandidate = Boolean(isJobType && onForwardToCandidate);
   // Candidate modal: forward this candidate to a job/vendor (only if candidate is in company roster)
-  const isInRoster =
+  const isInRoster = Boolean(
     isCandidate &&
-    companyCandidates?.some((c) => c.candidate_email === data.email);
-  const canForwardToJob = isCandidate && onForwardCandidateToJob && isInRoster;
+      candidateEmail &&
+        candidateOptions.some((c) => c.candidate_email === candidateEmail),
+  );
+  const canForwardToJob = Boolean(
+    isCandidate && onForwardCandidateToJob && isInRoster,
+  );
 
   const handleForwardCandidate = () => {
-    if (!selectedCandidate || !data.id) return;
-    onForwardToCandidate!(selectedCandidate, data.id, forwardNote);
+    if (!selectedCandidate || !dataId) return;
+    onForwardToCandidate?.(selectedCandidate, dataId, forwardNote);
     closeSendPanel();
   };
 
   const handleForwardToJob = () => {
-    if (!selectedJob || !data.email) return;
-    onForwardCandidateToJob!(data.email, selectedJob, forwardNote);
+    if (!selectedJob || !candidateEmail) return;
+    onForwardCandidateToJob?.(candidateEmail, selectedJob, forwardNote);
     closeSendPanel();
   };
 
@@ -194,77 +237,77 @@ const DetailModal: React.FC<DetailModalProps> = ({
   }
 
   function renderCandidateBody() {
-    if (!data) return null;
+    const skills = toStringList(detailData.skills);
+    const resumeSummary = toPlainString(detailData.resume_summary);
+    const resumeExperience = toPlainString(detailData.resume_experience);
+    const resumeEducation = toPlainString(detailData.resume_education);
+    const resumeAchievements = toPlainString(detailData.resume_achievements);
+    const bio = toPlainString(detailData.bio);
+
     return (
       <>
         <section className="detail-section">
           <h3>Personal Info</h3>
           <div className="detail-grid">
-            <Row label="Name" value={data.name} />
-            <Row label="Email" value={data.email} />
-            <Row label="Phone" value={data.phone} />
-            <Row label="Location" value={data.location} />
+            <Row label="Name" value={toPlainString(detailData.name)} />
+            <Row label="Email" value={candidateEmail} />
+            <Row label="Phone" value={toPlainString(detailData.phone)} />
+            <Row label="Location" value={toPlainString(detailData.location)} />
           </div>
         </section>
         <section className="detail-section">
           <h3>Professional Details</h3>
           <div className="detail-grid">
-            <Row label="Current Role" value={data.current_role} />
-            <Row label="Company" value={data.current_company} />
+            <Row label="Current Role" value={toPlainString(detailData.current_role)} />
+            <Row label="Company" value={toPlainString(detailData.current_company)} />
+            <Row label="Experience" value={formatYears(detailData.experience_years)} />
             <Row
-              label="Experience"
-              value={`${data.experience_years || 0} yrs`}
+              label="Preferred Type"
+              value={toPlainString(detailData.preferred_job_type)}
             />
-            <Row label="Preferred Type" value={data.preferred_job_type} />
             <Row
               label="Expected Rate"
-              value={
-                data.expected_hourly_rate
-                  ? `$${data.expected_hourly_rate}/hr`
-                  : undefined
-              }
+              value={formatMoney(detailData.expected_hourly_rate, "/hr")}
             />
           </div>
         </section>
-        {data.skills && data.skills.length > 0 && (
+        {skills.length > 0 && (
           <section className="detail-section">
             <h3>Extracted Skills</h3>
             <div className="detail-tags">
-              {data.skills.map((s: string) => (
-                <span key={s} className="detail-tag">
-                  {s}
+              {skills.map((skill) => (
+                <span key={skill} className="detail-tag">
+                  {skill}
                 </span>
               ))}
             </div>
           </section>
         )}
-        {(data.resume_summary ||
-          data.resume_experience ||
-          data.resume_education ||
-          data.resume_achievements) && (
+        {(resumeSummary ||
+          resumeExperience ||
+          resumeEducation ||
+          resumeAchievements) && (
           <section className="detail-section">
             <h3>Resume</h3>
-            {data.resume_summary && (
-              <Block label="Summary" value={data.resume_summary} />
+            {resumeSummary && <Block label="Summary" value={resumeSummary} />}
+            {resumeExperience && (
+              <Block label="Work Experience" value={resumeExperience} />
             )}
-            {data.resume_experience && (
-              <Block label="Work Experience" value={data.resume_experience} />
+            {resumeEducation && (
+              <Block label="Education" value={resumeEducation} />
             )}
-            {data.resume_education && (
-              <Block label="Education" value={data.resume_education} />
-            )}
-            {data.resume_achievements && (
+            {resumeAchievements && (
               <Block
                 label="Certifications & Achievements"
-                value={data.resume_achievements}
+                value={resumeAchievements}
               />
             )}
           </section>
         )}
-        {data.bio && (
+        {bio && (
           <section className="detail-section">
             <h3>Bio</h3>
-            <p className="detail-text">{data.bio}</p>
+            <p className="detail-text">{bio}</p>
           </section>
         )}
       </>
@@ -272,50 +315,43 @@ const DetailModal: React.FC<DetailModalProps> = ({
   }
 
   function renderJobBody() {
-    if (!data) return null;
+    const jobTitle = toPlainString(detailData.title) ?? "Job Details";
+    const description = toPlainString(detailData.description);
+    const skillsRequired = toStringList(detailData.skills_required);
+
     return (
       <>
         <section className="detail-section">
-          <h3>{data.title}</h3>
+          <h3>{jobTitle}</h3>
           <div className="detail-grid">
-            <Row label="Job Type" value={data.job_type} />
-            <Row label="Sub Type" value={data.job_sub_type} />
-            <Row label="Work Mode" value={data.work_mode} />
-            <Row label="Location" value={data.location} />
-            <Row
-              label="Pay/Hr"
-              value={data.pay_per_hour ? `$${data.pay_per_hour}` : undefined}
-            />
+            <Row label="Job Type" value={toPlainString(detailData.job_type)} />
+            <Row label="Sub Type" value={toPlainString(detailData.job_sub_type)} />
+            <Row label="Work Mode" value={toPlainString(detailData.work_mode)} />
+            <Row label="Location" value={toPlainString(detailData.location)} />
+            <Row label="Pay/Hr" value={formatMoney(detailData.pay_per_hour)} />
             <Row
               label="Salary"
-              value={
-                data.salary_min || data.salary_max
-                  ? `$${data.salary_min || "?"} – $${data.salary_max || "?"}`
-                  : undefined
-              }
+              value={formatSalaryRange(detailData.salary_min, detailData.salary_max)}
             />
-            <Row
-              label="Exp Required"
-              value={`${data.experience_required || 0} yrs`}
-            />
-            <Row label="Recruiter" value={data.recruiter_name} />
-            <Row label="Recruiter Ph" value={data.recruiter_phone} />
-            <Row label="Vendor Email" value={data.vendor_email} />
+            <Row label="Exp Required" value={formatYears(detailData.experience_required)} />
+            <Row label="Recruiter" value={toPlainString(detailData.recruiter_name)} />
+            <Row label="Recruiter Ph" value={toPlainString(detailData.recruiter_phone)} />
+            <Row label="Vendor Email" value={toPlainString(detailData.vendor_email)} />
           </div>
         </section>
-        {data.description && (
+        {description && (
           <section className="detail-section">
             <h3>Description</h3>
-            <p className="detail-text">{data.description}</p>
+            <p className="detail-text">{description}</p>
           </section>
         )}
-        {data.skills_required && data.skills_required.length > 0 && (
+        {skillsRequired.length > 0 && (
           <section className="detail-section">
             <h3>Skills Required</h3>
             <div className="detail-tags">
-              {data.skills_required.map((s: string) => (
-                <span key={s} className="detail-tag">
-                  {s}
+              {skillsRequired.map((skill) => (
+                <span key={skill} className="detail-tag">
+                  {skill}
                 </span>
               ))}
             </div>
@@ -332,7 +368,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
           <Button
             variant="download"
             className="detail-btn detail-btn-pdf"
-            onClick={() => data && openPdfPreview(type, data, matchPercentage)}
+            onClick={() => openPdfPreview(type, detailData, matchPercentage)}
           >
             ⬇ Download PDF
           </Button>
@@ -360,7 +396,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
                   onChange={(e) => setSelectedCandidate(e.target.value)}
                 >
                   <option value="">— Pick your candidate —</option>
-                  {companyCandidates.map((c) => (
+                  {candidateOptions.map((c) => (
                     <option key={c.candidate_email} value={c.candidate_email}>
                       {c.candidate_name
                         ? `${c.candidate_name} (${c.candidate_email})`
@@ -422,7 +458,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
                   style={{ minWidth: 260 }}
                 >
                   <option value="">— Pick a job opening —</option>
-                  {forwardableJobs.map((j) => (
+                  {jobOptions.map((j) => (
                     <option key={j.id} value={j.id}>
                       {j.title} ({j.vendor_email})
                     </option>

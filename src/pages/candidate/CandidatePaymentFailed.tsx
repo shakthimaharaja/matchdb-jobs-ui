@@ -32,9 +32,10 @@ export function CandidatePaymentFailed({
       if (result.url) {
         globalThis.location.href = result.url;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { error?: string } };
       setError(
-        err?.data?.error ||
+        apiErr?.data?.error ||
           "Could not restart payment. Please try again later.",
       );
     }

@@ -90,6 +90,48 @@ import { ActiveUsersPanel } from "../components/ActiveUsersPanel";
 import { CandidateInvitationList } from "../components/CandidateInvitationList";
 import { useGetAdminDashboardQuery } from "../api/jobsApi";
 
+function useDismissOnOutside(
+  open: boolean,
+  triggerRef: React.RefObject<HTMLElement | null>,
+  contentRef: React.RefObject<HTMLElement | null>,
+  onDismiss: () => void,
+) {
+  useEffect(() => {
+    if (!open) return;
+
+    const handler = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (
+        triggerRef.current?.contains(target) ||
+        contentRef.current?.contains(target)
+      ) {
+        return;
+      }
+      onDismiss();
+    };
+
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [contentRef, onDismiss, open, triggerRef]);
+}
+
+function addUniqueString(list: string[], value: string | null | undefined) {
+  if (value && !list.includes(value)) {
+    list.push(value);
+  }
+}
+
+function addPocContact(
+  contacts: { name: string; email: string }[],
+  name: string,
+  email: string | null | undefined,
+) {
+  if (email && !contacts.some((contact) => contact.email === email)) {
+    contacts.push({ name, email });
+  }
+}
+
 // ── Click-to-open Popover (used in client table columns) ──────────────────────
 function ClickPopover({
   label,
@@ -110,17 +152,7 @@ function ClickPopover({
     setPos({ top: rect.bottom + 2, left: rect.left });
   }, [open]);
 
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return;
-      setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+  useDismissOnOutside(open, btnRef, popRef, () => setOpen(false));
 
   return (
     <>
@@ -244,16 +276,7 @@ function LcaWagePopover({
     setPos({ top: rect.bottom + 4, left });
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return;
-      setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+  useDismissOnOutside(open, btnRef, popRef, () => setOpen(false));
 
   const entries = getLcaWages(candidateId);
   const fmtW = (n: number) =>
@@ -338,7 +361,7 @@ function LcaWagePopover({
 
 const MarketerDashboard: React.FC<Props> = () => {
   // ── RBAC context — used to filter sidebar nav items by permission
-  const { hasPermission, role: companyRole } = useCompanyContext();
+  const { hasPermission } = useCompanyContext();
 
   // ── URL-driven state — view, sub-filter, selected candidate, and detail tab
   const [searchParams, setSearchParams] = useSearchParams();
@@ -362,18 +385,21 @@ const MarketerDashboard: React.FC<Props> = () => {
     useState<string>("summary");
 
   /** Update multiple URL params atomically in one navigate() call */
-  const navParams = (updates: Record<string, string | null>) =>
-    setSearchParams(
-      (prev) => {
-        const n = new URLSearchParams(prev);
-        for (const [k, v] of Object.entries(updates)) {
-          if (v === null) n.delete(k);
-          else n.set(k, v);
-        }
-        return n;
-      },
-      { replace: true },
-    );
+  const navParams = useCallback(
+    (updates: Record<string, string | null>) =>
+      setSearchParams(
+        (prev) => {
+          const n = new URLSearchParams(prev);
+          for (const [k, v] of Object.entries(updates)) {
+            if (v === null) n.delete(k);
+            else n.set(k, v);
+          }
+          return n;
+        },
+        { replace: true },
+      ),
+    [setSearchParams],
+  );
   // On mount: stamp ?view=company-candidates if no view param exists yet
   // This ensures the URL always reflects the active view after login.
   useEffect(() => {
@@ -387,7 +413,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         { replace: true },
       );
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams]);
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null,
@@ -405,8 +431,7 @@ const MarketerDashboard: React.FC<Props> = () => {
   // Detail modal state
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailType, setDetailType] = useState<"job" | "candidate">("job");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [detailData, setDetailData] = useState<Record<string, any> | null>(
+  const [detailData, setDetailData] = useState<Record<string, unknown> | null>(
     null,
   );
 
@@ -510,13 +535,8 @@ const MarketerDashboard: React.FC<Props> = () => {
   const { data: companyCandidates = [] } = useGetMarketerCandidatesQuery();
   const { data: companySummary, isFetching: summaryLoading } =
     useGetCompanySummaryQuery();
-  const { data: clientCompanies = [] } = useGetClientCompaniesQuery();
-  const { data: vendorCompaniesLookup = [] } = useGetVendorCompaniesQuery();
-  const ccIdByName: Record<string, string> = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const c of clientCompanies) m[c.name] = c.id;
-    return m;
-  }, [clientCompanies]);
+  useGetClientCompaniesQuery();
+  useGetVendorCompaniesQuery();
   const {
     data: candidateDetail,
     isFetching: detailLoading,
@@ -624,11 +644,14 @@ const MarketerDashboard: React.FC<Props> = () => {
 
   // ── Nav helpers ─────────────────────────────────────────────────────────────
 
-  const navigateTo = (view: ActiveView) => {
-    navParams({ view, filter: null, cid: null, tab: null });
-    if (view === "vendor-posted") setNewJobsBadge(0);
-    if (view === "candidate-created") setNewProfilesBadge(0);
-  };
+  const navigateTo = useCallback(
+    (view: ActiveView) => {
+      navParams({ view, filter: null, cid: null, tab: null });
+      if (view === "vendor-posted") setNewJobsBadge(0);
+      if (view === "candidate-created") setNewProfilesBadge(0);
+    },
+    [navParams],
+  );
 
   // ── Admin modals state ──────────────────────────────────────────────────────
   const [inviteEmployeeOpen, setInviteEmployeeOpen] = useState(false);
@@ -646,19 +669,17 @@ const MarketerDashboard: React.FC<Props> = () => {
 
   // ── Open detail modal ───────────────────────────────────────────────────────
 
-  const openJobDetail = (j: MarketerJob) => {
+  const openJobDetail = useCallback((j: MarketerJob) => {
     setDetailType("job");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setDetailData(j as unknown as Record<string, any>);
+    setDetailData(j as unknown as Record<string, unknown>);
     setDetailOpen(true);
-  };
+  }, []);
 
-  const openProfileDetail = (p: MarketerProfile) => {
+  const openProfileDetail = useCallback((p: MarketerProfile) => {
     setDetailType("candidate");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setDetailData(p as unknown as Record<string, any>);
+    setDetailData(p as unknown as Record<string, unknown>);
     setDetailOpen(true);
-  };
+  }, []);
 
   // ── Download helpers ────────────────────────────────────────────────────────
 
@@ -747,15 +768,20 @@ const MarketerDashboard: React.FC<Props> = () => {
     }
   };
 
-  const handleRemoveCandidate = async (id: string) => {
-    if (!globalThis.confirm("Remove this candidate from your company roster?"))
-      return;
-    try {
-      await removeCandidate(id).unwrap();
-    } catch {
-      alert("Failed to remove candidate");
-    }
-  };
+  const handleRemoveCandidate = useCallback(
+    async (id: string) => {
+      if (
+        !globalThis.confirm("Remove this candidate from your company roster?")
+      )
+        return;
+      try {
+        await removeCandidate(id).unwrap();
+      } catch {
+        alert("Failed to remove candidate");
+      }
+    },
+    [removeCandidate],
+  );
 
   const handleForwardOpening = async (
     candidateEmail: string,
@@ -821,13 +847,16 @@ const MarketerDashboard: React.FC<Props> = () => {
 
   // ── Update forwarded opening status handler ─────────────────────────────────
 
-  const handleUpdateForwardedStatus = async (id: string, status: string) => {
-    try {
-      await updateForwardedStatus({ id, status }).unwrap();
-    } catch (e: unknown) {
-      alert(getApiErrorMessage(e, "Failed to update status"));
-    }
-  };
+  const handleUpdateForwardedStatus = useCallback(
+    async (id: string, status: string) => {
+      try {
+        await updateForwardedStatus({ id, status }).unwrap();
+      } catch (e: unknown) {
+        alert(getApiErrorMessage(e, "Failed to update status"));
+      }
+    },
+    [updateForwardedStatus],
+  );
 
   // Build forwardable jobs list for the candidate profile modal
   const forwardableJobs = useMemo(
@@ -1071,7 +1100,6 @@ const MarketerDashboard: React.FC<Props> = () => {
         ],
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       activeView,
       subFilter,
@@ -1082,31 +1110,33 @@ const MarketerDashboard: React.FC<Props> = () => {
       companyCandidates.length,
       forwardedOpenings.length,
       companyLabel,
+      navigateTo,
+      navParams,
     ],
   );
 
   // ── RBAC: filter sidebar items by permission ────────────────────────────────
   // Maps nav item IDs → required permission. Items without a mapping are visible
   // to everyone. Admin role bypasses all checks (handled in hasPermission).
-  const NAV_PERM_MAP: Record<string, string> = {
-    "admin-users": "manage_roles",
-    "admin-invitations": "invite_workers",
-    "admin-active-users": "manage_roles",
-    "admin-candidate-tracking": "candidates",
-    "admin-dashboard": "subscription",
-    "workers-dashboard": "workers",
-    "financial-summary": "finance",
-    "project-summary": "finance",
-    "job-positions-summary": "staffing",
-    immigration: "immigration",
-    timesheets: "workers",
-    "vendor-summary": "candidates",
-    "client-summary": "candidates",
-  };
 
   const filteredNavGroups: NavGroup[] = useMemo(
-    () =>
-      navGroups
+    () => {
+      const NAV_PERM_MAP: Record<string, string> = {
+        "admin-users": "manage_roles",
+        "admin-invitations": "invite_workers",
+        "admin-active-users": "manage_roles",
+        "admin-candidate-tracking": "candidates",
+        "admin-dashboard": "subscription",
+        "workers-dashboard": "workers",
+        "financial-summary": "finance",
+        "project-summary": "finance",
+        "job-positions-summary": "staffing",
+        immigration: "immigration",
+        timesheets: "workers",
+        "vendor-summary": "candidates",
+        "client-summary": "candidates",
+      };
+      return navGroups
         .map((group) => ({
           ...group,
           items: group.items.filter((item) => {
@@ -1114,9 +1144,9 @@ const MarketerDashboard: React.FC<Props> = () => {
             return !perm || hasPermission(perm);
           }),
         }))
-        .filter((group) => group.items.length > 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [navGroups, companyRole],
+        .filter((group) => group.items.length > 0);
+    },
+    [navGroups, hasPermission],
   );
 
   const breadcrumb = getBreadcrumb(
@@ -1349,8 +1379,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         render: (j) => <>{fmtDate(j.created_at)}</>,
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [openJobDetail],
   );
 
   // ── Profiles table columns ──────────────────────────────────────────────────
@@ -1530,8 +1559,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         ),
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [openProfileDetail],
   );
 
   // ── Company Candidates table columns ────────────────────────────────────────
@@ -1711,8 +1739,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         ),
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [handleRemoveCandidate, navParams],
   );
 
   // ── Forwarded Openings table columns ────────────────────────────────────────
@@ -1823,8 +1850,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         render: (f) => <>{fmtDate(f.created_at)}</>,
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [handleUpdateForwardedStatus],
   );
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -1862,37 +1888,123 @@ const MarketerDashboard: React.FC<Props> = () => {
     },
   ];
 
+  const openVendorDetail = useCallback(
+    (vendor: string, origin: ActiveView) => {
+      setSelectedVendor(vendor);
+      setPrevView(origin);
+      navParams({ view: "vendor-detail" });
+    },
+    [navParams],
+  );
+
+  // buildVendorRows only derives from companySummary.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const vendorRows = useMemo(() => buildVendorRows(), [companySummary]);
+
+  const vendorByCompanyName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of vendorRows) {
+      if (row.companyName) {
+        map.set(row.companyName, row.vendor);
+      }
+    }
+    return map;
+  }, [vendorRows]);
+
+  // buildClientRows only derives from companySummary.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const clientRows = useMemo(() => buildClientRows(), [companySummary]);
+
+  const renderImplementationPartners = useCallback(
+    (partners: string[]) => {
+      if (!partners.length) {
+        return (
+          <span
+            style={{
+              fontSize: 11,
+              color: "var(--w97-text-secondary)",
+            }}
+          >
+            —
+          </span>
+        );
+      }
+
+      return (
+        <span style={{ fontSize: 11 }}>
+          {partners.map((partner, index) => {
+            const vendor = vendorByCompanyName.get(partner);
+            return (
+              <span key={partner}>
+                {index > 0 && ", "}
+                {vendor ? (
+                  <button
+                    type="button"
+                    onClick={() => openVendorDetail(vendor, "client-summary")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      font: "inherit",
+                      color: "var(--w97-blue)",
+                      textDecoration: "underline dotted",
+                      fontSize: 11,
+                    }}
+                  >
+                    {partner}
+                  </button>
+                ) : (
+                  partner
+                )}
+              </span>
+            );
+          })}
+        </span>
+      );
+    },
+    [openVendorDetail, vendorByCompanyName],
+  );
+
   function renderActiveView() {
-    if (activeView === "vendor-posted") return renderVendorPostedView();
-    if (activeView === "candidate-created") return renderCandidateCreatedView();
-    if (activeView === "candidate-detail" && selectedCandidateId)
-      return renderCandidateDetailView();
-    if (activeView === "company-candidates")
-      return renderCompanyCandidatesView();
-    if (activeView === "financial-summary") return renderFinancialSummaryView();
-    if (activeView === "project-summary") return renderProjectSummaryView();
-    if (activeView === "job-positions-summary")
-      return renderJobPositionsSummaryView();
-    if (activeView === "immigration") return renderImmigrationView();
-    if (activeView === "immigration-detail" && selectedCandidateId)
-      return renderImmigrationDetailView();
-    if (activeView === "timesheets") return renderTimesheetsView();
-    if (activeView === "vendor-summary") return renderVendorSummaryView();
-    if (activeView === "vendor-detail" && selectedVendor)
-      return renderVendorDetailView();
-    if (activeView === "client-summary") return renderClientSummaryView();
-    if (activeView === "client-detail" && selectedClient)
-      return renderClientDetailView();
-    if (activeView === "candidate-dashboard")
-      return renderCandidateDashboardView();
-    if (activeView === "workers-dashboard") return renderWorkersDashboardView();
-    if (activeView === "admin-users") return renderAdminUsersView();
-    if (activeView === "admin-invitations") return renderAdminInvitationsView();
-    if (activeView === "admin-active-users")
-      return renderAdminActiveUsersView();
-    if (activeView === "admin-candidate-tracking")
-      return renderAdminCandidateTrackingView();
-    return renderForwardedOpeningsView();
+    const contextualRenderer =
+      (activeView === "candidate-detail" &&
+        selectedCandidateId &&
+        renderCandidateDetailView) ||
+      (activeView === "immigration-detail" &&
+        selectedCandidateId &&
+        renderImmigrationDetailView) ||
+      (activeView === "vendor-detail" &&
+        selectedVendor &&
+        renderVendorDetailView) ||
+      (activeView === "client-detail" &&
+        selectedClient &&
+        renderClientDetailView);
+
+    if (contextualRenderer) {
+      return contextualRenderer();
+    }
+
+    const renderers: Partial<Record<ActiveView, () => React.ReactNode>> = {
+      "vendor-posted": renderVendorPostedView,
+      "candidate-created": renderCandidateCreatedView,
+      "company-candidates": renderCompanyCandidatesView,
+      "financial-summary": renderFinancialSummaryView,
+      "project-summary": renderProjectSummaryView,
+      "job-positions-summary": renderJobPositionsSummaryView,
+      immigration: renderImmigrationView,
+      timesheets: renderTimesheetsView,
+      "vendor-summary": renderVendorSummaryView,
+      "client-summary": renderClientSummaryView,
+      "candidate-dashboard": renderCandidateDashboardView,
+      "workers-dashboard": renderWorkersDashboardView,
+      "admin-users": renderAdminUsersView,
+      "admin-invitations": renderAdminInvitationsView,
+      "admin-active-users": renderAdminActiveUsersView,
+      "admin-candidate-tracking": renderAdminCandidateTrackingView,
+    };
+
+    return renderers[activeView]?.() ?? renderForwardedOpeningsView();
   }
 
   function renderVendorPostedView() {
@@ -4339,7 +4451,6 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderVendorSummaryView() {
     const fmtC = (v: number) =>
       `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-    const vendorRows = buildVendorRows();
     const q = vendorSearch.toLowerCase();
     const filtered = q
       ? vendorRows.filter(
@@ -4470,9 +4581,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           font: "inherit",
                         }}
                         onClick={() => {
-                          setSelectedVendor(r.vendor);
-                          setPrevView("vendor-summary");
-                          navParams({ view: "vendor-detail" });
+                          openVendorDetail(r.vendor, "vendor-summary");
                         }}
                       >
                         <div
@@ -4619,7 +4728,6 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderVendorDetailView() {
     const fmtC = (v: number) =>
       `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-    const vendorRows = buildVendorRows();
     const row = vendorRows.find((r) => r.vendor === selectedVendor);
 
     if (!row) {
@@ -4917,6 +5025,62 @@ const MarketerDashboard: React.FC<Props> = () => {
     }[];
   }
 
+  function createClientRow(client: string): ClientRow {
+    return {
+      client,
+      candidateCount: 0,
+      revenue: 0,
+      credited: 0,
+      pending: 0,
+      hours: 0,
+      vendors: [],
+      locations: [],
+      implementationPartners: [],
+      pocContacts: [],
+      activeOpenings: 0,
+      closedOpenings: 0,
+      candidates: [],
+    };
+  }
+
+  function applyClientFinancials(
+    row: ClientRow,
+    financials: CompanySummaryProject["financials"],
+  ) {
+    if (!financials) return;
+    row.revenue += financials.totalBilled;
+    row.credited += financials.amountPaid;
+    row.pending += financials.amountPending;
+    row.hours += financials.hoursWorked;
+  }
+
+  function addClientCandidate(
+    row: ClientRow,
+    project: CompanySummaryProject,
+    candidateMap: Map<string, CompanySummaryCandidate>,
+    vendor: string,
+  ) {
+    if (
+      row.candidates.some((candidate) => candidate.email === project.candidateEmail)
+    ) {
+      return;
+    }
+
+    const candidate = candidateMap.get(project.candidateEmail);
+    row.candidates.push({
+      id: candidate?.id ?? project.candidateId,
+      name: project.candidateName,
+      email: project.candidateEmail,
+      role: candidate?.currentRole ?? project.jobTitle,
+      vendor,
+      implementationPartner: project.implementationPartner || "",
+      totalBilled: candidate?.totalBilled ?? 0,
+      amountPaid: candidate?.amountPaid ?? 0,
+      amountPending: candidate?.amountPending ?? 0,
+      hoursWorked: candidate?.hoursWorked ?? 0,
+    });
+  }
+
   function buildClientRows(): ClientRow[] {
     const projects = companySummary?.projects ?? [];
     const cands = companySummary?.candidates ?? [];
@@ -4925,79 +5089,37 @@ const MarketerDashboard: React.FC<Props> = () => {
     const map = new Map<string, ClientRow>();
     for (const p of projects) {
       const client = p.clientName || "Unknown Client";
-      if (!map.has(client)) {
-        map.set(client, {
-          client,
-          candidateCount: 0,
-          revenue: 0,
-          credited: 0,
-          pending: 0,
-          hours: 0,
-          vendors: [],
-          locations: [],
-          implementationPartners: [],
-          pocContacts: [],
-          activeOpenings: 0,
-          closedOpenings: 0,
-          candidates: [],
-        });
-      }
-      const row = map.get(client)!;
-      const fin = p.financials;
-      if (fin) {
-        row.revenue += fin.totalBilled;
-        row.credited += fin.amountPaid;
-        row.pending += fin.amountPending;
-        row.hours += fin.hoursWorked;
-      }
+      const row = map.get(client) ?? createClientRow(client);
+      map.set(client, row);
+
+      applyClientFinancials(row, p.financials);
+
       const vendor = p.vendorCompanyName || p.vendorEmail || "Direct";
-      if (!row.vendors.includes(vendor)) {
-        row.vendors.push(vendor);
-      }
-      if (p.location && !row.locations.includes(p.location)) {
-        row.locations.push(p.location);
-      }
-      const ip = p.implementationPartner;
-      if (ip && !row.implementationPartners.includes(ip)) {
-        row.implementationPartners.push(ip);
-      }
-      if (
-        p.pocEmail &&
-        !row.pocContacts.some((pc) => pc.email === p.pocEmail)
-      ) {
-        row.pocContacts.push({ name: p.pocName, email: p.pocEmail });
-      }
+      addUniqueString(row.vendors, vendor);
+      addUniqueString(row.locations, p.location);
+      addUniqueString(row.implementationPartners, p.implementationPartner);
+      addPocContact(row.pocContacts, p.pocName, p.pocEmail);
+
       if (p.isActive) {
         row.activeOpenings++;
       } else {
         row.closedOpenings++;
       }
-      if (!row.candidates.some((c) => c.email === p.candidateEmail)) {
-        const cd = candMap.get(p.candidateEmail);
-        row.candidates.push({
-          id: cd?.id ?? p.candidateId,
-          name: p.candidateName,
-          email: p.candidateEmail,
-          role: cd?.currentRole ?? p.jobTitle,
-          vendor,
-          implementationPartner: ip || "",
-          totalBilled: cd?.totalBilled ?? 0,
-          amountPaid: cd?.amountPaid ?? 0,
-          amountPending: cd?.amountPending ?? 0,
-          hoursWorked: cd?.hoursWorked ?? 0,
-        });
-      }
+
+      addClientCandidate(row, p, candMap, vendor);
     }
-    for (const row of map.values()) {
-      row.candidateCount = row.candidates.length;
-    }
-    return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+
+    return [...map.values()]
+      .map((row) => ({
+        ...row,
+        candidateCount: row.candidates.length,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
   }
 
   function renderClientSummaryView() {
     const fmtC = (v: number) =>
       `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-    const clientRows = buildClientRows();
     const q = clientSearch.toLowerCase();
     const filtered = q
       ? clientRows.filter((r) => r.client.toLowerCase().includes(q))
@@ -5187,59 +5309,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                   {
                     key: "implPartner",
                     header: "Impl. Partner",
-                    render: (r) => {
-                      if (!r.implementationPartners.length) {
-                        return (
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: "var(--w97-text-secondary)",
-                            }}
-                          >
-                            —
-                          </span>
-                        );
-                      }
-                      const vRows = buildVendorRows();
-                      return (
-                        <span style={{ fontSize: 11 }}>
-                          {r.implementationPartners.map((ip, i) => {
-                            const match = vRows.find(
-                              (vr) => vr.companyName === ip,
-                            );
-                            return (
-                              <span key={ip}>
-                                {i > 0 && ", "}
-                                {match ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedVendor(match.vendor);
-                                      setPrevView("client-summary");
-                                      navParams({ view: "vendor-detail" });
-                                    }}
-                                    style={{
-                                      background: "none",
-                                      border: "none",
-                                      padding: 0,
-                                      cursor: "pointer",
-                                      font: "inherit",
-                                      color: "var(--w97-blue)",
-                                      textDecoration: "underline dotted",
-                                      fontSize: 11,
-                                    }}
-                                  >
-                                    {ip}
-                                  </button>
-                                ) : (
-                                  ip
-                                )}
-                              </span>
-                            );
-                          })}
-                        </span>
-                      );
-                    },
+                    render: (r) =>
+                      renderImplementationPartners(r.implementationPartners),
                   },
                   {
                     key: "location",
@@ -5508,7 +5579,6 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderClientDetailView() {
     const fmtC = (v: number) =>
       `$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-    const clientRows = buildClientRows();
     const row = clientRows.find((r) => r.client === selectedClient);
 
     if (!row) {

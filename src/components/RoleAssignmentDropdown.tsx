@@ -22,6 +22,7 @@ const DEPARTMENT_OPTIONS: { value: MarketerDepartment; label: string }[] = [
 ];
 
 interface RoleAssignmentDropdownProps {
+  id?: string;
   value: UserRole;
   department?: MarketerDepartment | null;
   onChange: (role: UserRole, department?: MarketerDepartment | null) => void;
@@ -31,13 +32,14 @@ interface RoleAssignmentDropdownProps {
 }
 
 export function RoleAssignmentDropdown({
+  id,
   value,
   department,
   onChange,
   disabled,
   excludeAdmin,
   size = "sm",
-}: RoleAssignmentDropdownProps) {
+}: Readonly<RoleAssignmentDropdownProps>) {
   const options = excludeAdmin
     ? ROLE_OPTIONS.filter((o) => o.value !== "admin")
     : ROLE_OPTIONS;
@@ -47,6 +49,7 @@ export function RoleAssignmentDropdown({
   return (
     <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
       <Select
+        id={id}
         value={value}
         onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
           onChange(
@@ -65,6 +68,7 @@ export function RoleAssignmentDropdown({
       </Select>
       {value === "marketer" && (
         <Select
+          id={id ? `${id}-department` : undefined}
           value={department || "accounts"}
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             onChange(value, e.target.value as MarketerDepartment)

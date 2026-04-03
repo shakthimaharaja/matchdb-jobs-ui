@@ -96,7 +96,7 @@ export function useAutoRefreshFlash<T>({
       }, flashDurationMs);
       return () => clearTimeout(timer);
     }
-  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, keyExtractor, flashDurationMs]);
 
   // Auto-refresh interval -------------------------------------------------------
   useEffect(() => {

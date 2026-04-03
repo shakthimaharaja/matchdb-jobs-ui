@@ -5,7 +5,6 @@
 import React, { createContext, useContext, useMemo } from "react";
 import {
   useGetCompanyContextQuery,
-  type CompanyContext as CompanyCtx,
   type UserRole,
   type MarketerDepartment,
 } from "../api/jobsApi";
@@ -26,6 +25,10 @@ interface CompanyContextValue {
   hasRole: (...roles: UserRole[]) => boolean;
 }
 
+interface CompanyContextProviderProps {
+  readonly children: React.ReactNode;
+}
+
 const Ctx = createContext<CompanyContextValue>({
   isLoading: true,
   isUnsetup: true,
@@ -40,9 +43,7 @@ const Ctx = createContext<CompanyContextValue>({
 
 export function CompanyContextProvider({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: CompanyContextProviderProps) {
   const { data, isLoading, isError } = useGetCompanyContextQuery();
 
   const value = useMemo<CompanyContextValue>(() => {

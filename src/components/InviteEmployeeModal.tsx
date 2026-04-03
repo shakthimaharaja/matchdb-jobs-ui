@@ -22,7 +22,7 @@ interface InviteEmployeeModalProps {
 export function InviteEmployeeModal({
   open,
   onClose,
-}: InviteEmployeeModalProps) {
+}: Readonly<InviteEmployeeModalProps>) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<UserRole>("vendor");
@@ -62,9 +62,10 @@ export function InviteEmployeeModal({
         setSuccess("");
         onClose();
       }, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { error?: string; message?: string } };
       setError(
-        err?.data?.error || err?.data?.message || "Failed to send invitation",
+        apiErr?.data?.error || apiErr?.data?.message || "Failed to send invitation",
       );
     }
   };
@@ -108,6 +109,7 @@ export function InviteEmployeeModal({
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div>
             <label
+              htmlFor="invite-employee-email"
               style={{
                 fontSize: 11,
                 fontWeight: 600,
@@ -118,6 +120,7 @@ export function InviteEmployeeModal({
               Email *
             </label>
             <Input
+              id="invite-employee-email"
               value={email}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setEmail(e.target.value)
@@ -130,6 +133,7 @@ export function InviteEmployeeModal({
 
           <div>
             <label
+              htmlFor="invite-employee-name"
               style={{
                 fontSize: 11,
                 fontWeight: 600,
@@ -140,6 +144,7 @@ export function InviteEmployeeModal({
               Full Name
             </label>
             <Input
+              id="invite-employee-name"
               value={name}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setName(e.target.value)
@@ -152,6 +157,7 @@ export function InviteEmployeeModal({
 
           <div>
             <label
+              htmlFor="invite-employee-role"
               style={{
                 fontSize: 11,
                 fontWeight: 600,
@@ -162,6 +168,7 @@ export function InviteEmployeeModal({
               Role
             </label>
             <RoleAssignmentDropdown
+              id="invite-employee-role"
               value={role}
               department={department}
               onChange={(r, d) => {

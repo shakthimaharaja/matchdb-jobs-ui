@@ -65,6 +65,28 @@ interface PayPeriod {
   amountPaid: number;
 }
 
+interface ComputedPayRow {
+  billed: number;
+  gross: number;
+  tax: number;
+  withhold: number;
+  net: number;
+  margin: number;
+  balance: number;
+}
+
+interface ProjectPayTotals {
+  hours: number;
+  billed: number;
+  gross: number;
+  tax: number;
+  withhold: number;
+  net: number;
+  margin: number;
+  amountPaid: number;
+  balance: number;
+}
+
 // ─── Generate 12 monthly periods from project financials ─────────────────────
 
 function generatePeriods(fin: ProjectFinancialData | null): PayPeriod[] {
@@ -162,6 +184,192 @@ function outstandingDisplay(balance: number): string {
   if (balance < 0) return `+${fmtC(Math.abs(balance))}`;
   return "$0";
 }
+
+const ProjectTotalsStrip: React.FC<{
+  totals: ProjectPayTotals;
+  paidPct: number;
+}> = ({ totals, paidPct }) => (
+  <div className="ppt-totals-strip">
+    <div className="ppt-ts-tile">
+      <span className="ppt-ts-label">Total Hours</span>
+      <span className="ppt-ts-value">{totals.hours.toLocaleString()}</span>
+    </div>
+    <div className="ppt-ts-divider" />
+    <div className="ppt-ts-tile">
+      <span className="ppt-ts-label">Vendor Billed</span>
+      <span className="ppt-ts-value ppt-ts-green">{fmtC(totals.billed)}</span>
+    </div>
+    <div className="ppt-ts-divider" />
+    <div className="ppt-ts-tile">
+      <span className="ppt-ts-label">Your Margin</span>
+      <span className="ppt-ts-value ppt-ts-teal">
+        {fmtC(totals.margin)}
+        {totals.billed > 0
+          ? ` (${((totals.margin / totals.billed) * 100).toFixed(1)}%)`
+          : ""}
+      </span>
+    </div>
+    <div className="ppt-ts-divider" />
+    <div className="ppt-ts-tile">
+      <span className="ppt-ts-label">Gross Pay</span>
+      <span className="ppt-ts-value ppt-ts-blue">{fmtC(totals.gross)}</span>
+    </div>
+    <div className="ppt-ts-divider" />
+    <div className="ppt-ts-tile">
+      <span className="ppt-ts-label">Net Payable</span>
+      <span className="ppt-ts-value ppt-ts-blue">{fmtC(totals.net)}</span>
+    </div>
+    <div className="ppt-ts-divider" />
+    <div className="ppt-ts-tile">
+      <span className="ppt-ts-label">Paid to Date</span>
+      <span className="ppt-ts-value ppt-ts-green">
+        {fmtC(totals.amountPaid)}
+      </span>
+    </div>
+    <div className="ppt-ts-divider" />
+    <div className="ppt-ts-tile">
+      <span className="ppt-ts-label">Outstanding</span>
+      <span className={`ppt-ts-value ${outstandingClass(totals.balance)}`}>
+        {outstandingDisplay(totals.balance)}
+      </span>
+    </div>
+    <div className="ppt-ts-divider" />
+    <div className="ppt-ts-tile ppt-ts-progress-tile">
+      <span className="ppt-ts-label">{paidPct.toFixed(0)}% Paid</span>
+      <div className="ppt-ts-progress-wrap">
+        <div className="ppt-ts-progress-fill" style={{ width: `${paidPct}%` }} />
+      </div>
+    </div>
+  </div>
+);
+
+const PayPeriodsTable: React.FC<{
+  billRate: number;
+  payRate: number;
+  stateTaxPct: number;
+  cashPct: number;
+  periods: PayPeriod[];
+  editingRows: boolean;
+  totals: ProjectPayTotals;
+  computeRow: (period: PayPeriod) => ComputedPayRow;
+  setHours: (idx: number, value: number) => void;
+  setPaid: (idx: number, value: number) => void;
+}> = ({
+  billRate,
+  payRate,
+  stateTaxPct,
+  cashPct,
+  periods,
+  editingRows,
+  totals,
+  computeRow,
+  setHours,
+  setPaid,
+}) => (
+  <div className="ppt-table-wrap">
+    <table className="ppt-table">
+      <thead>
+        <tr className="ppt-thead-row">
+          <th className="ppt-th ppt-th-period">Pay Period</th>
+          <th className="ppt-th ppt-th-num">Hours</th>
+          <th className="ppt-th ppt-th-money">
+            <span>Billed</span>
+            {billRate > 0 && <span className="ppt-th-sub">@${billRate}/hr</span>}
+          </th>
+          <th className="ppt-th ppt-th-money">
+            <span>Gross Pay</span>
+            {payRate > 0 && <span className="ppt-th-sub">@${payRate}/hr</span>}
+          </th>
+          <th className="ppt-th ppt-th-money">
+            <span>State Tax</span>
+            {stateTaxPct > 0 && <span className="ppt-th-sub">{stateTaxPct}%</span>}
+          </th>
+          <th className="ppt-th ppt-th-money">
+            <span>Withholding</span>
+            {cashPct > 0 && <span className="ppt-th-sub">{cashPct}%</span>}
+          </th>
+          <th className="ppt-th ppt-th-money ppt-th-net">Net Pay</th>
+          <th className="ppt-th ppt-th-money">Paid</th>
+          <th className="ppt-th ppt-th-balance">Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {periods.map((period, idx) => {
+          const row = computeRow(period);
+          return (
+            <tr
+              key={period.label}
+              className={`ppt-row ${idx % 2 === 1 ? "ppt-row-alt" : ""}`}
+            >
+              <td className="ppt-td ppt-td-period">{period.label}</td>
+              <td className="ppt-td ppt-td-num">
+                {editingRows ? (
+                  <input
+                    type="number"
+                    className="ppt-cell-input ppt-cell-input-sm"
+                    value={period.hours || ""}
+                    onChange={(e) => setHours(idx, Number(e.target.value) || 0)}
+                    min={0}
+                    step={0.5}
+                  />
+                ) : (
+                  <span>{period.hours}</span>
+                )}
+              </td>
+              <td className="ppt-td ppt-td-money ppt-val-billed">{fmt(row.billed)}</td>
+              <td className="ppt-td ppt-td-money ppt-val-gross">{fmt(row.gross)}</td>
+              <td className="ppt-td ppt-td-money ppt-val-deduct">
+                {row.tax > 0 ? `−${fmt(row.tax)}` : "—"}
+              </td>
+              <td className="ppt-td ppt-td-money ppt-val-deduct">
+                {row.withhold > 0 ? `−${fmt(row.withhold)}` : "—"}
+              </td>
+              <td className="ppt-td ppt-td-money ppt-val-net">{fmt(row.net)}</td>
+              <td className="ppt-td ppt-td-money">
+                {editingRows ? (
+                  <input
+                    type="number"
+                    className="ppt-cell-input ppt-cell-input-sm ppt-cell-paid"
+                    value={period.amountPaid || ""}
+                    onChange={(e) => setPaid(idx, Number(e.target.value) || 0)}
+                    min={0}
+                    step={0.01}
+                  />
+                ) : (
+                  <span className={period.amountPaid > 0 ? "ppt-val-paid" : "ppt-val-zero"}>
+                    {period.amountPaid > 0 ? fmt(period.amountPaid) : "—"}
+                  </span>
+                )}
+              </td>
+              <td className={`ppt-td ppt-td-balance ${balanceClass(row.balance)}`}>
+                {balanceDisplay(row.balance)}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+      <tfoot>
+        <tr className="ppt-tfoot-row">
+          <td className="ppt-tf ppt-tf-label">TOTAL</td>
+          <td className="ppt-tf ppt-tf-num">{totals.hours.toLocaleString()}</td>
+          <td className="ppt-tf ppt-tf-money ppt-val-billed">{fmt(totals.billed)}</td>
+          <td className="ppt-tf ppt-tf-money ppt-val-gross">{fmt(totals.gross)}</td>
+          <td className="ppt-tf ppt-tf-money ppt-val-deduct">
+            {totals.tax > 0 ? `−${fmt(totals.tax)}` : "—"}
+          </td>
+          <td className="ppt-tf ppt-tf-money ppt-val-deduct">
+            {totals.withhold > 0 ? `−${fmt(totals.withhold)}` : "—"}
+          </td>
+          <td className="ppt-tf ppt-tf-money ppt-val-net">{fmt(totals.net)}</td>
+          <td className="ppt-tf ppt-tf-money ppt-val-paid">{fmt(totals.amountPaid)}</td>
+          <td className={`ppt-tf ppt-tf-balance ${balanceClass(totals.balance)}`}>
+            {totalBalanceDisplay(totals.balance)}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+);
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -528,217 +736,20 @@ const ProjectPayTable: React.FC<Props> = ({
         </div>
       )}
 
-      {/* ── Totals summary strip ──────────────────────────────────────────── */}
-      <div className="ppt-totals-strip">
-        <div className="ppt-ts-tile">
-          <span className="ppt-ts-label">Total Hours</span>
-          <span className="ppt-ts-value">{totals.hours.toLocaleString()}</span>
-        </div>
-        <div className="ppt-ts-divider" />
-        <div className="ppt-ts-tile">
-          <span className="ppt-ts-label">Vendor Billed</span>
-          <span className="ppt-ts-value ppt-ts-green">
-            {fmtC(totals.billed)}
-          </span>
-        </div>
-        <div className="ppt-ts-divider" />
-        <div className="ppt-ts-tile">
-          <span className="ppt-ts-label">Your Margin</span>
-          <span className="ppt-ts-value ppt-ts-teal">
-            {fmtC(totals.margin)}
-            {totals.billed > 0
-              ? ` (${((totals.margin / totals.billed) * 100).toFixed(1)}%)`
-              : ""}
-          </span>
-        </div>
-        <div className="ppt-ts-divider" />
-        <div className="ppt-ts-tile">
-          <span className="ppt-ts-label">Gross Pay</span>
-          <span className="ppt-ts-value ppt-ts-blue">{fmtC(totals.gross)}</span>
-        </div>
-        <div className="ppt-ts-divider" />
-        <div className="ppt-ts-tile">
-          <span className="ppt-ts-label">Net Payable</span>
-          <span className="ppt-ts-value ppt-ts-blue">{fmtC(totals.net)}</span>
-        </div>
-        <div className="ppt-ts-divider" />
-        <div className="ppt-ts-tile">
-          <span className="ppt-ts-label">Paid to Date</span>
-          <span className="ppt-ts-value ppt-ts-green">
-            {fmtC(totals.amountPaid)}
-          </span>
-        </div>
-        <div className="ppt-ts-divider" />
-        <div className="ppt-ts-tile">
-          <span className="ppt-ts-label">Outstanding</span>
-          <span className={`ppt-ts-value ${outstandingClass(totals.balance)}`}>
-            {outstandingDisplay(totals.balance)}
-          </span>
-        </div>
-        <div className="ppt-ts-divider" />
-        {/* Payment progress bar */}
-        <div className="ppt-ts-tile ppt-ts-progress-tile">
-          <span className="ppt-ts-label">{paidPct.toFixed(0)}% Paid</span>
-          <div className="ppt-ts-progress-wrap">
-            <div
-              className="ppt-ts-progress-fill"
-              style={{ width: `${paidPct}%` }}
-            />
-          </div>
-        </div>
-      </div>
+      <ProjectTotalsStrip totals={totals} paidPct={paidPct} />
 
-      {/* ── Pay Period Table ──────────────────────────────────────────────── */}
-      <div className="ppt-table-wrap">
-        <table className="ppt-table">
-          <thead>
-            <tr className="ppt-thead-row">
-              <th className="ppt-th ppt-th-period">Pay Period</th>
-              <th className="ppt-th ppt-th-num">Hours</th>
-              <th className="ppt-th ppt-th-money">
-                <span>Billed</span>
-                {billRate > 0 && (
-                  <span className="ppt-th-sub">@${billRate}/hr</span>
-                )}
-              </th>
-              <th className="ppt-th ppt-th-money">
-                <span>Gross Pay</span>
-                {payRate > 0 && (
-                  <span className="ppt-th-sub">@${payRate}/hr</span>
-                )}
-              </th>
-              <th className="ppt-th ppt-th-money">
-                <span>State Tax</span>
-                {stateTaxPct > 0 && (
-                  <span className="ppt-th-sub">{stateTaxPct}%</span>
-                )}
-              </th>
-              <th className="ppt-th ppt-th-money">
-                <span>Withholding</span>
-                {cashPct > 0 && <span className="ppt-th-sub">{cashPct}%</span>}
-              </th>
-              <th className="ppt-th ppt-th-money ppt-th-net">Net Pay</th>
-              <th className="ppt-th ppt-th-money">Paid</th>
-              <th className="ppt-th ppt-th-balance">Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {periods.map((period, idx) => {
-              const r = computeRow(period);
-              return (
-                <tr
-                  key={period.label}
-                  className={`ppt-row ${idx % 2 === 1 ? "ppt-row-alt" : ""}`}
-                >
-                  <td className="ppt-td ppt-td-period">{period.label}</td>
-
-                  {/* Hours — editable */}
-                  <td className="ppt-td ppt-td-num">
-                    {editingRows ? (
-                      <input
-                        type="number"
-                        className="ppt-cell-input ppt-cell-input-sm"
-                        value={period.hours || ""}
-                        onChange={(e) =>
-                          setHours(idx, Number(e.target.value) || 0)
-                        }
-                        min={0}
-                        step={0.5}
-                      />
-                    ) : (
-                      <span>{period.hours}</span>
-                    )}
-                  </td>
-
-                  <td className="ppt-td ppt-td-money ppt-val-billed">
-                    {fmt(r.billed)}
-                  </td>
-                  <td className="ppt-td ppt-td-money ppt-val-gross">
-                    {fmt(r.gross)}
-                  </td>
-                  <td className="ppt-td ppt-td-money ppt-val-deduct">
-                    {r.tax > 0 ? `−${fmt(r.tax)}` : "—"}
-                  </td>
-                  <td className="ppt-td ppt-td-money ppt-val-deduct">
-                    {r.withhold > 0 ? `−${fmt(r.withhold)}` : "—"}
-                  </td>
-                  <td className="ppt-td ppt-td-money ppt-val-net">
-                    {fmt(r.net)}
-                  </td>
-
-                  {/* Paid — editable */}
-                  <td className="ppt-td ppt-td-money">
-                    {editingRows ? (
-                      <input
-                        type="number"
-                        className="ppt-cell-input ppt-cell-input-sm ppt-cell-paid"
-                        value={period.amountPaid || ""}
-                        onChange={(e) =>
-                          setPaid(idx, Number(e.target.value) || 0)
-                        }
-                        min={0}
-                        step={0.01}
-                      />
-                    ) : (
-                      <span
-                        className={
-                          period.amountPaid > 0
-                            ? "ppt-val-paid"
-                            : "ppt-val-zero"
-                        }
-                      >
-                        {period.amountPaid > 0 ? fmt(period.amountPaid) : "—"}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Balance */}
-                  <td
-                    className={`ppt-td ppt-td-balance ${balanceClass(
-                      r.balance,
-                    )}`}
-                  >
-                    {balanceDisplay(r.balance)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr className="ppt-tfoot-row">
-              <td className="ppt-tf ppt-tf-label">TOTAL</td>
-              <td className="ppt-tf ppt-tf-num">
-                {totals.hours.toLocaleString()}
-              </td>
-              <td className="ppt-tf ppt-tf-money ppt-val-billed">
-                {fmt(totals.billed)}
-              </td>
-              <td className="ppt-tf ppt-tf-money ppt-val-gross">
-                {fmt(totals.gross)}
-              </td>
-              <td className="ppt-tf ppt-tf-money ppt-val-deduct">
-                {totals.tax > 0 ? `−${fmt(totals.tax)}` : "—"}
-              </td>
-              <td className="ppt-tf ppt-tf-money ppt-val-deduct">
-                {totals.withhold > 0 ? `−${fmt(totals.withhold)}` : "—"}
-              </td>
-              <td className="ppt-tf ppt-tf-money ppt-val-net">
-                {fmt(totals.net)}
-              </td>
-              <td className="ppt-tf ppt-tf-money ppt-val-paid">
-                {fmt(totals.amountPaid)}
-              </td>
-              <td
-                className={`ppt-tf ppt-tf-balance ${balanceClass(
-                  totals.balance,
-                )}`}
-              >
-                {totalBalanceDisplay(totals.balance)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      <PayPeriodsTable
+        billRate={billRate}
+        payRate={payRate}
+        stateTaxPct={stateTaxPct}
+        cashPct={cashPct}
+        periods={periods}
+        editingRows={editingRows}
+        totals={totals}
+        computeRow={computeRow}
+        setHours={setHours}
+        setPaid={setPaid}
+      />
 
       {/* ── Footer notes (read-only) ──────────────────────────────────────── */}
       {notes && !editingSettings && (

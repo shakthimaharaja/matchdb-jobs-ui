@@ -101,22 +101,22 @@ const CandidateDashboard: React.FC<Props> = ({
   );
 
   /** Update multiple URL params atomically in one navigate() call */
-  const navParams = (
-    updates: Record<string, string | null>,
-    resetPage = true,
-  ) =>
-    setSearchParams(
-      (prev) => {
-        const n = new URLSearchParams(prev);
-        for (const [k, v] of Object.entries(updates)) {
-          if (v === null) n.delete(k);
-          else n.set(k, v);
-        }
-        if (resetPage) n.delete("page");
-        return n;
-      },
-      { replace: true },
-    );
+  const navParams = useCallback(
+    (updates: Record<string, string | null>, resetPage = true) =>
+      setSearchParams(
+        (prev) => {
+          const n = new URLSearchParams(prev);
+          for (const [k, v] of Object.entries(updates)) {
+            if (v === null) n.delete(k);
+            else n.set(k, v);
+          }
+          if (resetPage) n.delete("page");
+          return n;
+        },
+        { replace: true },
+      ),
+    [setSearchParams],
+  );
 
   // On mount: stamp ?view=matches if no view param exists yet (e.g. fresh login)
   useEffect(() => {
@@ -130,7 +130,7 @@ const CandidateDashboard: React.FC<Props> = ({
         { replace: true },
       );
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, setSearchParams]);
 
   const [selectedJob, setSelectedJob] = useState<Record<
     string,
@@ -378,23 +378,24 @@ const CandidateDashboard: React.FC<Props> = ({
       );
     }, 350);
     return () => clearTimeout(t);
-    // Debounce reacts only to text changes, not setSearchParams
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchText]);
+  }, [searchText, setSearchParams]);
 
   // Helper: build the filter payload for RTK Query matchFilters
-  const buildFilterArgs = (
-    page: number,
-    pageSize: number,
-  ): CandidateMatchesArgs => ({
-    page,
-    limit: pageSize,
-    types: membershipTypes ? membershipTypes.join(",") : undefined,
-    filter_type: filterType || undefined,
-    sub_type: filterSubType || undefined,
-    work_mode: filterWorkMode || undefined,
-    search: debouncedSearch.trim() || undefined,
-  });
+  const buildFilterArgs = useCallback(
+    (
+      page: number,
+      pageSize: number,
+    ): CandidateMatchesArgs => ({
+      page,
+      limit: pageSize,
+      types: membershipTypes ? membershipTypes.join(",") : undefined,
+      filter_type: filterType || undefined,
+      sub_type: filterSubType || undefined,
+      work_mode: filterWorkMode || undefined,
+      search: debouncedSearch.trim() || undefined,
+    }),
+    [membershipTypes, filterType, filterSubType, filterWorkMode, debouncedSearch],
+  );
 
   // Re-fetch when any URL filter / page param changes
   // On first mount skip — matchFilters already seeded from URL in useState init
@@ -405,8 +406,8 @@ const CandidateDashboard: React.FC<Props> = ({
       return;
     }
     setMatchFilters(buildFilterArgs(currentPage, currentPageSize));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    buildFilterArgs,
     filterType,
     filterSubType,
     filterWorkMode,
@@ -423,9 +424,7 @@ const CandidateDashboard: React.FC<Props> = ({
       setProfileOpen(true);
     }
     profileChecked.current = true;
-    // Only run once when profile data resolves; hasPurchasedVisibility is stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profileLoading, profile]);
+  }, [profileLoading, profile, hasPurchasedVisibility]);
 
   // Send profile location to shell for the subscription-location display
   useEffect(() => {
@@ -501,8 +500,6 @@ const CandidateDashboard: React.FC<Props> = ({
         new CustomEvent("matchdb:footerInfo", { detail: { text: "" } }),
       );
     };
-    // Footer row-count display tracks active view and relevant totals
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activeView,
     candidateMatchesTotal,
@@ -510,6 +507,8 @@ const CandidateDashboard: React.FC<Props> = ({
     pokesReceivedOnly.length,
     mailsSentOnly.length,
     mailsReceivedOnly.length,
+    forwardedOpenings.length,
+    myDetail?.projects.length,
   ]);
 
   const handlePageChange = (page: number, pageSize: number) => {
@@ -526,20 +525,24 @@ const CandidateDashboard: React.FC<Props> = ({
 
   const hasMembership =
     !!membershipConfig && Object.keys(membershipConfig).length > 0;
-  const showType = (type: string) => !hasMembership || type in membershipConfig;
-  const showSubtype = (type: string, sub: string) => {
-    if (!hasMembership) return true;
-    const subs = membershipConfig[type];
-    return subs !== undefined && (subs.length === 0 || subs.includes(sub));
-  };
+  const showType = useCallback(
+    (type: string) => !hasMembership || type in membershipConfig,
+    [hasMembership, membershipConfig],
+  );
+  const showSubtype = useCallback(
+    (type: string, sub: string) => {
+      if (!hasMembership) return true;
+      const subs = membershipConfig[type];
+      return subs !== undefined && (subs.length === 0 || subs.includes(sub));
+    },
+    [hasMembership, membershipConfig],
+  );
 
   useEffect(() => {
     return () => {
       clearPokeState();
     };
-    // Cleanup on unmount only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clearPokeState]);
 
   /* ── Auto-refresh + flash animations (30 s cycle) ── */
   const refreshAll = useCallback(() => {
@@ -1124,16 +1127,16 @@ const CandidateDashboard: React.FC<Props> = ({
       });
     }
     return items;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    membershipConfig,
-    candidateMatches.length,
     grandTotal,
     countByType,
     countBySubType,
     filterType,
     filterSubType,
     activeView,
+    navParams,
+    showSubtype,
+    showType,
   ]);
 
   function buildNavGroups(): NavGroup[] {

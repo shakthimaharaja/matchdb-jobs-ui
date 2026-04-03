@@ -219,8 +219,7 @@ const TimesheetView: React.FC<Props> = ({
       setEntries((prev) => ({ ...prev, ...map }));
     }
     // Only re-fill when a different draft is loaded
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingDraft?.id]);
+  }, [existingDraft]);
 
   function buildEntries(): TimesheetEntry[] {
     return weekDates.map((wd) => ({

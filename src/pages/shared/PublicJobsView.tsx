@@ -249,23 +249,6 @@ const LoginWarningBar: React.FC<{
   </div>
 );
 
-/** Banner shown at the top of every public view — prompts unauthenticated users to sign up via Shell. */
-const SignUpBanner: React.FC = () => (
-  <div className="pub-signup-banner">
-    <span className="pub-signup-banner-icon">💼</span>
-    <span className="pub-signup-banner-text">
-      Browsing live data • <strong>Sign up</strong> to apply for jobs, get
-      matched, and get discovered by employers
-    </span>
-    <span className="pub-signup-banner-actions">
-      <span className="pub-signup-hint">
-        Use <strong>Sign&nbsp;In</strong> / <strong>Sign&nbsp;Up</strong> in the
-        top header to get started
-      </span>
-    </span>
-  </div>
-);
-
 /** Stat chips row — displayed below the pagehead in each public view.
  *  Each chip toggles between total count and "new today" count on click. */
 const StatChipsBar: React.FC<{ stats: LiveStats }> = ({ stats }) => {
@@ -365,44 +348,6 @@ const StatChipsBar: React.FC<{ stats: LiveStats }> = ({ stats }) => {
         );
       })}
     </div>
-  );
-};
-
-/**
- * Renders a number with a typewriter-style animation,
- * re-triggering each time the value changes.
- */
-const TypewriterCount: React.FC<{ value: number | null; fallback: number }> = ({
-  value,
-  fallback,
-}) => {
-  const target = value ?? fallback;
-  const text = String(target);
-  const [displayed, setDisplayed] = useState("");
-  const prevRef = useRef(text);
-
-  useEffect(() => {
-    let active = true;
-    setDisplayed("");
-    let i = 0;
-    const id = setInterval(() => {
-      if (!active) return;
-      i++;
-      setDisplayed(text.slice(0, i));
-      if (i >= text.length) clearInterval(id);
-    }, 80);
-    prevRef.current = text;
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
-  }, [text]);
-
-  return (
-    <span className="pub-typewriter-count">
-      {displayed}
-      <span className="pub-typewriter-cursor">|</span>
-    </span>
   );
 };
 
@@ -1166,7 +1111,7 @@ const PublicJobsView: React.FC = () => {
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [jobTypeFilter, setJobTypeFilter] = useState("");
-  const [wsConnected, setWsConnected] = useState(true);
+  const [wsConnected] = useState(true);
   const [lastSync, setLastSync] = useState<number | null>(null);
 
   const [flashJobIds, setFlashJobIds] = useState<Set<string>>(new Set());
@@ -1310,9 +1255,12 @@ const PublicJobsView: React.FC = () => {
       clearTimeout(deleteFlashJobTimer.current);
       clearTimeout(deleteFlashProfileTimer.current);
     };
-    // Polling setup runs once on mount — schedule callbacks are stable refs
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    scheduleFlashJobs,
+    scheduleFlashProfiles,
+    scheduleDeleteFlashJobs,
+    scheduleDeleteFlashProfiles,
+  ]);
 
   // ── Listen for job-type filter events from the shell ──────────────────────
   useEffect(() => {
