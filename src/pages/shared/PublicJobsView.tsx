@@ -87,6 +87,17 @@ interface PublicDataMessage {
   deletedProfiles: PublicProfile[];
 }
 
+/** Single entry in the activity log shown before login */
+interface ActivityEntry {
+  id: string;
+  ts: number;
+  type: "update" | "delete" | "new";
+  entity: "job" | "profile";
+  label: string;
+}
+
+const MAX_ACTIVITY = 50;
+
 // ── Polling helpers ───────────────────────────────────────────────────────────
 
 /**
@@ -424,6 +435,7 @@ interface TwinProps {
   wsConnected: boolean;
   lastSync: number | null;
   stats: LiveStats;
+  activityLog: ActivityEntry[];
 }
 
 const TwinView: React.FC<TwinProps> = ({
@@ -438,6 +450,7 @@ const TwinView: React.FC<TwinProps> = ({
   deleteFlashProfileIds,
   wsConnected,
   lastSync,
+  activityLog,
 }) => {
   const queryTime = useMemo(
     () => (Math.random() * 0.005 + 0.002).toFixed(3),
@@ -494,35 +507,35 @@ const TwinView: React.FC<TwinProps> = ({
       {
         key: "title",
         header: "Title",
-        width: "21%",
+        width: "26%",
         className: "pub-job-title",
         render: (j) => j.title,
       },
       {
         key: "name",
         header: "Name",
-        width: "12%",
+        width: "15%",
         className: "pub-cell-truncate",
         render: (j) => j.recruiter_name,
       },
       {
         key: "company",
         header: "Company",
-        width: "12%",
+        width: "15%",
         className: "pub-cell-truncate",
         render: (j) => fmtCompany(j),
       },
       {
         key: "location",
         header: "Location",
-        width: "12%",
+        width: "13%",
         className: "pub-cell-truncate",
         render: (j) => j.location,
       },
       {
         key: "type",
         header: "Type",
-        width: "11%",
+        width: "8%",
         render: (j) => (
           <span className={`pub-type-badge pub-type-${j.job_type}`}>
             {j.job_type.replace("_", " ")}
@@ -532,7 +545,7 @@ const TwinView: React.FC<TwinProps> = ({
       {
         key: "mode",
         header: "Mode",
-        width: "6%",
+        width: "7%",
         className: "pub-mode-cell",
         render: (j) => j.work_mode,
       },
@@ -543,21 +556,21 @@ const TwinView: React.FC<TwinProps> = ({
             Rate <span className="pub-sort">▼</span>
           </>
         ),
-        width: "6%",
+        width: "7%",
         className: "pub-num",
         render: (j) => fmtJobRate(j),
       },
       {
         key: "exp",
         header: "Exp",
-        width: "3%",
+        width: "4%",
         className: "pub-num",
         render: (j) => `${j.experience_required}y`,
       },
       {
         key: "candidates",
         header: "Cand.",
-        width: "4%",
+        width: "5%",
         className: "pub-cand-count",
         render: (j) =>
           j.candCount > 0 ? (
@@ -575,7 +588,7 @@ const TwinView: React.FC<TwinProps> = ({
       {
         key: "name",
         header: "Name",
-        width: "20%",
+        width: "18%",
         className: "pub-job-title",
         render: (p) => p.name,
         tooltip: (p) => p.name,
@@ -583,7 +596,7 @@ const TwinView: React.FC<TwinProps> = ({
       {
         key: "current_role",
         header: "Role",
-        width: "14%",
+        width: "18%",
         className: "pub-cell-truncate",
         render: (p) => p.current_role,
         tooltip: (p) => p.current_role,
@@ -591,7 +604,7 @@ const TwinView: React.FC<TwinProps> = ({
       {
         key: "company",
         header: "Company",
-        width: "12%",
+        width: "15%",
         className: "pub-cell-truncate",
         render: (p) => p.current_company,
         tooltip: (p) => p.current_company,
@@ -599,7 +612,7 @@ const TwinView: React.FC<TwinProps> = ({
       {
         key: "location",
         header: "Location",
-        width: "12%",
+        width: "14%",
         className: "pub-cell-truncate",
         render: (p) => p.location || "—",
         tooltip: (p) => p.location || "—",
@@ -607,7 +620,7 @@ const TwinView: React.FC<TwinProps> = ({
       {
         key: "pref_type",
         header: "Pref",
-        width: "11%",
+        width: "8%",
         render: (p) => (
           <span
             className={`pub-type-badge pub-type-${p.preferred_job_type || ""}`}
@@ -620,7 +633,7 @@ const TwinView: React.FC<TwinProps> = ({
       {
         key: "rate_hr",
         header: "Rate/hr",
-        width: "7%",
+        width: "8%",
         className: "pub-num",
         render: (p) => fmtProfileRate(p),
         tooltip: (p) => fmtProfileRate(p),
@@ -628,7 +641,7 @@ const TwinView: React.FC<TwinProps> = ({
       {
         key: "exp",
         header: "Exp",
-        width: "4%",
+        width: "5%",
         className: "pub-num",
         render: (p) => `${p.experience_years}y`,
         tooltip: (p) => `${p.experience_years} years`,
@@ -686,8 +699,13 @@ const TwinView: React.FC<TwinProps> = ({
             keyExtractor={(j) => j.id}
             flashIds={flashJobIds}
             deleteFlashIds={deleteFlashJobIds}
-            serialNumberColumnWidth="32px"
+            serialNumberColumnWidth="18px"
             rowCount={PAGE_SIZE}
+            scrollableRows={false}
+            rowHeight={20}
+            headerRowHeight={20}
+            cellPadding="1px 4px"
+            cellFontSize="11.5px"
           />
           <DataTable<ProfileWithFit>
             title="Candidate Profiles"
@@ -698,11 +716,17 @@ const TwinView: React.FC<TwinProps> = ({
             keyExtractor={(p) => p.id}
             flashIds={flashProfileIds}
             deleteFlashIds={deleteFlashProfileIds}
-            serialNumberColumnWidth="32px"
+            serialNumberColumnWidth="18px"
             rowCount={PAGE_SIZE}
+            scrollableRows={false}
+            rowHeight={20}
+            headerRowHeight={20}
+            cellPadding="1px 4px"
+            cellFontSize="11.5px"
           />
         </div>
 
+        <ActivityLog entries={activityLog} />
         <StatusBar
           loading={loading}
           live={true}
@@ -732,6 +756,7 @@ interface CandViewProps {
   wsConnected: boolean;
   lastSync: number | null;
   stats: LiveStats;
+  activityLog: ActivityEntry[];
 }
 
 const CandView: React.FC<CandViewProps> = ({
@@ -745,6 +770,7 @@ const CandView: React.FC<CandViewProps> = ({
   wsConnected,
   lastSync,
   stats,
+  activityLog,
 }) => {
   const queryTime = useMemo(
     () => (Math.random() * 0.004 + 0.001).toFixed(3),
@@ -800,7 +826,7 @@ const CandView: React.FC<CandViewProps> = ({
       {
         key: "name",
         header: "Name",
-        width: "11%",
+        width: "12%",
         className: "pub-cell-truncate",
         render: (j) => j.recruiter_name,
         tooltip: (j) => j.recruiter_name,
@@ -808,7 +834,7 @@ const CandView: React.FC<CandViewProps> = ({
       {
         key: "location",
         header: "Location",
-        width: "11%",
+        width: "12%",
         className: "pub-cell-truncate",
         render: (j) => j.location,
         tooltip: (j) => j.location,
@@ -825,7 +851,7 @@ const CandView: React.FC<CandViewProps> = ({
       {
         key: "mode",
         header: "Mode",
-        width: "6%",
+        width: "7%",
         className: "pub-mode-cell",
         render: (j) => j.work_mode,
         tooltip: (j) => j.work_mode,
@@ -837,7 +863,7 @@ const CandView: React.FC<CandViewProps> = ({
             Rate <span className="pub-sort">▼</span>
           </>
         ),
-        width: "6%",
+        width: "7%",
         className: "pub-num",
         render: (j) => fmtJobRate(j),
         tooltip: (j) => fmtJobRate(j),
@@ -845,7 +871,7 @@ const CandView: React.FC<CandViewProps> = ({
       {
         key: "exp",
         header: "Exp",
-        width: "3%",
+        width: "4%",
         className: "pub-num",
         render: (j) => j.experience_required,
         tooltip: (j) => `${j.experience_required} years`,
@@ -910,10 +936,16 @@ const CandView: React.FC<CandViewProps> = ({
           keyExtractor={(j) => j.id}
           flashIds={flashJobIds}
           deleteFlashIds={deleteFlashJobIds}
-          serialNumberColumnWidth="32px"
+          serialNumberColumnWidth="22px"
           rowCount={PAGE_SIZE}
+          scrollableRows={false}
+          rowHeight={20}
+          headerRowHeight={20}
+          cellPadding="1px 4px"
+          cellFontSize="11.5px"
         />
 
+        <ActivityLog entries={activityLog} />
         <StatusBar
           loading={loading}
           live={true}
@@ -944,6 +976,7 @@ interface VendorViewProps {
   wsConnected: boolean;
   lastSync: number | null;
   stats: LiveStats;
+  activityLog: ActivityEntry[];
 }
 
 const VendorView: React.FC<VendorViewProps> = ({
@@ -955,6 +988,7 @@ const VendorView: React.FC<VendorViewProps> = ({
   wsConnected,
   lastSync,
   stats,
+  activityLog,
 }) => {
   const queryTime = useMemo(
     () => (Math.random() * 0.003 + 0.001).toFixed(3),
@@ -973,7 +1007,7 @@ const VendorView: React.FC<VendorViewProps> = ({
       {
         key: "name",
         header: "Name",
-        width: "13%",
+        width: "14%",
         className: "pub-job-title",
         render: (p) => p.name,
         tooltip: (p) => p.name,
@@ -981,7 +1015,7 @@ const VendorView: React.FC<VendorViewProps> = ({
       {
         key: "current_role",
         header: "Role",
-        width: "14%",
+        width: "16%",
         className: "pub-cell-truncate",
         render: (p) => p.current_role,
         tooltip: (p) => p.current_role,
@@ -989,7 +1023,7 @@ const VendorView: React.FC<VendorViewProps> = ({
       {
         key: "company",
         header: "Company",
-        width: "11%",
+        width: "12%",
         className: "pub-cell-truncate",
         render: (p) => p.current_company,
         tooltip: (p) => p.current_company,
@@ -997,7 +1031,7 @@ const VendorView: React.FC<VendorViewProps> = ({
       {
         key: "location",
         header: "Location",
-        width: "10%",
+        width: "12%",
         className: "pub-cell-truncate",
         render: (p) => p.location,
         tooltip: (p) => p.location,
@@ -1005,7 +1039,7 @@ const VendorView: React.FC<VendorViewProps> = ({
       {
         key: "rate_hr",
         header: "Rate/hr",
-        width: "7%",
+        width: "8%",
         className: "pub-num",
         render: (p) => fmtProfileRate(p),
         tooltip: (p) => fmtProfileRate(p),
@@ -1017,7 +1051,7 @@ const VendorView: React.FC<VendorViewProps> = ({
             Exp <span className="pub-sort">▼</span>
           </>
         ),
-        width: "4%",
+        width: "5%",
         className: "pub-num",
         render: (p) => `${p.experience_years}y`,
         tooltip: (p) => `${p.experience_years} years`,
@@ -1025,7 +1059,7 @@ const VendorView: React.FC<VendorViewProps> = ({
       {
         key: "pref_type",
         header: "Pref. Type",
-        width: "10%",
+        width: "8%",
         render: (p) => (
           <span className={`pub-type-badge pub-type-${p.preferred_job_type}`}>
             {p.preferred_job_type.replace("_", " ")}
@@ -1081,10 +1115,16 @@ const VendorView: React.FC<VendorViewProps> = ({
           keyExtractor={(p) => p.id}
           flashIds={flashProfileIds}
           deleteFlashIds={deleteFlashProfileIds}
-          serialNumberColumnWidth="32px"
+          serialNumberColumnWidth="22px"
           rowCount={PAGE_SIZE}
+          scrollableRows={false}
+          rowHeight={20}
+          headerRowHeight={20}
+          cellPadding="1px 4px"
+          cellFontSize="11.5px"
         />
 
+        <ActivityLog entries={activityLog} />
         <StatusBar
           loading={loading}
           live={true}
@@ -1102,6 +1142,47 @@ const VendorView: React.FC<VendorViewProps> = ({
   );
 };
 
+// ── ActivityLog — single-line horizontal ticker ──────────────────────────────
+
+const ActivityLog: React.FC<{ entries: ActivityEntry[] }> = ({ entries }) => {
+  const latest = entries[0];
+
+  if (!latest) {
+    return (
+      <div className="pub-activity-bar">
+        <span className="pub-activity-icon">📋</span>
+        <span className="pub-activity-title">Recent Activity</span>
+        <span className="pub-activity-empty">Waiting for changes…</span>
+      </div>
+    );
+  }
+
+  const badgeMap = { delete: "DEL", new: "NEW", update: "UPD" };
+
+  return (
+    <div className="pub-activity-bar">
+      <span className="pub-activity-icon">📋</span>
+      <span className="pub-activity-title">Recent Activity</span>
+      <span className="pub-activity-count">{entries.length}</span>
+      <span className="pub-activity-sep">│</span>
+      {entries.slice(0, 6).map((e) => (
+        <span key={e.id} className={`pub-activity-chip pub-activity-${e.type}`}>
+          <span className="pub-activity-badge">{badgeMap[e.type]}</span>
+          {e.entity === "job" ? "💼" : "👤"}
+          <span className="pub-activity-label">{e.label}</span>
+          <span className="pub-activity-time">
+            {new Date(e.ts).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+};
+
 // ── PublicJobsView (root) — polls /api/jobs/poll/public-data ──────────────────
 
 const PublicJobsView: React.FC = () => {
@@ -1112,6 +1193,7 @@ const PublicJobsView: React.FC = () => {
   const [jobTypeFilter, setJobTypeFilter] = useState("");
   const [wsConnected] = useState(true);
   const [lastSync, setLastSync] = useState<number | null>(null);
+  const [activityLog, setActivityLog] = useState<ActivityEntry[]>([]);
 
   const [flashJobIds, setFlashJobIds] = useState<Set<string>>(new Set());
   const [flashProfileIds, setFlashProfileIds] = useState<Set<string>>(
@@ -1189,6 +1271,66 @@ const PublicJobsView: React.FC = () => {
     location.pathname.startsWith("/jobs/candidate/");
 
   // ── Polling connection to /api/jobs/poll/public-data ────────────────────────
+
+  /** Build activity entries from a diff message */
+  const buildActivityEntries = useCallback(
+    (
+      msg: PublicDataMessage,
+      deletedJobSet: Set<string>,
+      deletedProfileSet: Set<string>,
+    ): ActivityEntry[] => {
+      const now = Date.now();
+      const entries: ActivityEntry[] = [];
+      const jobMap = new Map(msg.jobs.map((j) => [j.id, j]));
+      const profileMap = new Map(msg.profiles.map((p) => [p.id, p]));
+
+      for (const id of msg.deletedJobIds ?? []) {
+        const dj = (msg.deletedJobs ?? []).find((j) => j.id === id);
+        entries.push({
+          id: `dj-${id}-${now}`,
+          ts: now,
+          type: "delete",
+          entity: "job",
+          label: dj?.title ?? id,
+        });
+      }
+      for (const id of msg.deletedProfileIds ?? []) {
+        const dp = (msg.deletedProfiles ?? []).find((p) => p.id === id);
+        entries.push({
+          id: `dp-${id}-${now}`,
+          ts: now,
+          type: "delete",
+          entity: "profile",
+          label: dp?.name ?? id,
+        });
+      }
+      for (const id of msg.changedJobIds ?? []) {
+        if (deletedJobSet.has(id)) continue;
+        const j = jobMap.get(id);
+        entries.push({
+          id: `uj-${id}-${now}`,
+          ts: now,
+          type: "update",
+          entity: "job",
+          label: j?.title ?? id,
+        });
+      }
+      for (const id of msg.changedProfileIds ?? []) {
+        if (deletedProfileSet.has(id)) continue;
+        const p = profileMap.get(id);
+        entries.push({
+          id: `up-${id}-${now}`,
+          ts: now,
+          type: "update",
+          entity: "profile",
+          label: p?.name ?? id,
+        });
+      }
+      return entries;
+    },
+    [],
+  );
+
   useEffect(() => {
     let active = true;
     let isFirst = true;
@@ -1233,6 +1375,18 @@ const PublicJobsView: React.FC = () => {
           if (deletedProfileSet.size > 0) {
             scheduleDeleteFlashProfiles(deletedProfileSet);
           }
+
+          // ── Build activity log entries ──────────────────────────────────
+          const newEntries = buildActivityEntries(
+            msg,
+            deletedJobSet,
+            deletedProfileSet,
+          );
+          if (newEntries.length > 0) {
+            setActivityLog((prev) =>
+              [...newEntries, ...prev].slice(0, MAX_ACTIVITY),
+            );
+          }
         }
 
         isFirst = false;
@@ -1259,6 +1413,7 @@ const PublicJobsView: React.FC = () => {
     scheduleFlashProfiles,
     scheduleDeleteFlashJobs,
     scheduleDeleteFlashProfiles,
+    buildActivityEntries,
   ]);
 
   // ── Listen for job-type filter events from the shell ──────────────────────
@@ -1298,6 +1453,7 @@ const PublicJobsView: React.FC = () => {
         wsConnected={wsConnected}
         lastSync={lastSync}
         stats={stats}
+        activityLog={activityLog}
       />
     );
   }
@@ -1315,6 +1471,7 @@ const PublicJobsView: React.FC = () => {
         wsConnected={wsConnected}
         lastSync={lastSync}
         stats={stats}
+        activityLog={activityLog}
       />
     );
   }
@@ -1332,6 +1489,7 @@ const PublicJobsView: React.FC = () => {
       wsConnected={wsConnected}
       lastSync={lastSync}
       stats={stats}
+      activityLog={activityLog}
     />
   );
 };
