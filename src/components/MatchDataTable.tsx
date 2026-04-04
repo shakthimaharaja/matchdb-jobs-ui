@@ -193,93 +193,101 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
 
   const renderActions = useCallback(
     (row: MatchRow) => {
-    const alreadyPoked = pokedRowIds?.has(row.id) ?? false;
-    const alreadyEmailed = emailedRowIds?.has(row.id) ?? false;
+      const alreadyPoked = pokedRowIds?.has(row.id) ?? false;
+      const alreadyEmailed = emailedRowIds?.has(row.id) ?? false;
 
-    const mailMatchTooLow =
-      !isVendor && row.matchPercentage < MAIL_MATCH_THRESHOLD;
-    const pokeMatchTooLow =
-      !isVendor && row.matchPercentage < POKE_MATCH_THRESHOLD;
+      const mailMatchTooLow =
+        !isVendor && row.matchPercentage < MAIL_MATCH_THRESHOLD;
+      const pokeMatchTooLow =
+        !isVendor && row.matchPercentage < POKE_MATCH_THRESHOLD;
 
-    const pokeAt = pokedAtMap?.get(row.id);
-    const pokeTooRecent =
-      !!pokeAt && Date.now() - new Date(pokeAt).getTime() < POKE_COOLDOWN_MS;
+      const pokeAt = pokedAtMap?.get(row.id);
+      const pokeTooRecent =
+        !!pokeAt && Date.now() - new Date(pokeAt).getTime() < POKE_COOLDOWN_MS;
 
-    const pokeDisabled =
-      pokeLoading || alreadyPoked || alreadyEmailed || pokeMatchTooLow;
-    const mailDisabled = alreadyEmailed || mailMatchTooLow || pokeTooRecent;
+      const pokeDisabled =
+        pokeLoading || alreadyPoked || alreadyEmailed || pokeMatchTooLow;
+      const mailDisabled = alreadyEmailed || mailMatchTooLow || pokeTooRecent;
 
-    const pokeTitle = getPokeTitle(
-      pokeMatchTooLow,
-      alreadyEmailed,
-      alreadyPoked,
-      row.pokeTargetName,
-    );
-    const mailTitle = getMailTitle(
-      mailMatchTooLow,
-      alreadyEmailed,
-      pokeTooRecent,
-      row.pokeTargetName,
-      pokeAt,
-    );
-    const pokeStyle = getPokeStyle(
-      pokeMatchTooLow,
-      alreadyPoked,
-      alreadyEmailed,
-    );
-    const pokeLabel = getPokeLabel(alreadyPoked, pokeLoading);
-    const mailStyle = getMailStyle(
-      mailMatchTooLow,
-      alreadyEmailed,
-      pokeTooRecent,
-    );
+      const pokeTitle = getPokeTitle(
+        pokeMatchTooLow,
+        alreadyEmailed,
+        alreadyPoked,
+        row.pokeTargetName,
+      );
+      const mailTitle = getMailTitle(
+        mailMatchTooLow,
+        alreadyEmailed,
+        pokeTooRecent,
+        row.pokeTargetName,
+        pokeAt,
+      );
+      const pokeStyle = getPokeStyle(
+        pokeMatchTooLow,
+        alreadyPoked,
+        alreadyEmailed,
+      );
+      const pokeLabel = getPokeLabel(alreadyPoked, pokeLoading);
+      const mailStyle = getMailStyle(
+        mailMatchTooLow,
+        alreadyEmailed,
+        pokeTooRecent,
+      );
 
-    return (
-      <div style={{ display: "flex", gap: 2 }}>
-        <button
-          className="matchdb-btn matchdb-btn-poke"
-          type="button"
-          disabled={pokeDisabled}
-          onClick={() => !pokeDisabled && onPoke(row)}
-          title={pokeTitle}
-          aria-label={pokeTitle}
-          style={{
-            flex: 1,
-            ...pokeStyle,
-          }}
-        >
-          {pokeLabel}
-        </button>
-        {onPokeEmail && (
+      return (
+        <div className="u-flex u-gap-2">
           <button
-            className="matchdb-btn matchdb-btn-email"
+            className="matchdb-btn matchdb-btn-poke"
             type="button"
-            disabled={mailDisabled}
-            onClick={() => !mailDisabled && onPokeEmail(row)}
-            title={mailTitle}
-            aria-label={mailTitle}
+            disabled={pokeDisabled}
+            onClick={() => !pokeDisabled && onPoke(row)}
+            title={pokeTitle}
+            aria-label={pokeTitle}
             style={{
               flex: 1,
-              ...mailStyle,
+              ...pokeStyle,
             }}
           >
-            {alreadyEmailed ? "✓" : "✉"}
+            {pokeLabel}
           </button>
-        )}
-        <button
-          className="matchdb-btn matchdb-btn-call"
-          type="button"
-          disabled
-          title="Call — coming soon"
-          aria-label="Call (coming soon)"
-          style={{ flex: 1, opacity: 0.3, cursor: "not-allowed" }}
-        >
-          📞
-        </button>
-      </div>
-    );
+          {onPokeEmail && (
+            <button
+              className="matchdb-btn matchdb-btn-email"
+              type="button"
+              disabled={mailDisabled}
+              onClick={() => !mailDisabled && onPokeEmail(row)}
+              title={mailTitle}
+              aria-label={mailTitle}
+              style={{
+                flex: 1,
+                ...mailStyle,
+              }}
+            >
+              {alreadyEmailed ? "✓" : "✉"}
+            </button>
+          )}
+          <button
+            className="matchdb-btn matchdb-btn-call"
+            type="button"
+            disabled
+            title="Call — coming soon"
+            aria-label="Call (coming soon)"
+            style={{ flex: 1, opacity: 0.3, cursor: "not-allowed" }}
+          >
+            📞
+          </button>
+        </div>
+      );
     },
-    [pokedRowIds, emailedRowIds, isVendor, pokeLoading, pokedAtMap, onPoke, onPokeEmail],
+    [
+      pokedRowIds,
+      emailedRowIds,
+      isVendor,
+      pokeLoading,
+      pokedAtMap,
+      onPoke,
+      onPokeEmail,
+    ],
   );
 
   // Build column definitions with sort-aware headers and per-column render
@@ -310,7 +318,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       {
         key: "name",
         header: <>Name {indicator("name")}</>,
-        width: "11%",
+        width: "12%",
         className: "matchdb-th-sortable",
         thProps: {
           onClick: () => onSort("name"),
@@ -348,7 +356,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       {
         key: "email",
         header: "Mail ID",
-        width: "11%",
+        width: "12%",
         className: "col-email",
         skeletonWidth: 110,
         thProps: { title: "Contact email" },
@@ -368,7 +376,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       {
         key: "role",
         header: <>Role {indicator("role")}</>,
-        width: "11%",
+        width: "12%",
         className: "matchdb-th-sortable",
         thProps: {
           onClick: () => onSort("role"),
@@ -381,7 +389,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       {
         key: "type",
         header: <>Type {indicator("type")}</>,
-        width: "8%",
+        width: "9%",
         className: "matchdb-th-sortable",
         thProps: {
           onClick: () => onSort("type"),
@@ -451,7 +459,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
       {
         key: "location",
         header: <>Location {indicator("location")}</>,
-        width: "7%",
+        width: "8%",
         className: "col-location matchdb-th-sortable",
         thProps: {
           onClick: () => onSort("location"),
@@ -472,12 +480,7 @@ const MatchDataTable: React.FC<MatchDataTableProps> = ({
         render: renderActions,
       },
     ];
-  }, [
-    sortKey,
-    sortDir,
-    onRowClick,
-    renderActions,
-  ]);
+  }, [sortKey, sortDir, onRowClick, renderActions]);
 
   return (
     <DataTable<MatchRow>

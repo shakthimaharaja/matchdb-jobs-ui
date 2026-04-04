@@ -96,7 +96,7 @@ export function CandidatePaymentPage({
             variant="primary"
             onClick={handlePay}
             disabled={isLoading}
-            style={{ width: "100%" }}
+            fullWidth
           >
             {isLoading ? "Preparing Checkout…" : "Proceed to Payment →"}
           </Button>

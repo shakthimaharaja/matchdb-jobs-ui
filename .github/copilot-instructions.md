@@ -1,8 +1,8 @@
-# MatchDB Jobs UI — Copilot Rules
+# MatchingDB Jobs UI — Copilot Rules
 
 ## Project Overview
 
-This is the **Jobs remote micro-frontend** for the MatchDB staffing platform. It runs on **port 3001** (webpack dev server) + **port 4001** (proxy server). It exposes `./JobsApp` via Webpack 5 Module Federation, which the Shell UI loads dynamically. Contains role-based dashboards for Candidates, Vendors, and Marketers.
+This is the **Jobs remote micro-frontend** for the MatchingDB staffing platform. It runs on **port 3001** (webpack dev server) + **port 4001** (proxy server). It exposes `./JobsApp` via Webpack 5 Module Federation, which the Shell UI loads dynamically. Contains role-based dashboards for Candidates, Vendors, and Marketers.
 
 **Stack:** React 18, TypeScript, Webpack 5 Module Federation, Redux Toolkit (RTK Query), Tailwind CSS, jsPDF, matchdb-component-library
 

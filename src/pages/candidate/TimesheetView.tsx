@@ -280,7 +280,7 @@ const TimesheetView: React.FC<Props> = ({
       header: "Week",
       width: "22%",
       render: (t) => (
-        <span style={{ fontWeight: 600 }}>{fmtWeek(t.weekStart)}</span>
+        <span className="u-fw-600">{fmtWeek(t.weekStart)}</span>
       ),
     },
     {
@@ -342,7 +342,7 @@ const TimesheetView: React.FC<Props> = ({
             size="xs"
             title="Download CSV"
             onClick={() => downloadTimesheetCSV(t)}
-            style={{ fontSize: 11 }}
+            className="u-fs-11"
           >
             ⬇ CSV
           </Button>
@@ -370,8 +370,8 @@ const TimesheetView: React.FC<Props> = ({
             </span>
             {currentWeekSheet && (
               <span
-                className="matchdb-panel-title-meta"
-                style={{ marginLeft: 8 }}
+                className="matchdb-panel-title-meta u-ml-8"
+                
               >
                 <StatusPill status={currentWeekSheet.status} />
               </span>
@@ -420,7 +420,7 @@ const TimesheetView: React.FC<Props> = ({
               currentWeekSheet.status === "approved") && (
               <Button
                 size="xs"
-                style={{ marginLeft: 12 }}
+                className="u-ml-12"
                 onClick={() => downloadTimesheetCSV(currentWeekSheet)}
               >
                 ⬇ Download CSV
@@ -430,7 +430,7 @@ const TimesheetView: React.FC<Props> = ({
         ) : (
           <>
             {/* Entry grid */}
-            <div style={{ overflowX: "auto" }}>
+            <div className="u-overflow-x-auto">
               <table
                 style={{
                   width: "100%",
@@ -554,8 +554,8 @@ const TimesheetView: React.FC<Props> = ({
                       >
                         <input
                           type="text"
-                          className="matchdb-input"
-                          style={{ width: "100%" }}
+                          className="matchdb-input u-w-full"
+                          
                           placeholder="Optional task notes..."
                           value={entries[wd.date]?.notes ?? ""}
                           onChange={(e) =>
@@ -703,7 +703,7 @@ const TimesheetView: React.FC<Props> = ({
                 won&apos;t be able to edit it after submission.
               </p>
               <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+                className="u-flex u-gap-8 u-justify-end"
               >
                 <Button onClick={() => setSubmitConfirm(false)}>Cancel</Button>
                 <Button

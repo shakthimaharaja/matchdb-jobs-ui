@@ -380,7 +380,7 @@ const ProjectFinancialForm: React.FC<Props> = ({
 
         <div className="pf-edit-form">
           <div className="pf-edit-section-title">Vendor &amp; Client</div>
-          <div className="pf-edit-grid" style={{ marginBottom: 6 }}>
+          <div className="pf-edit-grid u-mb-6" >
             <div className="pf-field">
               <label
                 className="pf-field-label"
@@ -464,7 +464,7 @@ const ProjectFinancialForm: React.FC<Props> = ({
           </div>
 
           <div className="pf-edit-section-title">Billing &amp; Hours</div>
-          <div className="pf-edit-grid" style={{ marginBottom: 6 }}>
+          <div className="pf-edit-grid u-mb-6" >
             <div className="pf-field">
               <label
                 className="pf-field-label"
@@ -531,8 +531,8 @@ const ProjectFinancialForm: React.FC<Props> = ({
             Deductions &amp; Tax
           </div>
           <div
-            className="pf-edit-grid pf-edit-grid-3"
-            style={{ marginBottom: 6 }}
+            className="pf-edit-grid pf-edit-grid-3 u-mb-6"
+            
           >
             <div className="pf-field">
               <label
@@ -601,8 +601,8 @@ const ProjectFinancialForm: React.FC<Props> = ({
             Project Timeline
           </div>
           <div
-            className="pf-edit-grid pf-edit-grid-3"
-            style={{ marginBottom: 6 }}
+            className="pf-edit-grid pf-edit-grid-3 u-mb-6"
+            
           >
             <div className="pf-field">
               <label

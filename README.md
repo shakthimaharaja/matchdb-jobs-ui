@@ -1,6 +1,6 @@
 # matchdb-jobs-ui
 
-Remote microfrontend for the MatchDB staffing platform. Exposes the Jobs application module (`./JobsApp`) via Webpack 5 Module Federation and is consumed by the shell host at runtime.
+Remote microfrontend for the MatchingDB staffing platform. Exposes the Jobs application module (`./JobsApp`) via Webpack 5 Module Federation and is consumed by the shell host at runtime.
 
 ---
 
@@ -367,7 +367,7 @@ When running standalone (not inside the shell), the app renders with its own `bo
 
 ## Full Platform Startup Order
 
-To run the entire MatchDB platform locally, start services in this order:
+To run the entire MatchingDB platform locally, start services in this order:
 
 ```
 1. matchdb-shell-services        →  port 8000  (auth + payments API + gateway — MongoDB Atlas)

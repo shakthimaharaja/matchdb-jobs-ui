@@ -112,7 +112,7 @@ const LeaveManagementView: React.FC<Props> = () => {
         titleExtra={
           <Button
             onClick={() => setShowSetBalance(true)}
-            style={{ marginLeft: 12 }}
+            className="u-ml-12"
           >
             + Set Balance
           </Button>
@@ -158,14 +158,14 @@ const LeaveManagementView: React.FC<Props> = () => {
             }}
           >
             <h3 style={{ marginTop: 0 }}>Set Leave Balance</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="u-flex u-flex-col-dir u-gap-8">
               <input
                 placeholder="Worker ID"
                 value={balanceForm.personId}
                 onChange={(e) =>
                   setBalanceForm((p) => ({ ...p, personId: e.target.value }))
                 }
-                style={{ width: "100%" }}
+                className="u-w-full"
               />
               <select
                 value={balanceForm.leaveType}
@@ -175,7 +175,7 @@ const LeaveManagementView: React.FC<Props> = () => {
                     leaveType: e.target.value as LeaveType,
                   }))
                 }
-                style={{ width: "100%" }}
+                className="u-w-full"
               >
                 <option value="PTO">PTO</option>
                 <option value="SICK">Sick</option>
@@ -197,7 +197,7 @@ const LeaveManagementView: React.FC<Props> = () => {
                   onChange={(e) =>
                     setBalanceForm((p) => ({ ...p, year: +e.target.value }))
                   }
-                  style={{ width: "100%" }}
+                  className="u-w-full"
                 />
                 <input
                   type="number"
@@ -209,11 +209,11 @@ const LeaveManagementView: React.FC<Props> = () => {
                       totalAllotted: +e.target.value,
                     }))
                   }
-                  style={{ width: "100%" }}
+                  className="u-w-full"
                 />
               </div>
               <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+                className="u-flex u-gap-8 u-justify-end"
               >
                 <Button
                   variant="default"

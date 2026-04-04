@@ -84,7 +84,7 @@ export function InviteCandidateModal({
           🎯 Invite Candidate
         </h3>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="u-flex u-flex-col-dir u-gap-10">
           <div>
             <label
               htmlFor="invite-candidate-email"
@@ -105,7 +105,7 @@ export function InviteCandidateModal({
               }
               placeholder="candidate@email.com"
               disabled={isLoading}
-              style={{ width: "100%" }}
+              fullWidth
             />
           </div>
 
@@ -129,7 +129,7 @@ export function InviteCandidateModal({
               }
               placeholder="Jane Smith"
               disabled={isLoading}
-              style={{ width: "100%" }}
+              fullWidth
             />
           </div>
 
@@ -153,7 +153,7 @@ export function InviteCandidateModal({
               }
               placeholder="Senior Developer"
               disabled={isLoading}
-              style={{ width: "100%" }}
+              fullWidth
             />
           </div>
 
@@ -176,7 +176,8 @@ export function InviteCandidateModal({
                 setCandidatePlan(e.target.value)
               }
               disabled={isLoading}
-              style={{ width: "100%", fontSize: 12 }}
+              fullWidth
+              size="sm"
             >
               <option value="">Select a plan…</option>
               {activePlans.map((p) => (
@@ -201,13 +202,12 @@ export function InviteCandidateModal({
             </label>
             <textarea
               id="invite-candidate-note"
-              className="matchdb-input"
+              className="matchdb-input u-w-full u-resize-v u-fs-12"
               value={personalNote}
               onChange={(e) => setPersonalNote(e.target.value)}
               placeholder="Looking forward to working with you…"
               disabled={isLoading}
               rows={3}
-              style={{ width: "100%", resize: "vertical", fontSize: 12 }}
             />
           </div>
         </div>

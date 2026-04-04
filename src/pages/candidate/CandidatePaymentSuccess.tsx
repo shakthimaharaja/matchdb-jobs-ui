@@ -56,11 +56,7 @@ export function CandidatePaymentSuccess({
             </div>
           </div>
 
-          <Button
-            variant="primary"
-            onClick={onGoToDashboard}
-            style={{ width: "100%", marginTop: 20 }}
-          >
+          <Button variant="primary" onClick={onGoToDashboard} fullWidth>
             Go to Dashboard →
           </Button>
 

@@ -137,7 +137,7 @@ const VendorsManagementView: React.FC<Props> = () => {
         titleIcon="🤝"
         title="Vendor Companies"
         titleExtra={
-          <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
+          <div className="u-flex u-gap-8 u-ml-12">
             <Input
               placeholder="Search vendors…"
               value={search}
@@ -224,7 +224,7 @@ const VendorsManagementView: React.FC<Props> = () => {
             <h3 style={{ marginTop: 0 }}>
               {editingVendor ? "Edit Vendor" : "New Vendor"}
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="u-flex u-flex-col-dir u-gap-8">
               <Input
                 placeholder="Company Name *"
                 value={formData.name}
@@ -314,7 +314,7 @@ const VendorsManagementView: React.FC<Props> = () => {
                         category: e.target.value as "STAFFING",
                       }))
                     }
-                    style={{ display: "block", width: "100%" }}
+                    className="u-block u-w-full"
                   >
                     {CATEGORY_OPTIONS.filter((o) => o.value).map((o) => (
                       <option key={o.value} value={o.value}>
@@ -349,11 +349,9 @@ const VendorsManagementView: React.FC<Props> = () => {
                   setFormData((p) => ({ ...p, notes: e.target.value }))
                 }
                 rows={2}
-                style={{ width: "100%" }}
+                className="u-w-full"
               />
-              <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
-              >
+              <div className="u-flex u-gap-8 u-justify-end">
                 <Button
                   variant="default"
                   onClick={() => {

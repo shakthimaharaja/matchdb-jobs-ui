@@ -146,7 +146,7 @@ export function CandidateInvitationList() {
           return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
         }
         return (
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="u-flex u-gap-4">
             {canResend && (
               <Button
                 size="sm"
@@ -179,7 +179,7 @@ export function CandidateInvitationList() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="u-flex u-flex-col-dir u-h-full">
       {/* Summary cards */}
       {counts && (
         <div
@@ -229,7 +229,7 @@ export function CandidateInvitationList() {
           padding: "4px 0",
         }}
       >
-        <span style={{ fontSize: 11, fontWeight: 600 }}>Filter:</span>
+        <span className="u-fs-11 u-fw-600">Filter:</span>
         {[
           "all",
           "pending",

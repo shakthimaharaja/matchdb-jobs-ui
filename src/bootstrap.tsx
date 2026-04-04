@@ -18,7 +18,7 @@ root.render(
         token={null}
         userType="candidate"
         userId="standalone-dev"
-        userEmail="dev@matchdb.com"
+        userEmail="dev@matchingdb.com"
         username="standalone-dev"
       />
     </Provider>

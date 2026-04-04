@@ -72,7 +72,7 @@ export function InvitationList() {
       width: "12%",
       skeletonWidth: 80,
       render: (r) => (
-        <span style={{ textTransform: "capitalize" }}>{r.role}</span>
+        <span className="u-capitalize">{r.role}</span>
       ),
     },
     {

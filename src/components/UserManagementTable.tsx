@@ -95,9 +95,7 @@ export function UserManagementTable() {
       skeletonWidth: 100,
       render: (r) => (
         <div>
-          <div style={{ fontWeight: 600, fontSize: 12 }}>
-            {r.fullName || "—"}
-          </div>
+          <div className="u-fw-600 u-fs-12">{r.fullName || "—"}</div>
           <div style={{ fontSize: 10, color: "#888" }}>{r.email}</div>
         </div>
       ),
@@ -182,7 +180,7 @@ export function UserManagementTable() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="u-flex u-flex-col-dir u-h-full">
       {/* Filter toolbar */}
       <div
         style={{
@@ -201,7 +199,7 @@ export function UserManagementTable() {
           placeholder="Search name or email…"
           style={{ fontSize: 11, width: 180 }}
         />
-        <span style={{ fontSize: 11, fontWeight: 600 }}>Role:</span>
+        <span className="u-fs-11 u-fw-600">Role:</span>
         <Select
           value={roleFilter}
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -215,7 +213,7 @@ export function UserManagementTable() {
           <option value="vendor">Vendor</option>
           <option value="marketer">Marketer</option>
         </Select>
-        <span style={{ fontSize: 11, fontWeight: 600 }}>Status:</span>
+        <span className="u-fs-11 u-fw-600">Status:</span>
         <Select
           value={statusFilter}
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>

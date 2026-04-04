@@ -179,7 +179,7 @@ const InvoicesView: React.FC<Props> = () => {
         key: "actions",
         header: "Actions",
         render: (i) => (
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="u-flex u-gap-4">
             {i.status === "DRAFT" && (
               <Button size="sm" onClick={() => handleSend(i._id)}>
                 Send
@@ -205,7 +205,7 @@ const InvoicesView: React.FC<Props> = () => {
 
   return (
     <>
-      <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+      <div className="u-mb-12 u-flex u-gap-8">
         {tabs.map((t) => (
           <Button
             key={t.id}
@@ -288,7 +288,7 @@ const InvoicesView: React.FC<Props> = () => {
           }}
         >
           <h3 style={{ marginTop: 0 }}>Generate Invoice from Timesheets</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="u-flex u-flex-col-dir u-gap-12">
             <label>
               <span>Client</span>
               <select
@@ -296,7 +296,7 @@ const InvoicesView: React.FC<Props> = () => {
                 onChange={(e) =>
                   setGenForm((p) => ({ ...p, clientCompanyId: e.target.value }))
                 }
-                style={{ display: "block", width: "100%" }}
+                className="u-block u-w-full"
               >
                 <option value="">Select client…</option>
                 {clientOptions.map((o) => (
@@ -321,7 +321,7 @@ const InvoicesView: React.FC<Props> = () => {
                   onChange={(e) =>
                     setGenForm((p) => ({ ...p, periodStart: e.target.value }))
                   }
-                  style={{ display: "block", width: "100%" }}
+                  className="u-block u-w-full"
                 />
               </label>
               <label>
@@ -332,7 +332,7 @@ const InvoicesView: React.FC<Props> = () => {
                   onChange={(e) =>
                     setGenForm((p) => ({ ...p, periodEnd: e.target.value }))
                   }
-                  style={{ display: "block", width: "100%" }}
+                  className="u-block u-w-full"
                 />
               </label>
             </div>
@@ -390,7 +390,7 @@ const InvoicesView: React.FC<Props> = () => {
             }}
           >
             <h3 style={{ marginTop: 0 }}>Record Payment</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="u-flex u-flex-col-dir u-gap-8">
               <input
                 type="number"
                 placeholder="Amount"
@@ -398,14 +398,14 @@ const InvoicesView: React.FC<Props> = () => {
                 onChange={(e) =>
                   setPaymentForm((p) => ({ ...p, amount: +e.target.value }))
                 }
-                style={{ width: "100%" }}
+                className="u-w-full"
               />
               <select
                 value={paymentForm.method}
                 onChange={(e) =>
                   setPaymentForm((p) => ({ ...p, method: e.target.value }))
                 }
-                style={{ width: "100%" }}
+                className="u-w-full"
               >
                 <option value="ACH">ACH</option>
                 <option value="WIRE">Wire</option>
@@ -421,10 +421,10 @@ const InvoicesView: React.FC<Props> = () => {
                     referenceNumber: e.target.value,
                   }))
                 }
-                style={{ width: "100%" }}
+                className="u-w-full"
               />
               <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+                className="u-flex u-gap-8 u-justify-end"
               >
                 <Button variant="default" onClick={() => setShowPayment(null)}>
                   Cancel

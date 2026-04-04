@@ -9,6 +9,7 @@ export const JOB_TYPES = [
   { value: "full_time", label: "Full Time" },
   { value: "part_time", label: "Part Time" },
   { value: "contract", label: "Contract" },
+  { value: "internship", label: "Internship" },
 ];
 
 /** Extended job types used in candidate profile (includes "remote" legacy option) */

@@ -42,16 +42,12 @@ const InviteAcceptPage: React.FC = () => {
   const [accepted, setAccepted] = useState(false);
 
   if (isLoading) {
-    return (
-      <div style={{ padding: 40, textAlign: "center", fontSize: 14 }}>
-        Loading invite…
-      </div>
-    );
+    return <div className="u-p-40 u-text-center u-fs-14">Loading invite…</div>;
   }
 
   if (error || !data) {
     return (
-      <div style={{ padding: 40, textAlign: "center" }}>
+      <div className="u-p-40 u-text-center">
         <div
           style={{
             fontSize: 16,
@@ -85,7 +81,7 @@ const InviteAcceptPage: React.FC = () => {
 
   if (accepted) {
     return (
-      <div style={{ padding: 40, textAlign: "center" }}>
+      <div className="u-p-40 u-text-center">
         <div style={{ fontSize: 48, marginBottom: 12 }}>🎉</div>
         <h2
           style={{
@@ -107,10 +103,7 @@ const InviteAcceptPage: React.FC = () => {
 
   return (
     <div style={{ maxWidth: 480, margin: "40px auto", padding: 20 }}>
-      <div
-        className="matchdb-card"
-        style={{ padding: 24, textAlign: "center" }}
-      >
+      <div className="matchdb-card u-p-24 u-text-center">
         <div style={{ fontSize: 40, marginBottom: 12 }}>{info.icon}</div>
         <h2 style={{ margin: "0 0 6px", fontSize: 18, color: info.color }}>
           {info.text}
@@ -176,15 +169,9 @@ const InviteAcceptPage: React.FC = () => {
                 }}
               >
                 <Button
-                  variant="primary"
+                  variant="cta"
                   onClick={handleAccept}
                   disabled={accepting}
-                  style={{
-                    fontSize: 13,
-                    padding: "8px 24px",
-                    cursor: accepting ? "wait" : "pointer",
-                    fontWeight: 600,
-                  }}
                 >
                   {accepting ? "Accepting…" : "✓ Accept Invite"}
                 </Button>

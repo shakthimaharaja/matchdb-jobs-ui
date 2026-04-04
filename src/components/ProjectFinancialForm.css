@@ -95,7 +95,7 @@
 }
 
 .pf-summary-tile-label {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -103,7 +103,7 @@
 }
 
 .pf-summary-tile-value {
-  font-size: 18px;
+  font-size: calc(18px * var(--fs-scale, 1));
   font-weight: 700;
   color: var(--pf-text);
   line-height: 1.2;
@@ -123,7 +123,7 @@
 }
 
 .pf-summary-tile-sub {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   color: var(--pf-muted);
 }
 
@@ -193,7 +193,7 @@
 }
 
 .pf-job-title {
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale, 1));
   font-weight: 700;
   color: var(--pf-text);
   white-space: nowrap;
@@ -210,7 +210,7 @@
 }
 
 .pf-meta-item {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   color: var(--pf-muted);
   display: flex;
   align-items: center;
@@ -219,7 +219,7 @@
 
 .pf-meta-sep {
   color: var(--pf-border);
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
 }
 
 /* Status badges */
@@ -229,7 +229,7 @@
   gap: 4px;
   padding: 2px 8px;
   border-radius: 20px;
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -266,7 +266,7 @@
   gap: 5px;
   padding: 5px 12px;
   border-radius: var(--pf-radius-sm);
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -324,7 +324,7 @@
 }
 
 .pf-panel-title {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -340,7 +340,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 3px 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   color: var(--pf-text-2);
 }
 
@@ -353,7 +353,7 @@
   font-weight: 600;
   color: var(--pf-text);
   font-family: "Consolas", "Courier New", monospace;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
 }
 
 .pf-divider {
@@ -379,14 +379,14 @@
   font-weight: 700;
   font-family: monospace;
   color: var(--pf-green);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
 }
 
 .pf-value-pay {
   font-weight: 700;
   font-family: monospace;
   color: var(--pf-blue);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
 }
 
 /* Marketer margin highlight */
@@ -402,7 +402,7 @@
 }
 
 .pf-margin-label {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -417,14 +417,14 @@
 }
 
 .pf-margin-amount {
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale, 1));
   font-weight: 800;
   color: var(--pf-teal);
   font-family: monospace;
 }
 
 .pf-margin-pct {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   color: var(--pf-teal);
   font-weight: 600;
 }
@@ -435,7 +435,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 3px 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
 }
 
 .pf-comp-label {
@@ -469,7 +469,7 @@
 }
 
 .pf-net-label {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -477,7 +477,7 @@
 }
 
 .pf-net-amount {
-  font-size: 15px;
+  font-size: calc(15px * var(--fs-scale, 1));
   font-weight: 800;
   color: var(--pf-blue);
   font-family: monospace;
@@ -493,7 +493,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 2px 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
 }
 
 .pf-payment-label {
@@ -547,7 +547,7 @@
   display: flex;
   justify-content: space-between;
   margin-top: 3px;
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   color: var(--pf-muted);
 }
 
@@ -563,7 +563,7 @@
 }
 
 .pf-footer-item {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   color: var(--pf-muted);
   display: flex;
   align-items: center;
@@ -571,7 +571,7 @@
 }
 
 .pf-footer-notes {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   color: var(--pf-text-2);
   font-style: italic;
   flex: 1;
@@ -601,7 +601,7 @@
 }
 
 .pf-preview-label {
-  font-size: 9px;
+  font-size: calc(9px * var(--fs-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -609,7 +609,7 @@
 }
 
 .pf-preview-value {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   font-weight: 700;
   color: #fff;
   font-family: monospace;
@@ -644,7 +644,7 @@
 }
 
 .pf-edit-section-title {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -699,7 +699,7 @@
   padding: 0 8px;
   border: 1px solid var(--pf-border);
   border-radius: var(--pf-radius-sm);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   color: var(--pf-text);
   background: #fff;
   font-family: inherit;
@@ -725,7 +725,7 @@
   padding: 0 8px;
   border: 1px solid var(--pf-border);
   border-radius: var(--pf-radius-sm);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   color: var(--pf-text);
   background: #fff;
   font-family: inherit;
@@ -745,7 +745,7 @@
   padding: 7px 8px;
   border: 1px solid var(--pf-border);
   border-radius: var(--pf-radius-sm);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   color: var(--pf-text);
   background: #fff;
   font-family: inherit;
@@ -803,13 +803,13 @@
 }
 
 .pf-empty-icon {
-  font-size: 36px;
+  font-size: calc(36px * var(--fs-scale, 1));
   margin-bottom: 10px;
   opacity: 0.4;
 }
 
 .pf-empty-text {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   color: var(--pf-muted);
 }
 
@@ -822,7 +822,7 @@
 }
 
 .pf-tab-title {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   font-weight: 700;
   color: var(--pf-text);
   display: flex;
@@ -831,7 +831,7 @@
 }
 
 .pf-tab-count {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: 600;
   padding: 2px 7px;
   background: var(--pf-blue-lt);
@@ -890,7 +890,7 @@
 }
 
 .ppt-sval-label {
-  font-size: 9px;
+  font-size: calc(9px * var(--fs-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -898,7 +898,7 @@
 }
 
 .ppt-sval {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   font-weight: 700;
   color: var(--pf-text);
   font-family: "Consolas", "Courier New", monospace;
@@ -949,7 +949,7 @@
   padding: 0 7px;
   border: 1px solid var(--pf-border);
   border-radius: var(--pf-radius-sm);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   color: var(--pf-text);
   background: #fff;
   font-family: inherit;
@@ -1004,7 +1004,7 @@
   padding: 6px 14px;
   background: var(--pf-gold-lt);
   border-top: 1px solid #fde68a;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   color: var(--pf-gold);
   font-style: italic;
   flex-shrink: 0;
@@ -1035,7 +1035,7 @@
 }
 
 .ppt-ts-label {
-  font-size: 9px;
+  font-size: calc(9px * var(--fs-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -1044,7 +1044,7 @@
 }
 
 .ppt-ts-value {
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale, 1));
   font-weight: 800;
   color: var(--pf-text);
   font-family: "Consolas", "Courier New", monospace;
@@ -1106,7 +1106,7 @@
 .ppt-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   table-layout: fixed;
 }
 
@@ -1120,7 +1120,7 @@
 
 .ppt-th {
   padding: 8px 10px;
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1150,7 +1150,7 @@
 
 .ppt-th-sub {
   display: block;
-  font-size: 9px;
+  font-size: calc(9px * var(--fs-scale, 1));
   font-weight: 500;
   opacity: 0.6;
   text-transform: none;
@@ -1183,7 +1183,7 @@
 }
 
 .ppt-td-period {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   font-weight: 600;
   color: var(--pf-text);
   white-space: nowrap;
@@ -1208,7 +1208,7 @@
 }
 .ppt-val-deduct {
   color: var(--pf-red);
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
 }
 .ppt-val-net {
   color: var(--pf-blue);
@@ -1285,7 +1285,7 @@
 
 .ppt-tf-label {
   text-align: left;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   letter-spacing: 0.05em;
   color: rgba(255, 255, 255, 0.7);
 }
@@ -1297,7 +1297,7 @@
   text-align: right;
 }
 .ppt-tf-balance {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
 }
 
 /* ── Project pill sub-tabs ──────────────────────────────────────────────── */
@@ -1317,7 +1317,7 @@
   gap: 5px;
   padding: 5px 12px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   font-weight: 600;
   cursor: pointer;
   border: 1.5px solid transparent;
@@ -1413,7 +1413,7 @@
 }
 
 .ov-kpi-label {
-  font-size: 9px;
+  font-size: calc(9px * var(--fs-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -1422,14 +1422,14 @@
 }
 
 .ov-kpi-value {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   font-weight: 700;
   color: var(--pf-text);
   white-space: nowrap;
 }
 
 .ov-kpi-pct {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: 500;
   opacity: 0.8;
 }
@@ -1474,7 +1474,7 @@
 
 /* Section header */
 .ov-section-hdr {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1489,7 +1489,7 @@
 }
 
 .ov-hdr-badge {
-  font-size: 9px;
+  font-size: calc(9px * var(--fs-scale, 1));
   font-weight: 700;
   padding: 1px 6px;
   background: var(--pf-blue-lt);
@@ -1510,7 +1510,7 @@
 .ov-info-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
 }
 
 .ov-info-table tr:not(:last-child) td {
@@ -1531,7 +1531,7 @@
 .ov-inf-val {
   padding: 7px 14px 7px 6px;
   color: var(--pf-text);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   vertical-align: middle;
 }
 
@@ -1546,7 +1546,7 @@
   color: var(--pf-blue);
   padding: 2px 7px;
   border-radius: 10px;
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: 500;
 }
 
@@ -1554,7 +1554,7 @@
   display: inline-block;
   padding: 2px 7px;
   border-radius: 10px;
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: 700;
   text-transform: capitalize;
 }
@@ -1587,7 +1587,7 @@
 .ov-proj-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   table-layout: auto;
 }
 
@@ -1641,7 +1641,7 @@
 }
 
 .ov-proj-badge {
-  font-size: 9px;
+  font-size: calc(9px * var(--fs-scale, 1));
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 8px;
@@ -1659,7 +1659,7 @@
 }
 
 .ov-proj-state {
-  font-size: 9px;
+  font-size: calc(9px * var(--fs-scale, 1));
   font-weight: 600;
   padding: 1px 5px;
   border-radius: 6px;
@@ -1730,7 +1730,7 @@
 .ov-monthly-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   table-layout: auto;
   min-width: 700px;
 }
@@ -1776,7 +1776,7 @@
 }
 
 .ov-mt-period {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   font-weight: 600;
   color: var(--pf-text);
 }
@@ -1799,7 +1799,7 @@
 }
 
 .ov-mt-bar-pct {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   color: var(--pf-muted);
   font-weight: 600;
   display: inline-block;
@@ -1832,10 +1832,10 @@
 
 @media (max-width: 600px) {
   .ppt-table {
-    font-size: 10px;
+    font-size: calc(10px * var(--fs-scale, 1));
   }
   .ppt-th {
-    font-size: 9px;
+    font-size: calc(9px * var(--fs-scale, 1));
   }
 }
 
@@ -1846,7 +1846,7 @@
   border-radius: 4px;
   color: var(--w97-blue);
   font-weight: 700;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   padding: 2px 10px;
   cursor: pointer;
   text-decoration: underline dotted;
@@ -1867,7 +1867,7 @@
   padding: 0;
   width: 520px;
   max-width: calc(100vw - 32px);
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   overflow: hidden;
 }
 
@@ -1881,13 +1881,13 @@
 }
 .lca-wage-title {
   font-weight: 700;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
 }
 .lca-wage-close {
   background: none;
   border: none;
   color: #fff;
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale, 1));
   cursor: pointer;
   padding: 0 4px;
   line-height: 1;
@@ -1908,7 +1908,7 @@
   text-align: left;
   padding: 5px 6px;
   font-weight: 700;
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   color: var(--w97-text-secondary, #666);
   border-bottom: 1px solid var(--w97-border);
   white-space: nowrap;
@@ -1923,11 +1923,11 @@
 }
 .lca-wage-case {
   font-family: "Courier New", monospace;
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   color: var(--w97-text-secondary, #888);
 }
 .lca-wage-unit {
-  font-size: 9px;
+  font-size: calc(9px * var(--fs-scale, 1));
   color: var(--w97-text-secondary, #999);
   margin-left: 2px;
 }
@@ -1937,7 +1937,7 @@
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 600;
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
 }
 .lca-wage-status--certified {
   background: #e6f9e6;

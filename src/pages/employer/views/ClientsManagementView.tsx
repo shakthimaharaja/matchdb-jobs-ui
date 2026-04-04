@@ -164,7 +164,7 @@ const ClientsManagementView: React.FC<Props> = () => {
         key: "actions",
         header: "Actions",
         render: (c) => (
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="u-flex u-gap-4">
             <Button
               size="sm"
               variant="default"
@@ -238,7 +238,7 @@ const ClientsManagementView: React.FC<Props> = () => {
     const client = clients.find((c) => c._id === selectedClientId);
     return (
       <>
-        <div style={{ marginBottom: 12 }}>
+        <div className="u-mb-12">
           <Button variant="default" onClick={() => setSelectedClientId(null)}>
             ← Back to Clients
           </Button>
@@ -252,7 +252,7 @@ const ClientsManagementView: React.FC<Props> = () => {
           titleExtra={
             <Button
               onClick={() => setShowRateCardForm(true)}
-              style={{ marginLeft: 12 }}
+              className="u-ml-12"
             >
               + New Rate Card
             </Button>
@@ -297,7 +297,7 @@ const ClientsManagementView: React.FC<Props> = () => {
               }}
             >
               <h3 style={{ marginTop: 0 }}>New Rate Card</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="u-flex u-flex-col-dir u-gap-8">
                 <Input
                   placeholder="Worker ID"
                   value={rcForm.personId}
@@ -372,13 +372,7 @@ const ClientsManagementView: React.FC<Props> = () => {
                     setRcForm((p) => ({ ...p, effectiveDate: e.target.value }))
                   }
                 />
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    justifyContent: "flex-end",
-                  }}
-                >
+                <div className="u-flex u-gap-8 u-justify-end">
                   <Button
                     variant="default"
                     onClick={() => setShowRateCardForm(false)}
@@ -412,7 +406,7 @@ const ClientsManagementView: React.FC<Props> = () => {
         titleIcon="🏢"
         title="Client Companies"
         titleExtra={
-          <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
+          <div className="u-flex u-gap-8 u-ml-12">
             <Input
               placeholder="Search clients…"
               value={search}
@@ -495,7 +489,7 @@ const ClientsManagementView: React.FC<Props> = () => {
             <h3 style={{ marginTop: 0 }}>
               {editingClient ? "Edit Client" : "New Client"}
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="u-flex u-flex-col-dir u-gap-8">
               <Input
                 placeholder="Company Name *"
                 value={formData.name}
@@ -609,11 +603,9 @@ const ClientsManagementView: React.FC<Props> = () => {
                   setFormData((p) => ({ ...p, notes: e.target.value }))
                 }
                 rows={2}
-                style={{ width: "100%" }}
+                className="u-w-full"
               />
-              <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
-              >
+              <div className="u-flex u-gap-8 u-justify-end">
                 <Button
                   variant="default"
                   onClick={() => {

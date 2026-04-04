@@ -157,7 +157,7 @@ const PayrollView: React.FC<Props> = () => {
         key: "actions",
         header: "Actions",
         render: (p) => (
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="u-flex u-gap-4">
             {p.status === "DRAFT" && (
               <Button
                 size="sm"
@@ -213,7 +213,7 @@ const PayrollView: React.FC<Props> = () => {
         titleIcon="💰"
         title="Payroll Periods"
         titleExtra={
-          <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
+          <div className="u-flex u-gap-8 u-ml-12">
             <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -270,7 +270,7 @@ const PayrollView: React.FC<Props> = () => {
             }}
           >
             <h3 style={{ marginTop: 0 }}>Create Pay Period</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="u-flex u-flex-col-dir u-gap-12">
               <label>
                 <span>Period Start</span>
                 <input
@@ -282,7 +282,7 @@ const PayrollView: React.FC<Props> = () => {
                       periodStart: e.target.value,
                     }))
                   }
-                  style={{ display: "block", width: "100%" }}
+                  className="u-block u-w-full"
                 />
               </label>
               <label>
@@ -293,7 +293,7 @@ const PayrollView: React.FC<Props> = () => {
                   onChange={(e) =>
                     setNewPeriod((p) => ({ ...p, periodEnd: e.target.value }))
                   }
-                  style={{ display: "block", width: "100%" }}
+                  className="u-block u-w-full"
                 />
               </label>
               <label>
@@ -306,7 +306,7 @@ const PayrollView: React.FC<Props> = () => {
                       frequency: e.target.value as "BI_WEEKLY",
                     }))
                   }
-                  style={{ display: "block", width: "100%" }}
+                  className="u-block u-w-full"
                 >
                   <option value="WEEKLY">Weekly</option>
                   <option value="BI_WEEKLY">Bi-Weekly</option>
@@ -321,12 +321,12 @@ const PayrollView: React.FC<Props> = () => {
                   onChange={(e) =>
                     setNewPeriod((p) => ({ ...p, notes: e.target.value }))
                   }
-                  style={{ display: "block", width: "100%" }}
+                  className="u-block u-w-full"
                   rows={2}
                 />
               </label>
               <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+                className="u-flex u-gap-8 u-justify-end"
               >
                 <Button variant="default" onClick={() => setShowCreate(false)}>
                   Cancel

@@ -53,7 +53,7 @@ export function ActiveUsersPanel() {
   const users = data?.users || [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="u-flex u-flex-col-dir u-gap-12">
       {/* Summary bar */}
       <div
         style={{
@@ -136,8 +136,7 @@ export function ActiveUsersPanel() {
                 {user.fullName || user.email}
               </div>
               <div style={{ fontSize: 10, color: "#888" }}>
-                {user.email} ·{" "}
-                <span style={{ textTransform: "capitalize" }}>{user.role}</span>
+                {user.email} · <span className="u-capitalize">{user.role}</span>
               </div>
             </div>
 

@@ -226,7 +226,7 @@ const LoginWarningBar: React.FC<{
     </span>
     <button
       type="button"
-      className="pub-login-warning-cta"
+      className="pub-login-warning-cta u-cursor-pointer"
       onClick={
         openPricing ||
         (() =>
@@ -236,7 +236,6 @@ const LoginWarningBar: React.FC<{
             }),
           ))
       }
-      style={{ cursor: "pointer" }}
     >
       {(() => {
         if (viewType === "vendor") return "View Vendor Plans & Pricing →";
@@ -687,7 +686,7 @@ const TwinView: React.FC<TwinProps> = ({
             keyExtractor={(j) => j.id}
             flashIds={flashJobIds}
             deleteFlashIds={deleteFlashJobIds}
-            serialNumberColumnWidth="3%"
+            serialNumberColumnWidth="32px"
             rowCount={PAGE_SIZE}
           />
           <DataTable<ProfileWithFit>
@@ -699,7 +698,7 @@ const TwinView: React.FC<TwinProps> = ({
             keyExtractor={(p) => p.id}
             flashIds={flashProfileIds}
             deleteFlashIds={deleteFlashProfileIds}
-            serialNumberColumnWidth="3%"
+            serialNumberColumnWidth="32px"
             rowCount={PAGE_SIZE}
           />
         </div>
@@ -712,7 +711,7 @@ const TwinView: React.FC<TwinProps> = ({
           cells={[
             `${jobs.length} jobs × ${profiles.length} candidates (${queryTime} sec)`,
             `${totalMatches} strong matches (fit > 75%)`,
-            "MatchDB v97.2026",
+            "MatchingDB v97.2026",
           ]}
         />
       </div>
@@ -911,7 +910,7 @@ const CandView: React.FC<CandViewProps> = ({
           keyExtractor={(j) => j.id}
           flashIds={flashJobIds}
           deleteFlashIds={deleteFlashJobIds}
-          serialNumberColumnWidth="2%"
+          serialNumberColumnWidth="32px"
           rowCount={PAGE_SIZE}
         />
 
@@ -926,7 +925,7 @@ const CandView: React.FC<CandViewProps> = ({
               ? `Filter: ${jobTypeFilter.toUpperCase()}`
               : "Filter: ALL",
             "View Candidate Plans & Pricing →",
-            "MatchDB v97.2026",
+            "MatchingDB v97.2026",
           ]}
         />
       </div>
@@ -1082,7 +1081,7 @@ const VendorView: React.FC<VendorViewProps> = ({
           keyExtractor={(p) => p.id}
           flashIds={flashProfileIds}
           deleteFlashIds={deleteFlashProfileIds}
-          serialNumberColumnWidth="2%"
+          serialNumberColumnWidth="32px"
           rowCount={PAGE_SIZE}
         />
 
@@ -1095,7 +1094,7 @@ const VendorView: React.FC<VendorViewProps> = ({
             `${sortedProfiles.length} rows in set (${queryTime} sec)`,
             "Filter: profileLocked = 1",
             "View Vendor Plans & Pricing →",
-            "MatchDB v97.2026",
+            "MatchingDB v97.2026",
           ]}
         />
       </div>

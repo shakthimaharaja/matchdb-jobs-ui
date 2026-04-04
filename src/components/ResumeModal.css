@@ -30,7 +30,7 @@ dialog[open].rm-overlay {
   justify-content: center;
   padding: 16px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
 }
 
 .rm-window {
@@ -68,13 +68,13 @@ dialog[open].rm-overlay {
   );
   color: var(--w97-titlebar-text, #fff);
   padding: 3px 4px;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   font-weight: bold;
   flex-shrink: 0;
 }
 
 .rm-titlebar-icon {
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale, 1));
 }
 
 .rm-titlebar-title {
@@ -89,7 +89,7 @@ dialog[open].rm-overlay {
   border-right: 1px solid var(--w97-btn-dark, #404040);
   border-bottom: 1px solid var(--w97-btn-dark, #404040);
   color: var(--w97-text, #000);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   font-weight: bold;
   cursor: pointer;
   width: 18px;
@@ -111,7 +111,7 @@ dialog[open].rm-overlay {
   background: var(--w97-btn-face, #c0c0c0);
   border-bottom: 1px solid var(--w97-btn-shadow, #808080);
   padding: 3px 8px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   color: var(--w97-text-secondary, #444);
   flex-shrink: 0;
 }
@@ -129,7 +129,7 @@ dialog[open].rm-overlay {
 /* Alerts */
 .rm-alert {
   padding: 4px 8px;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   border: 1px solid;
   margin-bottom: 4px;
 }
@@ -155,7 +155,7 @@ dialog[open].rm-overlay {
 
 .rm-fieldset legend {
   padding: 0 4px;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   font-weight: bold;
   color: var(--w97-text, #000);
 }
@@ -178,7 +178,7 @@ dialog[open].rm-overlay {
 }
 
 .rm-field label {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   font-weight: normal;
   color: var(--w97-text, #000);
 }
@@ -191,7 +191,7 @@ dialog[open].rm-overlay {
   border-right: 1px solid var(--w97-btn-highlight, #fff);
   border-bottom: 1px solid var(--w97-btn-highlight, #fff);
   background: var(--w97-input-bg, #fff);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   padding: 2px 4px;
   font-family: inherit;
   color: var(--w97-text, #000);
@@ -223,7 +223,7 @@ select.rm-input {
   border-right: 1px solid var(--w97-btn-highlight, #fff);
   border-bottom: 1px solid var(--w97-btn-highlight, #fff);
   background: var(--w97-input-bg, #fff);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   padding: 4px;
   font-family: "Courier New", Courier, monospace;
   color: var(--w97-text, #000);
@@ -246,14 +246,14 @@ select.rm-input {
   border-right: 1px solid var(--w97-btn-highlight, #fff);
   border-bottom: 1px solid var(--w97-btn-highlight, #fff);
   padding: 4px 6px;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   color: var(--w97-text-secondary, #555);
   white-space: pre-wrap;
   min-height: 44px;
 }
 
 .rm-locked-badge {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   font-weight: normal;
   color: var(--w97-text-secondary, #666);
   margin-left: 6px;
@@ -261,7 +261,7 @@ select.rm-input {
 
 /* Skills */
 .rm-skill-note {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   font-weight: normal;
   color: var(--w97-text-secondary, #666);
   margin-left: 6px;
@@ -278,7 +278,7 @@ select.rm-input {
   border-left: 1px solid var(--w97-btn-highlight, #fff);
   border-right: 1px solid var(--w97-btn-dark, #404040);
   border-bottom: 1px solid var(--w97-btn-dark, #404040);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   padding: 1px 6px;
   color: var(--w97-text, #000);
 }
@@ -302,7 +302,7 @@ select.rm-input {
   border-right: 2px solid var(--w97-btn-dark, #404040);
   border-bottom: 2px solid var(--w97-btn-dark, #404040);
   color: var(--w97-text, #000);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   font-family: inherit;
   font-weight: bold;
   cursor: pointer;

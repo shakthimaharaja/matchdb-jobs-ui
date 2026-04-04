@@ -141,7 +141,7 @@ const BillsView: React.FC<Props> = () => {
         key: "actions",
         header: "Actions",
         render: (b) => (
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="u-flex u-gap-4">
             {b.status === "PENDING" && (
               <Button size="sm" onClick={() => handleApprove(b._id)}>
                 Approve
@@ -161,7 +161,7 @@ const BillsView: React.FC<Props> = () => {
 
   return (
     <>
-      <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+      <div className="u-mb-12 u-flex u-gap-8">
         <Button
           variant={activeTab === "list" ? "primary" : "default"}
           size="sm"
@@ -276,7 +276,7 @@ const BillsView: React.FC<Props> = () => {
             }}
           >
             <h3 style={{ marginTop: 0 }}>Record Bill Payment</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="u-flex u-flex-col-dir u-gap-8">
               <input
                 type="number"
                 placeholder="Amount"
@@ -284,14 +284,14 @@ const BillsView: React.FC<Props> = () => {
                 onChange={(e) =>
                   setPayForm((p) => ({ ...p, amount: +e.target.value }))
                 }
-                style={{ width: "100%" }}
+                className="u-w-full"
               />
               <select
                 value={payForm.method}
                 onChange={(e) =>
                   setPayForm((p) => ({ ...p, method: e.target.value }))
                 }
-                style={{ width: "100%" }}
+                className="u-w-full"
               >
                 <option value="ACH">ACH</option>
                 <option value="WIRE">Wire</option>
@@ -303,10 +303,10 @@ const BillsView: React.FC<Props> = () => {
                 onChange={(e) =>
                   setPayForm((p) => ({ ...p, referenceNumber: e.target.value }))
                 }
-                style={{ width: "100%" }}
+                className="u-w-full"
               />
               <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+                className="u-flex u-gap-8 u-justify-end"
               >
                 <Button variant="default" onClick={() => setShowPay(null)}>
                   Cancel

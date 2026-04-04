@@ -382,10 +382,7 @@ const CandidateDashboard: React.FC<Props> = ({
 
   // Helper: build the filter payload for RTK Query matchFilters
   const buildFilterArgs = useCallback(
-    (
-      page: number,
-      pageSize: number,
-    ): CandidateMatchesArgs => ({
+    (page: number, pageSize: number): CandidateMatchesArgs => ({
       page,
       limit: pageSize,
       types: membershipTypes ? membershipTypes.join(",") : undefined,
@@ -394,7 +391,13 @@ const CandidateDashboard: React.FC<Props> = ({
       work_mode: filterWorkMode || undefined,
       search: debouncedSearch.trim() || undefined,
     }),
-    [membershipTypes, filterType, filterSubType, filterWorkMode, debouncedSearch],
+    [
+      membershipTypes,
+      filterType,
+      filterSubType,
+      filterWorkMode,
+      debouncedSearch,
+    ],
   );
 
   // Re-fetch when any URL filter / page param changes
@@ -480,8 +483,10 @@ const CandidateDashboard: React.FC<Props> = ({
   useEffect(() => {
     const countMap: Record<string, number> = {
       matches: candidateMatchesTotal,
+      pokes: pokesSentOnly.length,
       "pokes-sent": pokesSentOnly.length,
       "pokes-received": pokesReceivedOnly.length,
+      mails: mailsSentOnly.length,
       "mails-sent": mailsSentOnly.length,
       "mails-received": mailsReceivedOnly.length,
       forwarded: forwardedOpenings.length,
@@ -701,7 +706,7 @@ const CandidateDashboard: React.FC<Props> = ({
       {
         key: "company",
         header: <>Company {indicator("company")}</>,
-        width: "10%",
+        width: "14%",
         className: "col-company matchdb-th-sortable",
         thProps: {
           onClick: () => onSort("company"),
@@ -714,7 +719,7 @@ const CandidateDashboard: React.FC<Props> = ({
       {
         key: "email",
         header: "Mail ID",
-        width: "11%",
+        width: "12%",
         className: "col-email",
         skeletonWidth: 110,
         thProps: { title: "Contact email" },
@@ -731,7 +736,7 @@ const CandidateDashboard: React.FC<Props> = ({
       {
         key: "role",
         header: <>Role {indicator("role")}</>,
-        width: "11%",
+        width: "15%",
         className: "matchdb-th-sortable",
         thProps: {
           onClick: () => onSort("role"),
@@ -744,7 +749,7 @@ const CandidateDashboard: React.FC<Props> = ({
       {
         key: "type",
         header: <>Type {indicator("type")}</>,
-        width: "8%",
+        width: "9%",
         className: "matchdb-th-sortable",
         thProps: {
           onClick: () => onSort("type"),
@@ -767,7 +772,7 @@ const CandidateDashboard: React.FC<Props> = ({
       {
         key: "pay",
         header: "Pay/Hr",
-        width: "6%",
+        width: "5%",
         className: "col-pay",
         skeletonWidth: 50,
         thProps: { title: "Pay rate/hr" },
@@ -776,7 +781,7 @@ const CandidateDashboard: React.FC<Props> = ({
       {
         key: "exp",
         header: "Exp",
-        width: "5%",
+        width: "4%",
         className: "col-experience",
         skeletonWidth: 40,
         thProps: { title: "Years of experience" },
@@ -785,7 +790,7 @@ const CandidateDashboard: React.FC<Props> = ({
       {
         key: "match",
         header: <>Match {indicator("matchPercentage")}</>,
-        width: "10%",
+        width: "13%",
         className: "matchdb-th-sortable",
         thProps: {
           onClick: () => onSort("matchPercentage"),
@@ -814,7 +819,7 @@ const CandidateDashboard: React.FC<Props> = ({
       {
         key: "location",
         header: <>Location {indicator("location")}</>,
-        width: "7%",
+        width: "9%",
         className: "col-location matchdb-th-sortable",
         thProps: {
           onClick: () => onSort("location"),
@@ -873,28 +878,6 @@ const CandidateDashboard: React.FC<Props> = ({
             mailTitle = `Compose mail template to ${row.pokeTargetName}`;
           }
 
-          let pokeStyle: React.CSSProperties = {};
-          if (pokeMatchTooLow) {
-            pokeStyle = {
-              background: "var(--w97-red, #bb3333)",
-              borderColor: "#fff #404040 #404040 #fff",
-              cursor: "not-allowed",
-            };
-          } else if (alreadyPoked || alreadyEmailed) {
-            pokeStyle = { opacity: 0.45, cursor: "not-allowed" };
-          }
-
-          let mailStyle: React.CSSProperties = {};
-          if (mailMatchTooLow) {
-            mailStyle = {
-              background: "var(--w97-red, #bb3333)",
-              borderColor: "#fff #404040 #404040 #fff",
-              cursor: "not-allowed",
-            };
-          } else if (alreadyEmailed || pokeTooRecent) {
-            mailStyle = { opacity: 0.4, cursor: "not-allowed" };
-          }
-
           return (
             <div className="u-flex u-gap-2">
               <Button
@@ -903,7 +886,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 onClick={() => !pokeDisabled && handlePoke(row)}
                 title={pokeTitle}
                 aria-label={pokeTitle}
-                style={{ flex: 1, ...pokeStyle }}
+                className="u-flex-1"
               >
                 {(() => {
                   if (alreadyPoked) return "✓";
@@ -917,7 +900,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 onClick={() => !mailDisabled && handlePokeEmail(row)}
                 title={mailTitle}
                 aria-label={mailTitle}
-                style={{ flex: 1, ...mailStyle }}
+                className="u-flex-1"
               >
                 {alreadyEmailed ? "✓" : "✉"}
               </Button>
@@ -1060,58 +1043,20 @@ const CandidateDashboard: React.FC<Props> = ({
         id: "contract",
         label: "Contract",
         count: countByType["contract"] || 0,
-        active:
-          activeView === "matches" &&
-          filterType === "contract" &&
-          filterSubType === "",
+        active: activeView === "matches" && filterType === "contract",
         onClick: () =>
           navParams({ view: "matches", type: "contract", sub: null }),
       });
-      CONTRACT_SUB_TYPES.filter((st) =>
-        showSubtype("contract", st.value),
-      ).forEach((st) =>
-        items.push({
-          id: `contract_${st.value}`,
-          label: st.label,
-          depth: 1,
-          count: countBySubType["contract"]?.[st.value] || 0,
-          active:
-            activeView === "matches" &&
-            filterType === "contract" &&
-            filterSubType === st.value,
-          onClick: () =>
-            navParams({ view: "matches", type: "contract", sub: st.value }),
-        }),
-      );
     }
     if (showType("full_time")) {
       items.push({
         id: "full_time",
         label: "Full Time",
         count: countByType["full_time"] || 0,
-        active:
-          activeView === "matches" &&
-          filterType === "full_time" &&
-          filterSubType === "",
+        active: activeView === "matches" && filterType === "full_time",
         onClick: () =>
           navParams({ view: "matches", type: "full_time", sub: null }),
       });
-      FULL_TIME_SUB_TYPES.filter((st) =>
-        showSubtype("full_time", st.value),
-      ).forEach((st) =>
-        items.push({
-          id: `full_time_${st.value}`,
-          label: st.label,
-          depth: 1,
-          count: countBySubType["full_time"]?.[st.value] || 0,
-          active:
-            activeView === "matches" &&
-            filterType === "full_time" &&
-            filterSubType === st.value,
-          onClick: () =>
-            navParams({ view: "matches", type: "full_time", sub: st.value }),
-        }),
-      );
     }
     if (showType("part_time")) {
       items.push({
@@ -1124,6 +1069,19 @@ const CandidateDashboard: React.FC<Props> = ({
           filterSubType === "",
         onClick: () =>
           navParams({ view: "matches", type: "part_time", sub: null }),
+      });
+    }
+    if (showType("internship")) {
+      items.push({
+        id: "internship",
+        label: "Internships",
+        count: countByType["internship"] || 0,
+        active:
+          activeView === "matches" &&
+          filterType === "internship" &&
+          filterSubType === "",
+        onClick: () =>
+          navParams({ view: "matches", type: "internship", sub: null }),
       });
     }
     return items;
@@ -1229,89 +1187,26 @@ const CandidateDashboard: React.FC<Props> = ({
             active: activeView === "vendor-openings",
             onClick: () => navParams({ view: "vendor-openings", sub: null }),
           },
-          ...["contract", "c2c", "w2c", "c2h", "full_time"].map((sub) => ({
-            id: `vendor-${sub}`,
-            label: sub
-              .replaceAll("_", " ")
-              .replaceAll(/\b\w/g, (c) => c.toUpperCase()),
-            depth: 1,
-            count: forwardedOpenings.filter(
-              (f) => f.job_type === sub || f.job_sub_type === sub,
-            ).length,
-            active: activeView === "vendor-openings" && filterSubType === sub,
-            onClick: () => navParams({ view: "vendor-openings", sub }),
-          })),
           {
-            id: "pokes-heading",
+            id: "pokes",
             label: `Pokes (${pokeCount}/${
               Number.isFinite(pokeLimit) ? pokeLimit : "∞"
             })`,
             active:
-              activeView === "pokes-sent" || activeView === "pokes-received",
+              activeView === "pokes" ||
+              activeView === "pokes-sent" ||
+              activeView === "pokes-received",
+            onClick: () => navParams({ view: "pokes" }),
           },
           {
-            id: "pokes-sent",
-            label: "Sent",
-            depth: 1,
-            count: pokesSentOnly.length,
-            active: activeView === "pokes-sent",
-            onClick: () => navParams({ view: "pokes-sent" }),
-          },
-          {
-            id: "pokes-received",
-            label: "Received",
-            depth: 1,
-            count: pokesReceivedOnly.length,
-            active: activeView === "pokes-received",
-            onClick: () => navParams({ view: "pokes-received" }),
-          },
-          ...(Number.isFinite(pokeLimit)
-            ? [
-                {
-                  id: "pokes-remaining",
-                  label: "Remaining",
-                  depth: 1,
-                  count: Math.max(0, pokeLimit - pokeCount),
-                },
-              ]
-            : []),
-          {
-            id: "mail-heading",
+            id: "mails",
             label: `Mail (${emailCount})`,
             active:
-              activeView === "mails-sent" || activeView === "mails-received",
+              activeView === "mails" ||
+              activeView === "mails-sent" ||
+              activeView === "mails-received",
+            onClick: () => navParams({ view: "mails" }),
           },
-          {
-            id: "mails-sent",
-            label: "Sent",
-            depth: 1,
-            count: mailsSentOnly.length,
-            active: activeView === "mails-sent",
-            onClick: () => navParams({ view: "mails-sent" }),
-          },
-          {
-            id: "mails-received",
-            label: "Received",
-            depth: 1,
-            count: mailsReceivedOnly.length,
-            active: activeView === "mails-received",
-            onClick: () => navParams({ view: "mails-received" }),
-          },
-          ...(hasPurchasedVisibility && rows.length > 0
-            ? [
-                {
-                  id: "mail-template",
-                  label: "✉ Mail Template",
-                  depth: 1,
-                  tooltip:
-                    "Compose a personalised email with your resume — click ✉ next to any row",
-                  onClick: () => {
-                    navParams({ view: "matches" });
-                    if (rows.length > 0) handlePokeEmail(rows[0]);
-                  },
-                },
-              ]
-            : []),
         ],
       },
       {
@@ -1429,14 +1324,14 @@ const CandidateDashboard: React.FC<Props> = ({
   })();
 
   const breadcrumb: [string, string, string] = (() => {
-    if (activeView === "pokes-sent")
-      return ["Candidate Portal", "Jobs", "Pokes Sent"];
+    if (activeView === "pokes" || activeView === "pokes-sent")
+      return ["Candidate Portal", "Jobs", "Pokes — Sent"];
     if (activeView === "pokes-received")
-      return ["Candidate Portal", "Jobs", "Pokes Received"];
-    if (activeView === "mails-sent")
-      return ["Candidate Portal", "Jobs", "Mails Sent"];
+      return ["Candidate Portal", "Jobs", "Pokes — Received"];
+    if (activeView === "mails" || activeView === "mails-sent")
+      return ["Candidate Portal", "Jobs", "Mail — Sent"];
     if (activeView === "mails-received")
-      return ["Candidate Portal", "Jobs", "Mails Received"];
+      return ["Candidate Portal", "Jobs", "Mail — Received"];
     if (activeView === "forwarded")
       return ["Candidate Portal", "Actions", "Forwarded Openings"];
     if (activeView === "my-detail")
@@ -1556,29 +1451,17 @@ const CandidateDashboard: React.FC<Props> = ({
                 paddingLeft: 12,
               }}
             >
-              <span
-                className="matchdb-type-pill"
-                style={{ whiteSpace: "nowrap" }}
-              >
+              <span className="matchdb-type-pill u-nowrap">
                 {myDetail.projects.filter((p) => p.is_active).length} active
                 projects
               </span>
-              <span
-                className="matchdb-type-pill"
-                style={{ whiteSpace: "nowrap" }}
-              >
+              <span className="matchdb-type-pill u-nowrap">
                 {myDetail.vendor_activity.length} interactions
               </span>
-              <span
-                className="matchdb-type-pill"
-                style={{ whiteSpace: "nowrap" }}
-              >
+              <span className="matchdb-type-pill u-nowrap">
                 {myDetail.forwarded_openings.length} forwarded
               </span>
-              <span
-                className="matchdb-type-pill"
-                style={{ whiteSpace: "nowrap" }}
-              >
+              <span className="matchdb-type-pill u-nowrap">
                 {myDetail.marketer_info.length} marketers
               </span>
             </div>
@@ -1734,37 +1617,17 @@ const CandidateDashboard: React.FC<Props> = ({
         className="matchdb-card"
         style={{ marginBottom: 16, padding: 16 }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 10,
-          }}
-        >
+        <div className="u-flex u-items-center u-justify-between u-mb-10">
           <div>
-            <h4
-              style={{
-                margin: 0,
-                fontSize: 14,
-                fontWeight: 700,
-                color: "var(--w97-titlebar-from)",
-              }}
-            >
+            <h4 className="u-m-0 u-fs-14 u-fw-700 u-color-titlebar">
               {proj.job_title}
             </h4>
-            <div
-              style={{
-                fontSize: 11,
-                color: "var(--w97-text-secondary)",
-                marginTop: 2,
-              }}
-            >
+            <div className="u-fs-11 u-color-secondary u-mt-2">
               {proj.vendor_email} · {proj.location || "—"} · {proj.job_type}
               {proj.job_sub_type ? ` › ${proj.job_sub_type}` : ""}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div className="u-flex u-gap-6 u-items-center">
             <span className="matchdb-type-pill">{proj.status}</span>
             {proj.is_active ? (
               <span
@@ -1795,7 +1658,7 @@ const CandidateDashboard: React.FC<Props> = ({
             No financial data recorded yet.
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="u-overflow-x-auto">
             <table
               style={{
                 width: "100%",
@@ -1863,7 +1726,7 @@ const CandidateDashboard: React.FC<Props> = ({
     if (!myDetail) return null;
     if (myDetail.projects.length === 0) {
       return (
-        <div style={{ padding: 16 }}>
+        <div className="u-p-16">
           <Panel>
             <div
               style={{
@@ -1880,7 +1743,7 @@ const CandidateDashboard: React.FC<Props> = ({
       );
     }
     return (
-      <div style={{ padding: 16 }}>
+      <div className="u-p-16">
         {myDetail.projects.map((proj) => renderProjectCard(proj))}
       </div>
     );
@@ -1910,8 +1773,43 @@ const CandidateDashboard: React.FC<Props> = ({
           .replaceAll(/\b\w/g, (c) => c.toUpperCase())
       : "All Types";
 
+    const FORWARDED_SUBS = ["contract", "c2c", "w2c", "c2h", "full_time"];
+
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="u-flex u-flex-col-dir u-gap-16">
+        {/* Sub-type tab bar for forwarded openings */}
+        <div className="matchdb-tabs">
+          <button
+            type="button"
+            className={`matchdb-tab${
+              filterSubType === "" ? " matchdb-tab-active" : ""
+            }`}
+            onClick={() => navParams({ sub: null })}
+          >
+            All ({forwardedOpenings.length})
+          </button>
+          {FORWARDED_SUBS.map((sub) => {
+            const cnt = forwardedOpenings.filter(
+              (f) => f.job_type === sub || f.job_sub_type === sub,
+            ).length;
+            if (cnt === 0) return null;
+            return (
+              <button
+                key={sub}
+                type="button"
+                className={`matchdb-tab${
+                  filterSubType === sub ? " matchdb-tab-active" : ""
+                }`}
+                onClick={() => navParams({ sub })}
+              >
+                {sub
+                  .replaceAll("_", " ")
+                  .replaceAll(/\b\w/g, (c) => c.toUpperCase())}{" "}
+                ({cnt})
+              </button>
+            );
+          })}
+        </div>
         <DataTable<ForwardedOpeningItem>
           columns={[
             {
@@ -2142,27 +2040,13 @@ const CandidateDashboard: React.FC<Props> = ({
   function renderEmployerFinance() {
     if (myDetailLoading)
       return (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 60,
-            fontSize: 13,
-            color: "var(--w97-text-secondary)",
-          }}
-        >
+        <div className="u-text-center u-p-60 u-fs-13 u-color-secondary">
           Loading financial data…
         </div>
       );
     if (!myDetail || myDetail.projects.length === 0)
       return (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 60,
-            fontSize: 13,
-            color: "var(--w97-text-secondary)",
-          }}
-        >
+        <div className="u-text-center u-p-60 u-fs-13 u-color-secondary">
           No financial data available. Projects with financial details will
           appear here.
         </div>
@@ -2180,7 +2064,7 @@ const CandidateDashboard: React.FC<Props> = ({
     const totalHours = allFins.reduce((a, f) => a + f.hoursWorked, 0);
 
     return (
-      <div style={{ display: "flex", flexDirection: "column" }}>
+      <div className="u-flex u-flex-col-dir">
         {/* ── Read-only badge ── */}
         <div
           style={{
@@ -2194,7 +2078,7 @@ const CandidateDashboard: React.FC<Props> = ({
             gap: 6,
           }}
         >
-          <span style={{ fontSize: 14 }}>🔒</span>
+          <span className="u-fs-14">🔒</span>
           <span>
             Read-only view — financial data is managed by your employer /
             marketer.
@@ -2237,38 +2121,18 @@ const CandidateDashboard: React.FC<Props> = ({
               className="matchdb-card"
               style={{ marginBottom: 16, padding: 16 }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 10,
-                }}
-              >
+              <div className="u-flex u-items-center u-justify-between u-mb-10">
                 <div>
-                  <h4
-                    style={{
-                      margin: 0,
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "var(--w97-titlebar-from)",
-                    }}
-                  >
+                  <h4 className="u-m-0 u-fs-14 u-fw-700 u-color-titlebar">
                     {proj.job_title}
                   </h4>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "var(--w97-text-secondary)",
-                      marginTop: 2,
-                    }}
-                  >
+                  <div className="u-fs-11 u-color-secondary u-mt-2">
                     {proj.vendor_email} · {proj.location || "—"} ·{" "}
                     {proj.job_type}
                     {proj.job_sub_type ? ` › ${proj.job_sub_type}` : ""}
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <div className="u-flex u-gap-6 u-items-center">
                   <span className="matchdb-type-pill">{proj.status}</span>
                   {proj.is_active ? (
                     <span
@@ -2299,7 +2163,7 @@ const CandidateDashboard: React.FC<Props> = ({
                   No financial data recorded yet.
                 </div>
               ) : (
-                <div style={{ overflowX: "auto" }}>
+                <div className="u-overflow-x-auto">
                   <table
                     style={{
                       width: "100%",
@@ -2370,21 +2234,14 @@ const CandidateDashboard: React.FC<Props> = ({
             gap: 6,
           }}
         >
-          <span style={{ fontSize: 14 }}>🔒</span>
+          <span className="u-fs-14">🔒</span>
           <span>
             Read-only view — immigration data is managed by your employer /
             marketer.
           </span>
         </div>
-        <div
-          style={{
-            background: "var(--w97-window)",
-            border: "1px solid var(--w97-border)",
-            padding: 40,
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🛂</div>
+        <div className="u-bg-window u-border-default u-p-40 u-text-center">
+          <div className="u-fs-32 u-mb-12">🛂</div>
           <h3
             style={{
               margin: "0 0 8px",
@@ -2413,27 +2270,13 @@ const CandidateDashboard: React.FC<Props> = ({
   function renderMyDashboard() {
     if (myDetailLoading)
       return (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 60,
-            fontSize: 13,
-            color: "var(--w97-text-secondary)",
-          }}
-        >
+        <div className="u-text-center u-p-60 u-fs-13 u-color-secondary">
           Loading your dashboard…
         </div>
       );
     if (!myDetail)
       return (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 60,
-            fontSize: 13,
-            color: "var(--w97-text-secondary)",
-          }}
-        >
+        <div className="u-text-center u-p-60 u-fs-13 u-color-secondary">
           No data found. Complete your profile to see details here.
         </div>
       );
@@ -2488,17 +2331,10 @@ const CandidateDashboard: React.FC<Props> = ({
 
         {/* ── Tab: Employer Activity ── */}
         {myDetailTab === "marketer-activity" && (
-          <div
-            style={{
-              padding: 16,
-              display: "flex",
-              flexDirection: "column",
-              gap: 16,
-            }}
-          >
+          <div className="u-p-16 u-flex u-flex-col-dir u-gap-16">
             {/* Marketer summary */}
             {myDetail.marketer_info.length > 0 && (
-              <div className="matchdb-card" style={{ padding: 16 }}>
+              <div className="matchdb-card u-p-16">
                 <h3
                   style={{
                     margin: "0 0 12px",
@@ -2656,7 +2492,7 @@ const CandidateDashboard: React.FC<Props> = ({
 
         {/* ── Tab: Forwarded Openings ── */}
         {myDetailTab === "forwarded-openings" && (
-          <div style={{ padding: 16 }}>
+          <div className="u-p-16">
             <DataTable<(typeof myDetail.forwarded_openings)[number]>
               columns={[
                 {
@@ -2719,7 +2555,7 @@ const CandidateDashboard: React.FC<Props> = ({
                   width: "9%",
                   skeletonWidth: 60,
                   render: (f) => (
-                    <span style={{ fontSize: 10 }}>{f.note || "—"}</span>
+                    <span className="u-fs-10">{f.note || "—"}</span>
                   ),
                 },
                 {
@@ -2929,7 +2765,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 gap: 12,
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: 13 }}>
+              <div className="u-fw-700 u-fs-13">
                 {respondAction === "accept"
                   ? "Accept Interview Invite"
                   : "Decline Interview Invite"}
@@ -2952,9 +2788,7 @@ const CandidateDashboard: React.FC<Props> = ({
                   fontFamily: "inherit",
                 }}
               />
-              <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
-              >
+              <div className="u-flex u-gap-8 u-justify-end">
                 <Button
                   size="sm"
                   onClick={() => {
@@ -3096,44 +2930,113 @@ const CandidateDashboard: React.FC<Props> = ({
           )}
         </div>
 
-        {/* Pokes Sent view */}
-        {activeView === "pokes-sent" && (
-          <PokesTable
-            pokes={pokesSentOnly}
-            loading={pokesSentLoading}
-            section="pokes-sent"
-            userType="candidate"
-          />
+        {/* Pokes view with tabs */}
+        {(activeView === "pokes" ||
+          activeView === "pokes-sent" ||
+          activeView === "pokes-received") && (
+          <>
+            <div className="matchdb-tabs">
+              <button
+                type="button"
+                className={`matchdb-tab${
+                  activeView === "pokes" || activeView === "pokes-sent"
+                    ? " matchdb-tab-active"
+                    : ""
+                }`}
+                onClick={() => navParams({ view: "pokes-sent" })}
+              >
+                Sent ({pokesSentOnly.length})
+              </button>
+              <button
+                type="button"
+                className={`matchdb-tab${
+                  activeView === "pokes-received" ? " matchdb-tab-active" : ""
+                }`}
+                onClick={() => navParams({ view: "pokes-received" })}
+              >
+                Received ({pokesReceivedOnly.length})
+              </button>
+              {Number.isFinite(pokeLimit) && (
+                <span
+                  className="matchdb-tab"
+                  style={{ cursor: "default", opacity: 0.7 }}
+                >
+                  Remaining: {Math.max(0, pokeLimit - pokeCount)}
+                </span>
+              )}
+            </div>
+            <PokesTable
+              pokes={
+                activeView === "pokes-received"
+                  ? pokesReceivedOnly
+                  : pokesSentOnly
+              }
+              loading={pokesSentLoading}
+              section={
+                activeView === "pokes-received"
+                  ? "pokes-received"
+                  : "pokes-sent"
+              }
+              userType="candidate"
+            />
+          </>
         )}
 
-        {/* Pokes Received view */}
-        {activeView === "pokes-received" && (
-          <PokesTable
-            pokes={pokesReceivedOnly}
-            loading={pokesSentLoading}
-            section="pokes-received"
-            userType="candidate"
-          />
-        )}
-
-        {/* Mails Sent view */}
-        {activeView === "mails-sent" && (
-          <PokesTable
-            pokes={mailsSentOnly}
-            loading={pokesSentLoading}
-            section="mails-sent"
-            userType="candidate"
-          />
-        )}
-
-        {/* Mails Received view */}
-        {activeView === "mails-received" && (
-          <PokesTable
-            pokes={mailsReceivedOnly}
-            loading={pokesSentLoading}
-            section="mails-received"
-            userType="candidate"
-          />
+        {/* Mails view with tabs */}
+        {(activeView === "mails" ||
+          activeView === "mails-sent" ||
+          activeView === "mails-received") && (
+          <>
+            <div className="matchdb-tabs">
+              <button
+                type="button"
+                className={`matchdb-tab${
+                  activeView === "mails" || activeView === "mails-sent"
+                    ? " matchdb-tab-active"
+                    : ""
+                }`}
+                onClick={() => navParams({ view: "mails-sent" })}
+              >
+                Sent ({mailsSentOnly.length})
+              </button>
+              <button
+                type="button"
+                className={`matchdb-tab${
+                  activeView === "mails-received" ? " matchdb-tab-active" : ""
+                }`}
+                onClick={() => navParams({ view: "mails-received" })}
+              >
+                Received ({mailsReceivedOnly.length})
+              </button>
+              {hasPurchasedVisibility && rows.length > 0 && (
+                <button
+                  type="button"
+                  className="matchdb-tab"
+                  onClick={() => {
+                    navParams({ view: "matches" });
+                    if (rows.length > 0) handlePokeEmail(rows[0]);
+                  }}
+                  title="Compose a personalised email with your resume"
+                >
+                  ✉ Mail Template
+                </button>
+              )}
+            </div>
+            <PokesTable
+              pokes={
+                activeView === "mails-received"
+                  ? mailsReceivedOnly
+                  : mailsSentOnly
+              }
+              loading={pokesSentLoading}
+              section={
+                activeView === "mails-received"
+                  ? "mails-received"
+                  : "mails-sent"
+              }
+              userType="candidate"
+            />
+          </>
         )}
 
         {/* Forwarded Openings view */}
@@ -3210,9 +3113,7 @@ const CandidateDashboard: React.FC<Props> = ({
                 header: "Note",
                 width: "10%",
                 skeletonWidth: 80,
-                render: (f) => (
-                  <span style={{ fontSize: 10 }}>{f.note || "—"}</span>
-                ),
+                render: (f) => <span className="u-fs-10">{f.note || "—"}</span>,
               },
               {
                 key: "status",
@@ -3251,15 +3152,7 @@ const CandidateDashboard: React.FC<Props> = ({
 
         {/* My Dashboard view — 4 tabs */}
         {activeView === "my-detail" && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              flex: 1,
-              minHeight: 0,
-              overflowY: "auto",
-            }}
-          >
+          <div className="u-flex u-flex-col-dir u-flex-1 u-min-h-0 u-overflow-y-auto">
             {renderMyDashboard()}
           </div>
         )}
@@ -3272,14 +3165,14 @@ const CandidateDashboard: React.FC<Props> = ({
 
         {/* Employer Finance (read-only) */}
         {activeView === "employer-finance" && (
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+          <div className="u-flex-1 u-min-h-0 u-overflow-y-auto">
             {renderEmployerFinance()}
           </div>
         )}
 
         {/* Employer Immigration (read-only) */}
         {activeView === "employer-immigration" && (
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+          <div className="u-flex-1 u-min-h-0 u-overflow-y-auto">
             {renderEmployerImmigration()}
           </div>
         )}
@@ -3294,112 +3187,203 @@ const CandidateDashboard: React.FC<Props> = ({
 
         {/* Matched Jobs view */}
         {activeView === "matches" && (
-          <DataTable<MatchRow>
-            columns={matchColumns}
-            data={sortedRows}
-            keyExtractor={(r) => r.id}
-            loading={matchesLoading}
-            serialNumberColumnWidth="20px"
-            scrollableColumns
-            paginated
-            emptyMessage="MySQL returned an empty result set (i.e. zero rows)."
-            alertSuccess={pokeSent ? "Poke sent successfully!" : undefined}
-            alertErrors={[pokeError ? "Failed to send poke." : null, error]}
-            title="Related Job Openings"
-            titleIcon="📌"
-            titleExtra={
-              <div className="matchdb-title-toolbar">
-                <Input
-                  id="candidate-search"
-                  className="matchdb-title-search"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Search..."
-                />
-                <Select
-                  id="candidate-type"
-                  className="matchdb-title-select"
-                  value={filterType}
-                  onChange={(e) =>
-                    navParams({ type: e.target.value || null, sub: null })
+          <>
+            {/* ── Primary type tabs ── */}
+            <div className="matchdb-tabs">
+              <button
+                type="button"
+                className={`matchdb-tab matchdb-tab-primary${
+                  filterType === "" ? " matchdb-tab-active" : ""
+                }`}
+                onClick={() =>
+                  navParams({ view: "matches", type: null, sub: null })
+                }
+              >
+                Matched Jobs ({grandTotal})
+              </button>
+              {showType("contract") && (
+                <button
+                  type="button"
+                  className={`matchdb-tab${
+                    filterType === "contract" ? " matchdb-tab-active" : ""
+                  }`}
+                  onClick={() =>
+                    navParams({ view: "matches", type: "contract", sub: null })
                   }
                 >
-                  <option value="">All Types</option>
-                  {JOB_TYPES.filter((t) => showType(t.value)).map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
+                  Contract ({countByType["contract"] || 0})
+                </button>
+              )}
+              {showType("full_time") && (
+                <button
+                  type="button"
+                  className={`matchdb-tab${
+                    filterType === "full_time" ? " matchdb-tab-active" : ""
+                  }`}
+                  onClick={() =>
+                    navParams({ view: "matches", type: "full_time", sub: null })
+                  }
+                >
+                  Full Time ({countByType["full_time"] || 0})
+                </button>
+              )}
+              {showType("part_time") && (
+                <button
+                  type="button"
+                  className={`matchdb-tab${
+                    filterType === "part_time" ? " matchdb-tab-active" : ""
+                  }`}
+                  onClick={() =>
+                    navParams({ view: "matches", type: "part_time", sub: null })
+                  }
+                >
+                  Part Time ({countByType["part_time"] || 0})
+                </button>
+              )}
+              {showType("internship") && (
+                <button
+                  type="button"
+                  className={`matchdb-tab${
+                    filterType === "internship" ? " matchdb-tab-active" : ""
+                  }`}
+                  onClick={() =>
+                    navParams({
+                      view: "matches",
+                      type: "internship",
+                      sub: null,
+                    })
+                  }
+                >
+                  Internships ({countByType["internship"] || 0})
+                </button>
+              )}
+            </div>
+
+            {/* ── Sub-type tabs (shown for Contract / Full Time) ── */}
+            {(filterType === "contract" || filterType === "full_time") && (
+              <div className="matchdb-tabs-sub">
+                <button
+                  type="button"
+                  className={`matchdb-tab${
+                    filterSubType === "" ? " matchdb-tab-active" : ""
+                  }`}
+                  onClick={() => navParams({ sub: null })}
+                >
+                  All
+                </button>
+                {(filterType === "contract"
+                  ? CONTRACT_SUB_TYPES
+                  : FULL_TIME_SUB_TYPES
+                )
+                  .filter((st) => showSubtype(filterType, st.value))
+                  .map((st) => (
+                    <button
+                      key={st.value}
+                      type="button"
+                      className={`matchdb-tab${
+                        filterSubType === st.value ? " matchdb-tab-active" : ""
+                      }`}
+                      onClick={() => navParams({ sub: st.value })}
+                    >
+                      {st.label}
+                      {countBySubType[filterType]?.[st.value]
+                        ? ` (${countBySubType[filterType][st.value]})`
+                        : ""}
+                    </button>
                   ))}
-                </Select>
-                {(filterType === "contract" || filterType === "full_time") && (
-                  <Select
-                    id="candidate-subtype"
-                    className="matchdb-title-select"
-                    value={filterSubType}
-                    onChange={(e) => navParams({ sub: e.target.value || null })}
-                  >
-                    <option value="">All Sub</option>
-                    {(filterType === "contract"
-                      ? CONTRACT_SUB_TYPES
-                      : FULL_TIME_SUB_TYPES
-                    )
-                      .filter((st) => showSubtype(filterType, st.value))
-                      .map((st) => (
-                        <option key={st.value} value={st.value}>
-                          {st.label}
+              </div>
+            )}
+            <DataTable<MatchRow>
+              columns={matchColumns}
+              data={sortedRows}
+              keyExtractor={(r) => r.id}
+              loading={matchesLoading}
+              serialNumberColumnWidth="32px"
+              scrollableColumns
+              paginated
+              emptyMessage="MySQL returned an empty result set (i.e. zero rows)."
+              alertSuccess={pokeSent ? "Poke sent successfully!" : undefined}
+              alertErrors={[pokeError ? "Failed to send poke." : null, error]}
+              title="Related Job Openings"
+              titleIcon="📌"
+              titleExtra={
+                <div className="matchdb-title-toolbar">
+                  <Input
+                    id="candidate-search"
+                    variant="search"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    placeholder="Search..."
+                  />
+                  {!filterType && (
+                    <Select
+                      id="candidate-type"
+                      variant="toolbar"
+                      value={filterType}
+                      onChange={(e) =>
+                        navParams({ type: e.target.value || null, sub: null })
+                      }
+                    >
+                      <option value="">All Types</option>
+                      {JOB_TYPES.filter((t) => showType(t.value)).map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
                         </option>
                       ))}
+                    </Select>
+                  )}
+                  <Select
+                    id="candidate-workmode"
+                    variant="toolbar"
+                    value={filterWorkMode}
+                    onChange={(e) =>
+                      navParams({ mode: e.target.value || null })
+                    }
+                  >
+                    <option value="">All Modes</option>
+                    {WORK_MODES.map((wm) => (
+                      <option key={wm.value} value={wm.value}>
+                        {wm.label}
+                      </option>
+                    ))}
                   </Select>
-                )}
-                <Select
-                  id="candidate-workmode"
-                  className="matchdb-title-select"
-                  value={filterWorkMode}
-                  onChange={(e) => navParams({ mode: e.target.value || null })}
-                >
-                  <option value="">All Modes</option>
-                  {WORK_MODES.map((wm) => (
-                    <option key={wm.value} value={wm.value}>
-                      {wm.label}
-                    </option>
-                  ))}
-                </Select>
-                <Button
-                  size="xs"
-                  onClick={() => {
-                    setSearchText("");
-                    navParams({ type: null, sub: null, mode: null, q: null });
-                  }}
-                >
-                  Reset
-                </Button>
-                <Button
-                  size="xs"
-                  onClick={() => {
-                    setSearchParams(
-                      (prev) => {
-                        const n = new URLSearchParams(prev);
-                        n.delete("page");
-                        return n;
-                      },
-                      { replace: true },
-                    );
-                    setMatchFilters(buildFilterArgs(1, currentPageSize));
-                  }}
-                >
-                  ↻
-                </Button>
-              </div>
-            }
-            serverTotal={candidateMatchesTotal}
-            serverPage={currentPage}
-            serverPageSize={currentPageSize}
-            onPageChange={handlePageChange}
-            onDownload={handleDownloadCSV}
-            downloadLabel="Download CSV"
-            pageResetKey={`${sortKey ?? ""}-${sortDir}`}
-            onRowDoubleClick={(row) => setSelectedJob(row.rawData || null)}
-          />
+                  <Button
+                    size="xs"
+                    onClick={() => {
+                      setSearchText("");
+                      navParams({ type: null, sub: null, mode: null, q: null });
+                    }}
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    size="xs"
+                    onClick={() => {
+                      setSearchParams(
+                        (prev) => {
+                          const n = new URLSearchParams(prev);
+                          n.delete("page");
+                          return n;
+                        },
+                        { replace: true },
+                      );
+                      setMatchFilters(buildFilterArgs(1, currentPageSize));
+                    }}
+                  >
+                    ↻
+                  </Button>
+                </div>
+              }
+              serverTotal={candidateMatchesTotal}
+              serverPage={currentPage}
+              serverPageSize={currentPageSize}
+              onPageChange={handlePageChange}
+              onDownload={handleDownloadCSV}
+              downloadLabel="Download CSV"
+              pageResetKey={`${sortKey ?? ""}-${sortDir}`}
+              onRowDoubleClick={(row) => setSelectedJob(row.rawData || null)}
+            />
+          </>
         )}
       </>
     );
@@ -3436,11 +3420,7 @@ const CandidateDashboard: React.FC<Props> = ({
           Packages start at <strong>$13</strong> — one-time payment, no
           subscription required.
         </p>
-        <Button
-          variant="primary"
-          style={{ fontSize: 14, padding: "10px 28px" }}
-          onClick={openPricingModal}
-        >
+        <Button variant="cta" onClick={openPricingModal}>
           View Visibility Packages →
         </Button>
       </div>

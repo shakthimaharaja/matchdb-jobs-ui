@@ -409,14 +409,9 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        minHeight: 0,
-      }}
+      className="u-flex u-flex-col-dir u-flex-1 u-min-h-0"
     >
-      <div className="rm-body pjp-body" style={{ flex: 1, minHeight: 0 }}>
+      <div className="rm-body pjp-body u-flex-1 u-min-h-0">
         {/* ── Draft restore banner ── */}
         {showDraftBanner && (
           <div
@@ -448,8 +443,8 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
               ↩ Restore Draft
             </Button>
             <Button
+              variant="muted"
               size="xs"
-              style={{ color: "#888" }}
               onClick={() => {
                 clearDraft();
                 setShowDraftBanner(false);
@@ -592,7 +587,7 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
               placeholder="Describe responsibilities and expectations"
             />
           </div>
-          <div className="rm-grid-2" style={{ marginTop: 6 }}>
+          <div className="rm-grid-2 u-mt-6">
             <div className="rm-field">
               <label htmlFor="pjp-location">Location</label>
               <input
@@ -625,7 +620,7 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
           </div>
 
           {/* ── Candidate Location (Country / State / City) ── */}
-          <div style={{ marginTop: 6 }}>
+          <div className="u-mt-6">
             <span
               style={{
                 fontSize: 11,
@@ -637,7 +632,7 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
             >
               🌍 Where do you need a candidate?
             </span>
-            <div className="rm-grid-2" style={{ marginTop: 2 }}>
+            <div className="rm-grid-2 u-mt-2">
               <div className="rm-field">
                 <label htmlFor="pjp-country">Country *</label>
                 <select
@@ -684,7 +679,7 @@ const PostJobPage: React.FC<Props> = ({ onPosted }) => {
               <div />
             </div>
           </div>
-          <div className="rm-grid-2" style={{ marginTop: 6 }}>
+          <div className="rm-grid-2 u-mt-6">
             {showSubType && (
               <div className="rm-field">
                 <label htmlFor="pjp-sub-type">Sub Type</label>

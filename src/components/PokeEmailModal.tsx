@@ -48,7 +48,7 @@ function buildVendorTemplate(
     body: `Dear ${row.pokeTargetName},
 
 ━━━ PART 1 — INTRODUCTION ━━━━━━━━━━━━━━━━━━━━━━━━━
-I am reaching out after reviewing your profile on MatchDB. We believe your
+I am reaching out after reviewing your profile on MatchingDB. We believe your
 background is an excellent match for the position described below.
 
 [Edit this section — add your personal introduction, company background, or
@@ -276,12 +276,12 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
               }}
             >
               <span style={{ fontWeight: 700, color: "#555" }}>To:</span>
-              <span style={{ fontFamily: "monospace", fontSize: 12 }}>
+              <span className="u-font-mono u-fs-12">
                 {row.pokeTargetName} &lt;{row.pokeTargetEmail}&gt;
               </span>
               <span style={{ fontWeight: 700, color: "#555" }}>From:</span>
-              <span style={{ fontFamily: "monospace", fontSize: 12 }}>
-                {senderName} &lt;{senderEmail}&gt; (via MatchDB)
+              <span className="u-font-mono u-fs-12">
+                {senderName} &lt;{senderEmail}&gt; (via MatchingDB)
               </span>
               {!isVendor && (
                 <>
@@ -300,8 +300,8 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           <fieldset className="rm-fieldset">
             <legend>Subject</legend>
             <Input
-              className="rm-input"
-              style={{ width: "100%", boxSizing: "border-box" }}
+              variant="modern"
+              fullWidth
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Email subject..."
@@ -309,7 +309,7 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           </fieldset>
 
           {/* Body */}
-          <fieldset className="rm-fieldset" style={{ flex: 1 }}>
+          <fieldset className="rm-fieldset u-flex-1">
             <legend>
               Email Body{" "}
               <span
@@ -359,7 +359,7 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
                 background: "#f9fafb",
               }}
             >
-              <div style={{ fontWeight: 600, fontSize: 12 }}>
+              <div className="u-fw-600 u-fs-12">
                 📞 Schedule Screening Call
                 {selectedJobTitle && selectedJobTitle !== "All Openings" && (
                   <span style={{ fontWeight: 400, color: "#555" }}>
@@ -378,12 +378,10 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
                 </div>
               ) : (
                 <>
-                  <div
-                    style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                  >
+                  <div className="u-flex u-flex-col-dir u-gap-4">
                     <label
                       htmlFor="modal-invite-proposed-at"
-                      style={{ fontSize: 11, fontWeight: 600 }}
+                      className="u-fs-11 u-fw-600"
                     >
                       Proposed Date & Time
                     </label>
@@ -404,12 +402,10 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
                     </span>
                   </div>
 
-                  <div
-                    style={{ display: "flex", flexDirection: "column", gap: 4 }}
-                  >
+                  <div className="u-flex u-flex-col-dir u-gap-4">
                     <label
                       htmlFor="modal-invite-message"
-                      style={{ fontSize: 11, fontWeight: 600 }}
+                      className="u-fs-11 u-fw-600"
                     >
                       Message (optional)
                     </label>
@@ -534,12 +530,7 @@ const PokeEmailModal: React.FC<PokeEmailModalProps> = ({
           >
             ↺ Reset Template
           </button>
-          <button
-            type="button"
-            className="rm-btn"
-            onClick={onClose}
-            style={{ marginLeft: "auto" }}
-          >
+          <button type="button" className="rm-btn u-ml-auto" onClick={onClose}>
             Cancel
           </button>
         </div>

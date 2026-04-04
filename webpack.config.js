@@ -79,7 +79,7 @@ module.exports = function webpackConfig(env = {}) {
       }),
       new HtmlWebpackPlugin({
         template: "./public/index.html",
-        title: "MatchDB Jobs",
+        title: "MatchingDB Jobs",
       }),
     ],
     devServer: {

@@ -1,4 +1,4 @@
-﻿import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import React, {
   useCallback,
   useEffect,
@@ -132,7 +132,7 @@ function addPocContact(
   }
 }
 
-// ── Click-to-open Popover (used in client table columns) ──────────────────────
+// -- Click-to-open Popover (used in client table columns) ----------------------
 function ClickPopover({
   label,
   children,
@@ -160,16 +160,7 @@ function ClickPopover({
         ref={btnRef}
         type="button"
         onClick={() => setOpen(!open)}
-        style={{
-          cursor: "pointer",
-          background: "none",
-          border: "none",
-          padding: 0,
-          font: "inherit",
-          color: "var(--w97-blue)",
-          textDecoration: "underline dotted",
-          fontSize: 11,
-        }}
+        className="u-cursor-pointer u-bg-none u-border-none u-p-0 u-font-inherit u-color-blue u-text-underline-dotted u-fs-11"
       >
         {label}
       </button>
@@ -202,7 +193,7 @@ function ClickPopover({
   );
 }
 
-// ── Mock LCA wage data for H-1B candidates ───────────────────────────────────
+// -- Mock LCA wage data for H-1B candidates -----------------------------------
 interface LcaWageEntry {
   caseNumber: string;
   jobTitle: string;
@@ -252,7 +243,7 @@ function getLcaWages(candidateId: string): LcaWageEntry[] {
   return MOCK_LCA_WAGES[candidateId] || MOCK_LCA_WAGES.default;
 }
 
-// ── H-1B LCA Wage Popover ─────────────────────────────────────────────────────
+// -- H-1B LCA Wage Popover -----------------------------------------------------
 function LcaWagePopover({
   candidateName,
   candidateId,
@@ -301,14 +292,14 @@ function LcaWagePopover({
           >
             <div className="lca-wage-header">
               <span className="lca-wage-title">
-                LCA Wages — {candidateName}
+                LCA Wages � {candidateName}
               </span>
               <button
                 type="button"
                 className="lca-wage-close"
                 onClick={() => setOpen(false)}
               >
-                ✕
+                ?
               </button>
             </div>
             <table className="lca-wage-table">
@@ -331,7 +322,7 @@ function LcaWagePopover({
                     <td>{e.jobTitle}</td>
                     <td>{e.wageLevel}</td>
                     <td>
-                      {fmtW(e.wageFrom)} – {fmtW(e.wageTo)}
+                      {fmtW(e.wageFrom)} � {fmtW(e.wageTo)}
                       <span className="lca-wage-unit">/{e.wageUnit}</span>
                     </td>
                     <td>{fmtW(e.prevailingWage)}</td>
@@ -357,13 +348,13 @@ function LcaWagePopover({
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// --- Component ----------------------------------------------------------------
 
 const MarketerDashboard: React.FC<Props> = () => {
-  // ── RBAC context — used to filter sidebar nav items by permission
+  // -- RBAC context � used to filter sidebar nav items by permission
   const { hasPermission } = useCompanyContext();
 
-  // ── URL-driven state — view, sub-filter, selected candidate, and detail tab
+  // -- URL-driven state � view, sub-filter, selected candidate, and detail tab
   const [searchParams, setSearchParams] = useSearchParams();
   const activeView =
     (searchParams.get("view") as ActiveView) || "company-candidates";
@@ -509,7 +500,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     };
   }, [kebabOpen]);
 
-  // ── RTK Query ───────────────────────────────────────────────────────────────
+  // -- RTK Query ---------------------------------------------------------------
 
   const { data: statsData } = useGetMarketerStatsQuery();
 
@@ -555,10 +546,10 @@ const MarketerDashboard: React.FC<Props> = () => {
     useForwardOpeningWithEmailMutation();
   const [updateForwardedStatus] = useUpdateForwardedStatusMutation();
 
-  // ── Immigration state ───────────────────────────────────────────────────────
+  // -- Immigration state -------------------------------------------------------
   const [immigrationSearch, setImmigrationSearch] = useState("");
 
-  // ── Timesheet hooks ─────────────────────────────────────────────────────────
+  // -- Timesheet hooks ---------------------------------------------------------
   const [tsStatusFilter, setTsStatusFilter] = useState<string>("submitted");
   const [approveNotes, setApproveNotes] = useState("");
   const [rejectNotes, setRejectNotes] = useState("");
@@ -591,7 +582,7 @@ const MarketerDashboard: React.FC<Props> = () => {
   const jobsTotal = jobsData?.total ?? 0;
   const profilesTotal = profilesData?.total ?? 0;
 
-  // ── Auto-refresh flash ──────────────────────────────────────────────────────
+  // -- Auto-refresh flash ------------------------------------------------------
 
   const refreshAll = useCallback(() => {
     refetchJobs();
@@ -642,7 +633,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     prevProfileFlashSize.current = n;
   }, [profilesFlash.flashIds.size, activeView]);
 
-  // ── Nav helpers ─────────────────────────────────────────────────────────────
+  // -- Nav helpers -------------------------------------------------------------
 
   const navigateTo = useCallback(
     (view: ActiveView) => {
@@ -653,7 +644,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [navParams],
   );
 
-  // ── Admin modals state ──────────────────────────────────────────────────────
+  // -- Admin modals state ------------------------------------------------------
   const [inviteEmployeeOpen, setInviteEmployeeOpen] = useState(false);
   const [inviteCandidateOpen, setInviteCandidateOpen] = useState(false);
   const { data: adminDashboard } = useGetAdminDashboardQuery(undefined, {
@@ -667,7 +658,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     ),
   });
 
-  // ── Open detail modal ───────────────────────────────────────────────────────
+  // -- Open detail modal -------------------------------------------------------
 
   const openJobDetail = useCallback((j: MarketerJob) => {
     setDetailType("job");
@@ -681,7 +672,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     setDetailOpen(true);
   }, []);
 
-  // ── Download helpers ────────────────────────────────────────────────────────
+  // -- Download helpers --------------------------------------------------------
 
   const handleDownloadJobsCSV = () => {
     const rows = jobs.map((j) => ({
@@ -692,7 +683,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       Location: j.location,
       Type: `${TYPE_LABELS[j.job_type] || j.job_type} ${
         j.job_sub_type
-          ? `› ${SUB_LABELS[j.job_sub_type] || j.job_sub_type}`
+          ? `� ${SUB_LABELS[j.job_sub_type] || j.job_sub_type}`
           : ""
       }`.trim(),
       Skills: (j.skills_required || []).join("; "),
@@ -724,7 +715,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     downloadExcel(rows, "candidate_profiles.xls");
   };
 
-  // ── Filtered data based on sub-nav selection ────────────────────────────────
+  // -- Filtered data based on sub-nav selection --------------------------------
 
   const filteredJobs = useMemo(() => {
     if (!subFilter) return jobs;
@@ -742,7 +733,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     return profiles;
   }, [profiles, subFilter]);
 
-  // ── Company / candidate / forwarding handlers ───────────────────────────────
+  // -- Company / candidate / forwarding handlers -------------------------------
 
   const handleRegisterCompany = async () => {
     if (!companyName.trim()) return;
@@ -797,7 +788,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     }
   };
 
-  // ── Invite candidate handler ────────────────────────────────────────────────
+  // -- Invite candidate handler ------------------------------------------------
 
   const openInviteModal = (c: MarketerCandidateItem) => {
     setInviteTarget(c);
@@ -820,7 +811,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     }
   };
 
-  // ── Send Job Opening via email handler ──────────────────────────────────────
+  // -- Send Job Opening via email handler --------------------------------------
 
   const openSendJobModal = (candidateEmail: string, candidateName: string) => {
     setSendJobCandidate({ email: candidateEmail, name: candidateName });
@@ -845,7 +836,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     }
   };
 
-  // ── Update forwarded opening status handler ─────────────────────────────────
+  // -- Update forwarded opening status handler ---------------------------------
 
   const handleUpdateForwardedStatus = useCallback(
     async (id: string, status: string) => {
@@ -869,7 +860,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [jobs],
   );
 
-  // ── DBLayout nav groups ─────────────────────────────────────────────────────
+  // -- DBLayout nav groups -----------------------------------------------------
 
   const companyLabel = myCompany?.name ?? "My Company";
 
@@ -1095,8 +1086,8 @@ const MarketerDashboard: React.FC<Props> = () => {
         label: "Active Sessions",
         icon: ICONS.GREEN_CIRCLE,
         items: [
-          { id: "session-1", label: "Profile 1 — Local" },
-          { id: "session-2", label: "Profile 2 — (available)" },
+          { id: "session-1", label: "Profile 1 � Local" },
+          { id: "session-2", label: "Profile 2 � (available)" },
         ],
       },
     ],
@@ -1115,8 +1106,8 @@ const MarketerDashboard: React.FC<Props> = () => {
     ],
   );
 
-  // ── RBAC: filter sidebar items by permission ────────────────────────────────
-  // Maps nav item IDs → required permission. Items without a mapping are visible
+  // -- RBAC: filter sidebar items by permission --------------------------------
+  // Maps nav item IDs ? required permission. Items without a mapping are visible
   // to everyone. Admin role bypasses all checks (handled in hasPermission).
 
   const filteredNavGroups: NavGroup[] = useMemo(() => {
@@ -1152,7 +1143,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     candidateDetail?.roster?.candidate_name,
   );
 
-  // ── Jobs table columns ──────────────────────────────────────────────────────
+  // -- Jobs table columns ------------------------------------------------------
 
   const jobColumns = useMemo<DataTableColumn<MarketerJob>[]>(
     () => [
@@ -1164,15 +1155,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         render: (j) => (
           <button
             type="button"
-            style={{
-              cursor: "pointer",
-              color: "var(--w97-blue)",
-              textDecoration: "underline",
-              background: "none",
-              border: "none",
-              padding: 0,
-              font: "inherit",
-            }}
+            className="u-cursor-pointer u-color-blue u-text-underline u-bg-none u-border-none u-p-0 u-font-inherit"
             onClick={() => openJobDetail(j)}
             title="Click to view details"
           >
@@ -1187,11 +1170,9 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "8%",
         skeletonWidth: 70,
         render: (j) => (
-          <span style={{ fontWeight: 600 }}>
-            {j.client_company_name || "—"}
-          </span>
+          <span className="u-fw-600">{j.client_company_name || "�"}</span>
         ),
-        tooltip: (j) => j.client_company_name || "—",
+        tooltip: (j) => j.client_company_name || "�",
       },
       {
         key: "vendor",
@@ -1201,10 +1182,10 @@ const MarketerDashboard: React.FC<Props> = () => {
         render: (j) => {
           const company = j.vendor_email
             ? j.vendor_email.split("@")[1]?.split(".")[0] || j.vendor_email
-            : j.recruiter_name || "—";
+            : j.recruiter_name || "�";
           return <span title={j.vendor_email}>{company}</span>;
         },
-        tooltip: (j) => j.vendor_email || j.recruiter_name || "—",
+        tooltip: (j) => j.vendor_email || j.recruiter_name || "�",
       },
       {
         key: "email",
@@ -1212,11 +1193,11 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "12%",
         skeletonWidth: 90,
         render: (j) => (
-          <span style={{ fontSize: 10 }} title={j.vendor_email}>
-            {j.vendor_email || "—"}
+          <span className="u-fs-10" title={j.vendor_email}>
+            {j.vendor_email || "�"}
           </span>
         ),
-        tooltip: (j) => j.vendor_email || "—",
+        tooltip: (j) => j.vendor_email || "�",
       },
       {
         key: "phone",
@@ -1224,8 +1205,8 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "8%",
         skeletonWidth: 65,
         render: (j) => (
-          <span style={{ fontSize: 10 }} title={j.recruiter_phone}>
-            {j.recruiter_phone || "—"}
+          <span className="u-fs-10" title={j.recruiter_phone}>
+            {j.recruiter_phone || "�"}
           </span>
         ),
       },
@@ -1234,8 +1215,8 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Location",
         width: "8%",
         skeletonWidth: 70,
-        render: (j) => <>{j.location || j.job_country || "—"}</>,
-        tooltip: (j) => j.location || "—",
+        render: (j) => <>{j.location || j.job_country || "�"}</>,
+        tooltip: (j) => j.location || "�",
       },
       {
         key: "type",
@@ -1243,9 +1224,9 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "10%",
         skeletonWidth: 85,
         render: (j) => {
-          const t = TYPE_LABELS[j.job_type] || j.job_type || "—";
+          const t = TYPE_LABELS[j.job_type] || j.job_type || "�";
           const s = j.job_sub_type
-            ? ` › ${SUB_LABELS[j.job_sub_type] || j.job_sub_type.toUpperCase()}`
+            ? ` � ${SUB_LABELS[j.job_sub_type] || j.job_sub_type.toUpperCase()}`
             : "";
           return (
             <span className="matchdb-type-pill">
@@ -1364,7 +1345,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               j.is_active ? "-active" : "-closed"
             }`}
           >
-            {j.is_active ? "● ACTIVE" : "● Closed"}
+            {j.is_active ? "? ACTIVE" : "? Closed"}
           </span>
         ),
       },
@@ -1379,7 +1360,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [openJobDetail],
   );
 
-  // ── Profiles table columns ──────────────────────────────────────────────────
+  // -- Profiles table columns --------------------------------------------------
 
   const profileColumns = useMemo<DataTableColumn<MarketerProfile>[]>(
     () => [
@@ -1391,22 +1372,14 @@ const MarketerDashboard: React.FC<Props> = () => {
         render: (p) => (
           <button
             type="button"
-            style={{
-              cursor: "pointer",
-              color: "var(--w97-blue)",
-              textDecoration: "underline",
-              background: "none",
-              border: "none",
-              padding: 0,
-              font: "inherit",
-            }}
+            className="u-cursor-pointer u-color-blue u-text-underline u-bg-none u-border-none u-p-0 u-font-inherit"
             onClick={() => openProfileDetail(p)}
             title="Click to view profile"
           >
-            {p.name || "—"}
+            {p.name || "�"}
           </button>
         ),
-        tooltip: (p) => p.name || "—",
+        tooltip: (p) => p.name || "�",
       },
       {
         key: "email",
@@ -1414,11 +1387,11 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "12%",
         skeletonWidth: 90,
         render: (p) => (
-          <span style={{ fontSize: 10 }} title={p.email}>
-            {p.email || "—"}
+          <span className="u-fs-10" title={p.email}>
+            {p.email || "�"}
           </span>
         ),
-        tooltip: (p) => p.email || "—",
+        tooltip: (p) => p.email || "�",
       },
       {
         key: "phone",
@@ -1426,8 +1399,8 @@ const MarketerDashboard: React.FC<Props> = () => {
         width: "8%",
         skeletonWidth: 65,
         render: (p) => (
-          <span style={{ fontSize: 10 }} title={p.phone}>
-            {p.phone || "—"}
+          <span className="u-fs-10" title={p.phone}>
+            {p.phone || "�"}
           </span>
         ),
       },
@@ -1436,16 +1409,16 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Role",
         width: "10%",
         skeletonWidth: 100,
-        render: (p) => <>{p.current_role || "—"}</>,
-        tooltip: (p) => p.current_role || "—",
+        render: (p) => <>{p.current_role || "�"}</>,
+        tooltip: (p) => p.current_role || "�",
       },
       {
         key: "company",
         header: "Company",
         width: "9%",
         skeletonWidth: 90,
-        render: (p) => <>{p.current_company || "—"}</>,
-        tooltip: (p) => p.current_company || "—",
+        render: (p) => <>{p.current_company || "�"}</>,
+        tooltip: (p) => p.current_company || "�",
       },
       {
         key: "type",
@@ -1454,7 +1427,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 70,
         render: (p) => (
           <span className="matchdb-type-pill">
-            {TYPE_LABELS[p.preferred_job_type] || p.preferred_job_type || "—"}
+            {TYPE_LABELS[p.preferred_job_type] || p.preferred_job_type || "�"}
           </span>
         ),
       },
@@ -1486,8 +1459,8 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Location",
         width: "7%",
         skeletonWidth: 70,
-        render: (p) => <>{p.location || "—"}</>,
-        tooltip: (p) => p.location || "—",
+        render: (p) => <>{p.location || "�"}</>,
+        tooltip: (p) => p.location || "�",
       },
       {
         key: "exp",
@@ -1496,7 +1469,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         align: "center" as const,
         skeletonWidth: 35,
         render: (p) => (
-          <>{p.experience_years ? `${p.experience_years}y` : "—"}</>
+          <>{p.experience_years ? `${p.experience_years}y` : "�"}</>
         ),
       },
       {
@@ -1559,7 +1532,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [openProfileDetail],
   );
 
-  // ── Company Candidates table columns ────────────────────────────────────────
+  // -- Company Candidates table columns ----------------------------------------
 
   const candidateColumns = useMemo<DataTableColumn<MarketerCandidateItem>[]>(
     () => [
@@ -1571,16 +1544,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         render: (c) => (
           <button
             type="button"
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--w97-blue)",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 12,
-              padding: 0,
-              textDecoration: "underline",
-            }}
+            className="u-bg-none u-border-none u-color-blue u-cursor-pointer u-fw-600 u-fs-12 u-p-0 u-text-underline"
             onClick={() => {
               setPrevView("company-candidates");
               navParams({
@@ -1590,7 +1554,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               });
             }}
           >
-            {c.candidate_name || "—"}
+            {c.candidate_name || "�"}
           </button>
         ),
       },
@@ -1599,18 +1563,14 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Email",
         width: "18%",
         skeletonWidth: 150,
-        render: (c) => (
-          <span style={{ fontSize: 10 }}>{c.candidate_email}</span>
-        ),
+        render: (c) => <span className="u-fs-10">{c.candidate_email}</span>,
       },
       {
         key: "current_role",
         header: "Role",
         width: "14%",
         skeletonWidth: 100,
-        render: (c) => (
-          <span style={{ fontSize: 10 }}>{c.current_role || "—"}</span>
-        ),
+        render: (c) => <span className="u-fs-10">{c.current_role || "�"}</span>,
       },
       {
         key: "invite_status",
@@ -1628,12 +1588,12 @@ const MarketerDashboard: React.FC<Props> = () => {
             invited: "#fffde6",
           };
           const STATUS_LABELS: Record<string, string> = {
-            accepted: "✓ Accepted",
-            invited: "⏳ Invited",
+            accepted: "? Accepted",
+            invited: "? Invited",
           };
           const color = STATUS_COLORS[s] ?? "var(--w97-text-secondary)";
           const bg = STATUS_BGS[s] ?? "var(--w97-sky)";
-          const label = STATUS_LABELS[s] ?? "—";
+          const label = STATUS_LABELS[s] ?? "�";
           return (
             <span
               style={{
@@ -1710,19 +1670,18 @@ const MarketerDashboard: React.FC<Props> = () => {
                 onClick={() => openInviteModal(c)}
                 title="Invite"
               >
-                ✉
+                ?
               </Button>
             )}
             <Button
               variant="email"
               size="xs"
-              style={{ color: "var(--w97-teal)" }}
               onClick={() =>
                 openSendJobModal(c.candidate_email, c.candidate_name)
               }
               title="Send Job"
             >
-              📧
+              ??
             </Button>
             <Button
               variant="close"
@@ -1730,7 +1689,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               onClick={() => handleRemoveCandidate(c.id)}
               title="Remove"
             >
-              ✕
+              ?
             </Button>
           </div>
         ),
@@ -1739,7 +1698,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [handleRemoveCandidate, navParams],
   );
 
-  // ── Forwarded Openings table columns ────────────────────────────────────────
+  // -- Forwarded Openings table columns ----------------------------------------
 
   const forwardedColumns = useMemo<DataTableColumn<ForwardedOpeningItem>[]>(
     () => [
@@ -1762,9 +1721,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Email",
         width: "16%",
         skeletonWidth: 120,
-        render: (f) => (
-          <span style={{ fontSize: 10 }}>{f.candidate_email}</span>
-        ),
+        render: (f) => <span className="u-fs-10">{f.candidate_email}</span>,
       },
       {
         key: "job_type",
@@ -1775,7 +1732,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           <>
             {TYPE_LABELS[f.job_type] || f.job_type}
             {f.job_sub_type
-              ? ` › ${SUB_LABELS[f.job_sub_type] || f.job_sub_type}`
+              ? ` � ${SUB_LABELS[f.job_sub_type] || f.job_sub_type}`
               : ""}
           </>
         ),
@@ -1785,7 +1742,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Location",
         width: "10%",
         skeletonWidth: 70,
-        render: (f) => <>{f.job_location || "—"}</>,
+        render: (f) => <>{f.job_location || "�"}</>,
       },
       {
         key: "status",
@@ -1823,11 +1780,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                 cursor: "pointer",
               }}
             >
-              <option value="pending">⏳ Pending</option>
-              <option value="applied">📝 Applied</option>
-              <option value="hired">✅ Hired</option>
-              <option value="declined">❌ Declined</option>
-              <option value="rejected">🚫 Rejected</option>
+              <option value="pending">? Pending</option>
+              <option value="applied">?? Applied</option>
+              <option value="hired">? Hired</option>
+              <option value="declined">? Declined</option>
+              <option value="rejected">?? Rejected</option>
             </Select>
           );
         },
@@ -1837,7 +1794,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Note",
         width: "12%",
         skeletonWidth: 80,
-        render: (f) => <span style={{ fontSize: 10 }}>{f.note || "—"}</span>,
+        render: (f) => <span className="u-fs-10">{f.note || "�"}</span>,
       },
       {
         key: "created_at",
@@ -1850,7 +1807,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     [handleUpdateForwardedStatus],
   );
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // -- Render -------------------------------------------------------------------
 
   // Stat chips data
   const stats = statsData;
@@ -1915,20 +1872,11 @@ const MarketerDashboard: React.FC<Props> = () => {
   const renderImplementationPartners = useCallback(
     (partners: string[]) => {
       if (!partners.length) {
-        return (
-          <span
-            style={{
-              fontSize: 11,
-              color: "var(--w97-text-secondary)",
-            }}
-          >
-            —
-          </span>
-        );
+        return <span className="u-fs-11 u-color-secondary">�</span>;
       }
 
       return (
-        <span style={{ fontSize: 11 }}>
+        <span className="u-fs-11">
           {partners.map((partner, index) => {
             const vendor = vendorByCompanyName.get(partner);
             return (
@@ -1938,16 +1886,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   <button
                     type="button"
                     onClick={() => openVendorDetail(vendor, "client-summary")}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      cursor: "pointer",
-                      font: "inherit",
-                      color: "var(--w97-blue)",
-                      textDecoration: "underline dotted",
-                      fontSize: 11,
-                    }}
+                    className="u-bg-none u-border-none u-p-0 u-cursor-pointer u-font-inherit u-color-blue u-text-underline-dotted u-fs-11"
                   >
                     {partner}
                   </button>
@@ -2007,7 +1946,7 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderVendorPostedView() {
     const displayedJobs = subFilter ? filteredJobs : jobs;
     const jobsCountDisplay = jobsLoading
-      ? "…"
+      ? "�"
       : `${displayedJobs.length} / ${jobsTotal}`;
     return (
       <DataTable<MarketerJob>
@@ -2018,10 +1957,10 @@ const MarketerDashboard: React.FC<Props> = () => {
         paginated
         flashIds={jobsFlash.flashIds}
         deleteFlashIds={jobsFlash.deleteFlashIds}
-        titleIcon="💼"
+        titleIcon="??"
         title={
           subFilter
-            ? `Job Openings — ${
+            ? `Job Openings � ${
                 TYPE_LABELS[subFilter] ?? subFilter.toUpperCase()
               }`
             : "Job Openings"
@@ -2033,31 +1972,23 @@ const MarketerDashboard: React.FC<Props> = () => {
             onClick={handleDownloadJobsCSV}
             title="Download all job openings as CSV"
           >
-            ⬇ CSV
+            ? CSV
           </Button>
         }
         titleExtra={
           <div className="matchdb-title-toolbar">
             <Input
-              className="matchdb-title-search"
+              variant="search"
               value={jobSearch}
               onChange={(e) => setJobSearch(e.target.value)}
-              placeholder="Search title, skills, location, client…"
+              placeholder="Search title, skills, location, client�"
             />
-            <Button
-              size="xs"
-              className="matchdb-title-btn"
-              onClick={() => setJobSearch("")}
-            >
+            <Button variant="title-icon" onClick={() => setJobSearch("")}>
               Reset
             </Button>
             <span className="matchdb-title-count">{jobsCountDisplay}</span>
-            <Button
-              size="xs"
-              className="matchdb-title-btn"
-              onClick={() => refetchJobs()}
-            >
-              ↻ Refresh
+            <Button variant="title-icon" onClick={() => refetchJobs()}>
+              ? Refresh
             </Button>
             {Boolean(jobsFlash.lastSync) && (
               <span className="matchdb-title-sync">
@@ -2073,7 +2004,7 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderCandidateCreatedView() {
     const displayedProfiles = subFilter ? filteredProfiles : profiles;
     const profilesCountDisplay = profilesLoading
-      ? "…"
+      ? "�"
       : `${displayedProfiles.length} / ${profilesTotal}`;
     return (
       <DataTable<MarketerProfile>
@@ -2084,10 +2015,10 @@ const MarketerDashboard: React.FC<Props> = () => {
         paginated
         flashIds={profilesFlash.flashIds}
         deleteFlashIds={profilesFlash.deleteFlashIds}
-        titleIcon="👤"
+        titleIcon="??"
         title={
           subFilter
-            ? `Candidate Profiles — ${
+            ? `Candidate Profiles � ${
                 TYPE_LABELS[subFilter] ?? subFilter.toUpperCase()
               }`
             : "Candidate Profiles"
@@ -2099,31 +2030,23 @@ const MarketerDashboard: React.FC<Props> = () => {
             onClick={handleDownloadProfilesExcel}
             title="Download all candidate profiles as Excel"
           >
-            ⬇ Excel
+            ? Excel
           </Button>
         }
         titleExtra={
           <div className="matchdb-title-toolbar">
             <Input
-              className="matchdb-title-search"
+              variant="search"
               value={profileSearch}
               onChange={(e) => setProfileSearch(e.target.value)}
-              placeholder="Search name, role, skills, location…"
+              placeholder="Search name, role, skills, location�"
             />
-            <Button
-              size="xs"
-              className="matchdb-title-btn"
-              onClick={() => setProfileSearch("")}
-            >
+            <Button variant="title-icon" onClick={() => setProfileSearch("")}>
               Reset
             </Button>
             <span className="matchdb-title-count">{profilesCountDisplay}</span>
-            <Button
-              size="xs"
-              className="matchdb-title-btn"
-              onClick={() => refetchProfiles()}
-            >
-              ↻ Refresh
+            <Button variant="title-icon" onClick={() => refetchProfiles()}>
+              ? Refresh
             </Button>
             {Boolean(profilesFlash.lastSync) && (
               <span className="matchdb-title-sync">
@@ -2147,9 +2070,9 @@ const MarketerDashboard: React.FC<Props> = () => {
             style={{ marginBottom: 12, padding: 12 }}
           >
             <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>
-              🏢 Register Your Company
+              ?? Register Your Company
             </h3>
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <div className="u-flex u-gap-6 u-items-center">
               <Input
                 placeholder="Company name"
                 value={companyName}
@@ -2164,14 +2087,8 @@ const MarketerDashboard: React.FC<Props> = () => {
         )}
 
         {myCompany && (
-          <div
-            style={{
-              marginBottom: 10,
-              fontSize: 12,
-              color: "var(--w97-text-secondary)",
-            }}
-          >
-            🏢 <strong>{myCompany.name}</strong> — {myCompany.marketer_email}
+          <div className="u-mb-10 u-fs-12 u-color-secondary">
+            ?? <strong>{myCompany.name}</strong> � {myCompany.marketer_email}
           </div>
         )}
 
@@ -2183,16 +2100,15 @@ const MarketerDashboard: React.FC<Props> = () => {
           loading={false}
           paginated
           pageSize={25}
-          titleIcon="🏢"
+          titleIcon="??"
           title={
             myCompany?.name
-              ? `${myCompany.name} — Candidates`
+              ? `${myCompany.name} � Candidates`
               : "Company Candidates"
           }
           titleExtra={
             <Button
-              size="xs"
-              className="matchdb-title-btn"
+              variant="title-icon"
               onClick={() => setAddCandModalOpen(true)}
             >
               + Add Candidate
@@ -2212,13 +2128,13 @@ const MarketerDashboard: React.FC<Props> = () => {
         keyExtractor={(f) => f.id}
         loading={false}
         paginated
-        titleIcon="📤"
+        titleIcon="??"
         title="Forwarded Openings"
       />
     );
   }
 
-  // ── Shared Export Helpers ───────────────────────────────────────────────────
+  // -- Shared Export Helpers ---------------------------------------------------
 
   const fmtDollar = (v: number) =>
     `$${v.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
@@ -2271,10 +2187,10 @@ const MarketerDashboard: React.FC<Props> = () => {
     const body = rows.map((p) => [
       p.candidateName,
       p.jobTitle || "Untitled",
-      p.vendorEmail || "—",
+      p.vendorEmail || "�",
       p.isActive ? "Active" : "Closed",
-      p.financials ? `$${p.financials.billRate}` : "—",
-      p.financials ? `$${p.financials.payRate}` : "—",
+      p.financials ? `$${p.financials.billRate}` : "�",
+      p.financials ? `$${p.financials.payRate}` : "�",
       p.financials ? String(p.financials.hoursWorked) : "0",
       p.financials ? p.financials.totalBilled.toFixed(2) : "0",
       p.financials ? p.financials.netPayable.toFixed(2) : "0",
@@ -2376,7 +2292,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     const { name, data, context } = emailModalTarget;
     const lines = Object.entries(data).map(([k, v]) => `${k}: ${v}`);
     const body = [
-      `${contextLabel(context)} Report — ${name}`,
+      `${contextLabel(context)} Report � ${name}`,
       "",
       ...lines,
       "",
@@ -2384,7 +2300,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       `Generated: ${new Date().toLocaleDateString()}`,
     ].join("%0D%0A");
     const subject = encodeURIComponent(
-      `${contextLabel(context)} Report — ${name}`,
+      `${contextLabel(context)} Report � ${name}`,
     );
     window.open(
       `mailto:${encodeURIComponent(
@@ -2428,14 +2344,14 @@ const MarketerDashboard: React.FC<Props> = () => {
   const buildProjData = (p: CompanySummaryProject): Record<string, string> => ({
     Candidate: p.candidateName,
     Project: p.jobTitle || "Untitled",
-    Client: p.vendorEmail || "—",
+    Client: p.vendorEmail || "�",
     Status: p.isActive ? "Active" : "Closed",
-    Billed: p.financials ? fmtDollar(p.financials.totalBilled) : "—",
-    "Net Pay": p.financials ? fmtDollar(p.financials.netPayable) : "—",
-    Paid: p.financials ? fmtDollar(p.financials.amountPaid) : "—",
+    Billed: p.financials ? fmtDollar(p.financials.totalBilled) : "�",
+    "Net Pay": p.financials ? fmtDollar(p.financials.netPayable) : "�",
+    Paid: p.financials ? fmtDollar(p.financials.amountPaid) : "�",
     Balance: p.financials
       ? fmtDollar(Math.max(0, p.financials.amountPending))
-      : "—",
+      : "�",
   });
 
   // Reusable kebab component render
@@ -2446,7 +2362,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     context: ReportContext,
     data: Record<string, string>,
   ) => (
-    <div style={{ position: "relative" }}>
+    <div className="u-relative">
       <button
         type="button"
         onClick={(e) => {
@@ -2465,7 +2381,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         }}
         title="Actions"
       >
-        ⋮
+        ?
       </button>
       {kebabOpen === id && (
         <div
@@ -2501,7 +2417,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f4ff")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
           >
-            📧 Email Report
+            ?? Email Report
           </button>
           <button
             type="button"
@@ -2522,14 +2438,14 @@ const MarketerDashboard: React.FC<Props> = () => {
             onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f4ff")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
           >
-            ⬇ Download
+            ? Download
           </button>
         </div>
       )}
     </div>
   );
 
-  // ── Financial Summary View ──────────────────────────────────────────────────
+  // -- Financial Summary View --------------------------------------------------
 
   function renderFinancialSummaryView() {
     const cands = companySummary?.candidates ?? [];
@@ -2570,15 +2486,8 @@ const MarketerDashboard: React.FC<Props> = () => {
     return (
       <div>
         {summaryLoading && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: 40,
-              fontSize: 13,
-              color: "var(--w97-text-secondary)",
-            }}
-          >
-            Loading financial summary…
+          <div className="u-text-center u-p-40 u-fs-13 u-color-secondary">
+            Loading financial summary�
           </div>
         )}
 
@@ -2635,7 +2544,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               <div className="ov-kpi-div" />
               <div className="ov-kpi" style={{ flex: 1, minWidth: 120 }}>
                 <span className="ov-kpi-label">
-                  Payment Progress — {paidPct}%
+                  Payment Progress � {paidPct}%
                 </span>
                 <div
                   style={{
@@ -2664,9 +2573,9 @@ const MarketerDashboard: React.FC<Props> = () => {
             <div style={{ display: "flex", gap: 0, marginBottom: 0 }}>
               {(
                 [
-                  { key: "table", label: "📊 Table View" },
-                  { key: "chart", label: "📈 Chart View" },
-                  { key: "graph", label: "📉 Graph View" },
+                  { key: "table", label: "?? Table View" },
+                  { key: "chart", label: "?? Chart View" },
+                  { key: "graph", label: "?? Graph View" },
                 ] as const
               ).map((t, i) => (
                 <button
@@ -2702,16 +2611,14 @@ const MarketerDashboard: React.FC<Props> = () => {
             {/* Table View */}
             {finViewTab === "table" && (
               <DataTable<CompanySummaryCandidate>
-                title="Financial Summary — By Candidate"
-                titleIcon="💰"
-                className="matchdb-auto-height"
+                title="Financial Summary � By Candidate"
+                titleIcon="??"
+                className="matchdb-auto-height u-flex u-gap-6 u-items-center"
                 titleExtra={
-                  <div
-                    style={{ display: "flex", gap: 6, alignItems: "center" }}
-                  >
+                  <div>
                     <input
                       type="text"
-                      placeholder="🔍 Search candidate…"
+                      placeholder="?? Search candidate�"
                       value={finSearch}
                       onChange={(e) => setFinSearch(e.target.value)}
                       style={{
@@ -2749,23 +2656,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Candidate",
                       width: "16%",
                       render: (c) => (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
+                        <div className="u-flex u-items-center u-gap-6">
                           <button
                             type="button"
-                            style={{
-                              cursor: "pointer",
-                              flex: 1,
-                              background: "none",
-                              border: "none",
-                              padding: 0,
-                              textAlign: "left",
-                            }}
+                            className="u-cursor-pointer u-flex-1 u-bg-none u-border-none u-p-0 u-text-left"
                             onClick={() => {
                               setPrevView("financial-summary");
                               navParams({
@@ -2775,13 +2669,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                               });
                             }}
                           >
-                            <div
-                              style={{
-                                fontWeight: 600,
-                                color: "var(--w97-blue)",
-                                textDecoration: "underline",
-                              }}
-                            >
+                            <div className="u-fw-600 u-color-blue u-text-underline">
                               {c.candidateName}
                             </div>
                           </button>
@@ -2825,7 +2713,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Hours",
                       align: "right" as const,
                       render: (c) => (
-                        <span style={{ fontFamily: "monospace" }}>
+                        <span className="u-font-mono">
                           {c.hoursWorked.toLocaleString()}
                         </span>
                       ),
@@ -2856,10 +2744,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Gross Pay",
                       align: "right" as const,
                       render: (c) => (
-                        <span
-                          className="ov-mono"
-                          style={{ color: "var(--w97-text)" }}
-                        >
+                        <span className="ov-mono u-color-text">
                           {fmtC(c.totalPay)}
                         </span>
                       ),
@@ -2921,30 +2806,18 @@ const MarketerDashboard: React.FC<Props> = () => {
                 showSerialNumber
                 paginated
                 pageSize={50}
-                emptyMessage="No financial data yet. Add financials in candidate detail → Projects tab."
+                emptyMessage="No financial data yet. Add financials in candidate detail ? Projects tab."
               />
             )}
 
-            {/* Chart View — horizontal bar chart */}
+            {/* Chart View � horizontal bar chart */}
             {finViewTab === "chart" && (
-              <div
-                style={{
-                  background: "var(--w97-window)",
-                  border: "1px solid var(--w97-border)",
-                  padding: 16,
-                }}
-              >
+              <div className="u-bg-window u-border-default u-p-16">
                 <h3 style={{ margin: "0 0 12px", fontSize: 13 }}>
-                  💰 Revenue by Candidate (Top 10)
+                  ?? Revenue by Candidate (Top 10)
                 </h3>
                 {topCands.length === 0 && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "var(--w97-text-secondary)",
-                      padding: 20,
-                    }}
-                  >
+                  <div className="u-fs-12 u-color-secondary u-p-20">
                     No financial data available.
                   </div>
                 )}
@@ -2952,7 +2825,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   const pct = (c.totalBilled / maxBilled) * 100;
                   const margin = c.totalBilled - c.totalPay;
                   return (
-                    <div key={c.id} style={{ marginBottom: 8 }}>
+                    <div key={c.id} className="u-mb-8">
                       <div
                         style={{
                           display: "flex",
@@ -2961,10 +2834,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                           marginBottom: 2,
                         }}
                       >
-                        <span style={{ fontWeight: 600 }}>
-                          {c.candidateName}
-                        </span>
-                        <span style={{ fontFamily: "monospace" }}>
+                        <span className="u-fw-600">{c.candidateName}</span>
+                        <span className="u-font-mono">
                           {fmtC(c.totalBilled)}{" "}
                           <span
                             style={{ color: "var(--w97-teal)", fontSize: 10 }}
@@ -2998,7 +2869,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               </div>
             )}
 
-            {/* Graph View — margin vs billed donut */}
+            {/* Graph View � margin vs billed donut */}
             {finViewTab === "graph" && (
               <div
                 style={{
@@ -3011,7 +2882,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 }}
               >
                 {/* Donut: Paid vs Outstanding */}
-                <div style={{ textAlign: "center" }}>
+                <div className="u-text-center">
                   <h3 style={{ margin: "0 0 12px", fontSize: 13 }}>
                     Payment Status
                   </h3>
@@ -3057,18 +2928,18 @@ const MarketerDashboard: React.FC<Props> = () => {
                       paid
                     </text>
                   </svg>
-                  <div style={{ fontSize: 11, marginTop: 6 }}>
-                    <span className="matchdb-legend-green">■</span> Paid:{" "}
+                  <div className="u-fs-11 u-mt-6">
+                    <span className="matchdb-legend-green">�</span> Paid:{" "}
                     {fmtC(totals.amountPaid)} &nbsp;
                     <span style={{ color: "var(--w97-border-light)" }}>
-                      ■
+                      �
                     </span>{" "}
                     Outstanding: {fmtC(Math.max(0, totals.amountPending))}
                   </div>
                 </div>
 
                 {/* Donut: Margin vs Pay */}
-                <div style={{ textAlign: "center" }}>
+                <div className="u-text-center">
                   <h3 style={{ margin: "0 0 12px", fontSize: 13 }}>
                     Margin vs Pay
                   </h3>
@@ -3121,10 +2992,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                             margin
                           </text>
                         </svg>
-                        <div style={{ fontSize: 11, marginTop: 6 }}>
-                          <span className="matchdb-legend-teal">■</span> Margin:{" "}
+                        <div className="u-fs-11 u-mt-6">
+                          <span className="matchdb-legend-teal">�</span> Margin:{" "}
                           {fmtC(grandMargin)} &nbsp;
-                          <span style={{ color: "#e0f2f1" }}>■</span> Pay:{" "}
+                          <span style={{ color: "#e0f2f1" }}>�</span> Pay:{" "}
                           {fmtC(totals.totalPay)}
                         </div>
                       </>
@@ -3219,7 +3090,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // ── Project Summary View ────────────────────────────────────────────────────
+  // -- Project Summary View ----------------------------------------------------
 
   function renderProjectSummaryView() {
     const projects = companySummary?.projects ?? [];
@@ -3232,39 +3103,25 @@ const MarketerDashboard: React.FC<Props> = () => {
             day: "numeric",
             year: "numeric",
           })
-        : "—";
+        : "�";
 
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
+      <div className="u-flex u-flex-col-dir u-flex-1 u-min-h-0">
         {summaryLoading && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: 40,
-              fontSize: 13,
-              color: "var(--w97-text-secondary)",
-            }}
-          >
-            Loading project summary…
+          <div className="u-text-center u-p-40 u-fs-13 u-color-secondary">
+            Loading project summary�
           </div>
         )}
 
         {!summaryLoading && (
           <DataTable<CompanySummaryProject>
-            title="Project Summary — All Candidates"
-            titleIcon="📋"
-            serialNumberColumnWidth="2%"
+            title="Project Summary � All Candidates"
+            titleIcon="??"
+            serialNumberColumnWidth="32px"
             titleExtra={
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <span style={{ fontSize: 10, opacity: 0.7 }}>
-                  {projects.length} total ·{" "}
+              <div className="u-flex u-gap-6 u-items-center">
+                <span className="u-fs-10 u-opacity-70">
+                  {projects.length} total �{" "}
                   {projects.filter((p) => p.isActive).length} active
                 </span>
                 <Button
@@ -3273,7 +3130,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   onClick={() => handleDownloadAll("project", "pdf")}
                   title="Download as CSV"
                 >
-                  ⬇ CSV
+                  ? CSV
                 </Button>
                 <Button
                   variant="download"
@@ -3281,7 +3138,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   onClick={() => handleDownloadAll("project", "excel")}
                   title="Download as Excel"
                 >
-                  ⬇ Excel
+                  ? Excel
                 </Button>
               </div>
             }
@@ -3295,19 +3152,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                   header: "Candidate",
                   width: "14%",
                   render: (p) => (
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 6 }}
-                    >
+                    <div className="u-flex u-items-center u-gap-6">
                       <button
                         type="button"
-                        style={{
-                          cursor: "pointer",
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          textAlign: "left",
-                          flex: 1,
-                        }}
+                        className="u-cursor-pointer u-bg-none u-border-none u-p-0 u-text-left u-flex-1"
                         onClick={() => {
                           setPrevView("project-summary");
                           navParams({
@@ -3317,21 +3165,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                           });
                         }}
                       >
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            color: "var(--w97-blue)",
-                            textDecoration: "underline",
-                          }}
-                        >
+                        <div className="u-fw-600 u-color-blue u-text-underline">
                           {p.candidateName}
                         </div>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            color: "var(--w97-text-secondary)",
-                          }}
-                        >
+                        <div className="u-fs-10 u-color-secondary">
                           {p.candidateEmail}
                         </div>
                       </button>
@@ -3351,19 +3188,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                   width: "16%",
                   render: (p) => (
                     <>
-                      <div style={{ fontWeight: 600 }}>
-                        {p.jobTitle || "Untitled"}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          color: "var(--w97-text-secondary)",
-                        }}
-                      >
+                      <div className="u-fw-600">{p.jobTitle || "Untitled"}</div>
+                      <div className="u-fs-10 u-color-secondary">
                         {p.jobType}
-                        {p.jobSubType ? ` · ${p.jobSubType.toUpperCase()}` : ""}
+                        {p.jobSubType ? ` � ${p.jobSubType.toUpperCase()}` : ""}
                         {p.financials?.stateCode
-                          ? ` · ${p.financials.stateCode}`
+                          ? ` � ${p.financials.stateCode}`
                           : ""}
                       </div>
                     </>
@@ -3374,7 +3204,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   header: "Client (Vendor)",
                   width: "14%",
                   render: (p) => (
-                    <span style={{ fontSize: 11 }}>{p.vendorEmail || "—"}</span>
+                    <span className="u-fs-11">{p.vendorEmail || "�"}</span>
                   ),
                 },
                 {
@@ -3382,7 +3212,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   header: "Location",
                   width: "10%",
                   render: (p) => (
-                    <span style={{ fontSize: 11 }}>{p.location || "—"}</span>
+                    <span className="u-fs-11">{p.location || "�"}</span>
                   ),
                 },
                 {
@@ -3395,18 +3225,18 @@ const MarketerDashboard: React.FC<Props> = () => {
                         p.isActive ? "ov-proj-active" : "ov-proj-closed"
                       }`}
                     >
-                      {p.isActive ? "● Active" : "✓ Closed"}
+                      {p.isActive ? "? Active" : "? Closed"}
                     </span>
                   ),
                 },
                 {
                   key: "dates",
-                  header: "Start — End",
+                  header: "Start � End",
                   width: "12%",
                   render: (p) => (
-                    <span style={{ fontSize: 10, fontFamily: "monospace" }}>
+                    <span className="u-fs-10 u-font-mono">
                       {fmtD(p.financials?.projectStart ?? null)}
-                      {" — "}
+                      {" � "}
                       {fmtD(p.financials?.projectEnd ?? null)}
                     </span>
                   ),
@@ -3417,17 +3247,17 @@ const MarketerDashboard: React.FC<Props> = () => {
                   align: "right" as const,
                   render: (p) =>
                     p.financials ? (
-                      <span style={{ fontFamily: "monospace", fontSize: 11 }}>
-                        <span style={{ color: "var(--pf-green)" }}>
+                      <span className="u-font-mono u-fs-11">
+                        <span className="u-color-pf-green">
                           ${p.financials.billRate}
                         </span>
                         {" / "}
-                        <span style={{ color: "var(--pf-blue)" }}>
+                        <span className="u-color-pf-blue">
                           ${p.financials.payRate}
                         </span>
                       </span>
                     ) : (
-                      <span style={{ color: "var(--w97-border-dark)" }}>—</span>
+                      <span className="u-color-border-dark">�</span>
                     ),
                 },
                 {
@@ -3436,7 +3266,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   align: "right" as const,
                   render: (p) => (
                     <span className="ov-mono ov-val-green">
-                      {p.financials ? fmtC(p.financials.totalBilled) : "—"}
+                      {p.financials ? fmtC(p.financials.totalBilled) : "�"}
                     </span>
                   ),
                 },
@@ -3446,7 +3276,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   align: "right" as const,
                   render: (p) => (
                     <span className="ov-mono ov-val-blue">
-                      {p.financials ? fmtC(p.financials.netPayable) : "—"}
+                      {p.financials ? fmtC(p.financials.netPayable) : "�"}
                     </span>
                   ),
                 },
@@ -3456,7 +3286,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   align: "right" as const,
                   render: (p) => (
                     <span className="ov-mono ov-val-green">
-                      {p.financials ? fmtC(p.financials.amountPaid) : "—"}
+                      {p.financials ? fmtC(p.financials.amountPaid) : "�"}
                     </span>
                   ),
                 },
@@ -3466,7 +3296,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   align: "right" as const,
                   render: (p) => {
                     if (!p.financials)
-                      return <span className="ov-mono">—</span>;
+                      return <span className="ov-mono">�</span>;
                     const bal = Math.max(0, p.financials.amountPending);
                     return (
                       <span
@@ -3491,7 +3321,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // ── Job Positions Summary View ──────────────────────────────────────────────
+  // -- Job Positions Summary View ----------------------------------------------
 
   function renderJobPositionsSummaryView() {
     const domains = companySummary?.domainCounts ?? [];
@@ -3525,36 +3355,22 @@ const MarketerDashboard: React.FC<Props> = () => {
     return (
       <div>
         {summaryLoading && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: 40,
-              fontSize: 13,
-              color: "var(--w97-text-secondary)",
-            }}
-          >
-            Loading job positions summary…
+          <div className="u-text-center u-p-40 u-fs-13 u-color-secondary">
+            Loading job positions summary�
           </div>
         )}
 
         {!summaryLoading && (
           <>
             {/* Toolbar */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 6,
-                marginBottom: 10,
-              }}
-            >
+            <div className="u-flex u-justify-end u-gap-6 u-mb-10">
               <Button
                 variant="download"
                 size="xs"
                 onClick={() => handleDownloadAll("positions", "pdf")}
                 title="Download as CSV"
               >
-                ⬇ CSV
+                ? CSV
               </Button>
               <Button
                 variant="download"
@@ -3562,7 +3378,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 onClick={() => handleDownloadAll("positions", "excel")}
                 title="Download as Excel"
               >
-                ⬇ Excel
+                ? Excel
               </Button>
             </div>
 
@@ -3598,7 +3414,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             </div>
 
             {/* Two columns: Domain list + Skills */}
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            <div className="u-flex u-gap-14 u-flex-wrap">
               {/* Resources by Domain / Role */}
               <div
                 style={{
@@ -3610,7 +3426,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 }}
               >
                 <h3 style={{ margin: "0 0 12px", fontSize: 13 }}>
-                  👥 Resources by Domain / Role
+                  ?? Resources by Domain / Role
                 </h3>
                 {domains.length === 0 && (
                   <div
@@ -3633,7 +3449,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     )}%`,
                   };
                   return (
-                    <div key={d.domain} style={{ marginBottom: 6 }}>
+                    <div key={d.domain} className="u-mb-6">
                       <div
                         style={{
                           display: "flex",
@@ -3644,16 +3460,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                         }}
                       >
                         <span style={{ fontWeight: 500 }}>{d.domain}</span>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <span
-                            style={{ fontFamily: "monospace", fontWeight: 600 }}
-                          >
+                        <div className="u-flex u-items-center u-gap-6">
+                          <span className="u-font-mono u-fw-600">
                             {d.count}{" "}
                             <span
                               style={{
@@ -3717,7 +3525,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   }}
                 >
                   <h3 style={{ margin: "0 0 10px", fontSize: 13 }}>
-                    📊 By Job Type
+                    ?? By Job Type
                   </h3>
                   {typeCounts.map((t) => (
                     <div
@@ -3735,22 +3543,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                       >
                         {t.type}
                       </span>
-                      <span
-                        style={{ fontFamily: "monospace", fontWeight: 600 }}
-                      >
-                        {t.count}
-                      </span>
+                      <span className="u-font-mono u-fw-600">{t.count}</span>
                     </div>
                   ))}
                   {typeCounts.length === 0 && (
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "var(--w97-text-secondary)",
-                      }}
-                    >
-                      No data.
-                    </div>
+                    <div className="u-fs-11 u-color-secondary">No data.</div>
                   )}
                 </div>
 
@@ -3763,7 +3560,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   }}
                 >
                   <h3 style={{ margin: "0 0 10px", fontSize: 13 }}>
-                    🎯 Top Skills in Roster
+                    ?? Top Skills in Roster
                   </h3>
                   <div className="u-flex-wrap u-gap-4">
                     {topSkills.map((s) => (
@@ -3779,16 +3576,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                         }}
                       >
                         {s.skill}{" "}
-                        <span style={{ opacity: 0.7 }}>({s.count})</span>
+                        <span className="u-opacity-70">({s.count})</span>
                       </span>
                     ))}
                     {topSkills.length === 0 && (
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: "var(--w97-text-secondary)",
-                        }}
-                      >
+                      <span className="u-fs-11 u-color-secondary">
                         No skills data.
                       </span>
                     )}
@@ -3802,7 +3594,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // ── Immigration View ───────────────────────────────────────────────────────
+  // -- Immigration View -------------------------------------------------------
 
   function renderImmigrationView() {
     const immigrationData = buildImmigrationData(companyCandidates);
@@ -3829,16 +3621,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 100,
         render: (r) => (
           <button
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--w97-blue)",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 12,
-              padding: 0,
-              textDecoration: "underline",
-            }}
+            className="u-bg-none u-border-none u-color-blue u-cursor-pointer u-fw-600 u-fs-12 u-p-0 u-text-underline"
             onClick={() => {
               setPrevView("immigration");
               navParams({
@@ -3892,21 +3675,9 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Current Status",
         width: "12%",
         skeletonWidth: 80,
-        render: (r) => {
-          let color = "var(--w97-blue)";
-          if (
-            r.workAuthorization === "Active" ||
-            r.workAuthorization === "Valid"
-          )
-            color = "var(--w97-green)";
-          else if (r.workAuthorization === "Expiring Soon")
-            color = "var(--w97-orange)";
-          return (
-            <span style={{ fontSize: 11, fontWeight: 600, color }}>
-              {r.workAuthorization}
-            </span>
-          );
-        },
+        render: (r) => (
+          <span className="u-fs-11 u-fw-600">{r.workAuthorization}</span>
+        ),
       },
       {
         key: "pendingApplications",
@@ -3972,9 +3743,9 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 80,
         render: (r) => {
           if (r.dependants.length === 0)
-            return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
+            return <span style={{ color: "#aaa", fontSize: 11 }}>�</span>;
           return (
-            <span style={{ fontSize: 11 }}>
+            <span className="u-fs-11">
               {r.dependants.map((d) => d.workAuthorization).join(", ")}
             </span>
           );
@@ -3983,7 +3754,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     ];
 
     return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div className="u-flex u-flex-col-dir u-h-full">
         {/* Search toolbar */}
         <div
           style={{
@@ -3994,7 +3765,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           }}
         >
           <Input
-            placeholder="Search by name, email, or visa status…"
+            placeholder="Search by name, email, or visa status�"
             value={immigrationSearch}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setImmigrationSearch(e.target.value)
@@ -4006,13 +3777,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               Clear
             </Button>
           )}
-          <span
-            style={{
-              fontSize: 11,
-              color: "var(--w97-text-secondary)",
-              marginLeft: "auto",
-            }}
-          >
+          <span className="u-fs-11 u-color-secondary u-ml-auto">
             {filtered.length} candidate{filtered.length === 1 ? "" : "s"}
           </span>
         </div>
@@ -4024,13 +3789,13 @@ const MarketerDashboard: React.FC<Props> = () => {
           paginated
           emptyMessage="No immigration records found."
           title="Immigration Tracking"
-          titleIcon="🛂"
+          titleIcon="??"
         />
       </div>
     );
   }
 
-  // ── Immigration Detail View ────────────────────────────────────────────────
+  // -- Immigration Detail View ------------------------------------------------
 
   function renderImmigrationDetailView() {
     const immigrationData = buildImmigrationData(companyCandidates);
@@ -4040,20 +3805,13 @@ const MarketerDashboard: React.FC<Props> = () => {
 
     if (!record) {
       return (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 60,
-            color: "var(--w97-text-secondary)",
-            fontSize: 13,
-          }}
-        >
+        <div className="u-text-center u-p-60 u-color-secondary u-fs-13">
           Candidate not found.{" "}
           <Button
             size="sm"
             onClick={() => navParams({ view: "immigration", cid: null })}
           >
-            ← Back
+            ? Back
           </Button>
         </div>
       );
@@ -4078,7 +3836,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     const visaHistory = [
       {
         date: fmtDate(joinDate.toISOString()),
-        event: `Joined — Initial ${record.immigrationStatus} approved`,
+        event: `Joined � Initial ${record.immigrationStatus} approved`,
         status: "completed" as const,
       },
       ...(record.immigrationStatus === "H-1B"
@@ -4087,7 +3845,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               date: fmtDate(
                 new Date(joinDate.getTime() + 365 * 24 * 3600000).toISOString(),
               ),
-              event: "H-1B Amendment — New worksite",
+              event: "H-1B Amendment � New worksite",
               status: "completed" as const,
             },
             {
@@ -4118,9 +3876,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Name",
         width: "25%",
         skeletonWidth: 80,
-        render: (d) => (
-          <span style={{ fontWeight: 600, fontSize: 12 }}>{d.name}</span>
-        ),
+        render: (d) => <span className="u-fw-600 u-fs-12">{d.name}</span>,
       },
       {
         key: "relationship",
@@ -4134,16 +3890,9 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Work Authorization",
         width: "22%",
         skeletonWidth: 80,
-        render: (d) => {
-          let color = "var(--w97-orange)";
-          if (d.workAuthorization === "H-4 EAD") color = "var(--w97-green)";
-          else if (d.workAuthorization === "N/A") color = "#aaa";
-          return (
-            <span style={{ fontWeight: 600, color, fontSize: 11 }}>
-              {d.workAuthorization}
-            </span>
-          );
-        },
+        render: (d) => (
+          <span className="u-fw-600 u-fs-11">{d.workAuthorization}</span>
+        ),
       },
       {
         key: "pendingApplications",
@@ -4165,18 +3914,11 @@ const MarketerDashboard: React.FC<Props> = () => {
     ];
 
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100%",
-          gap: 16,
-        }}
-      >
+      <div className="u-flex u-flex-col-dir u-h-full u-gap-16">
         {/* Top Bar */}
         <Toolbar
           left={
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="u-flex u-items-center u-gap-10">
               <Button
                 size="sm"
                 onClick={() =>
@@ -4187,7 +3929,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   })
                 }
               >
-                ← Back
+                ? Back
               </Button>
               <h2
                 style={{
@@ -4197,7 +3939,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   color: "var(--w97-titlebar-from)",
                 }}
               >
-                🛂 {record.candidateName}
+                ?? {record.candidateName}
               </h2>
             </div>
           }
@@ -4209,13 +3951,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
         >
           {/* Immigration Status Card */}
-          <div
-            style={{
-              background: "var(--w97-window)",
-              border: "1px solid var(--w97-border)",
-              padding: 16,
-            }}
-          >
+          <div className="u-bg-window u-border-default u-p-16">
             <h3
               style={{
                 margin: "0 0 12px",
@@ -4223,7 +3959,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 color: "var(--w97-titlebar-from)",
               }}
             >
-              📋 Immigration Information
+              ?? Immigration Information
             </h3>
             <div
               style={{
@@ -4259,23 +3995,13 @@ const MarketerDashboard: React.FC<Props> = () => {
               >
                 {record.pendingApplications}
               </span>
-              <span
-                style={{ fontWeight: 600, color: "var(--w97-text-secondary)" }}
-              >
-                Dependants:
-              </span>
+              <span className="u-fw-600 u-color-secondary">Dependants:</span>
               <span>{record.dependants.length}</span>
             </div>
           </div>
 
           {/* Visa Timeline Card */}
-          <div
-            style={{
-              background: "var(--w97-window)",
-              border: "1px solid var(--w97-border)",
-              padding: 16,
-            }}
-          >
+          <div className="u-bg-window u-border-default u-p-16">
             <h3
               style={{
                 margin: "0 0 12px",
@@ -4283,9 +4009,9 @@ const MarketerDashboard: React.FC<Props> = () => {
                 color: "var(--w97-titlebar-from)",
               }}
             >
-              📅 Visa History
+              ?? Visa History
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="u-flex u-flex-col-dir u-gap-8">
               {visaHistory.map((entry) => (
                 <div
                   key={`${entry.date}-${entry.event}`}
@@ -4310,10 +4036,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                     }}
                   />
                   <div>
-                    <div style={{ fontWeight: 600 }}>{entry.date}</div>
-                    <div style={{ color: "var(--w97-text-secondary)" }}>
-                      {entry.event}
-                    </div>
+                    <div className="u-fw-600">{entry.date}</div>
+                    <div className="u-color-secondary">{entry.event}</div>
                   </div>
                 </div>
               ))}
@@ -4322,13 +4046,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         </div>
 
         {/* Dependants Table */}
-        <div
-          style={{
-            background: "var(--w97-window)",
-            border: "1px solid var(--w97-border)",
-            padding: 16,
-          }}
-        >
+        <div className="u-bg-window u-border-default u-p-16">
           <h3
             style={{
               margin: "0 0 12px",
@@ -4336,7 +4054,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               color: "var(--w97-titlebar-from)",
             }}
           >
-            👨‍👩‍👧‍👦 Dependants ({record.dependants.length})
+            ??????????? Dependants ({record.dependants.length})
           </h3>
           {record.dependants.length === 0 ? (
             <div
@@ -4362,7 +4080,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // ── Vendor Summary & Detail Views ──────────────────────────────────────────
+  // -- Vendor Summary & Detail Views ------------------------------------------
 
   interface VendorRow {
     vendor: string;
@@ -4468,24 +4186,10 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
 
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
+      <div className="u-flex u-flex-col-dir u-flex-1 u-min-h-0">
         {summaryLoading && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: 40,
-              fontSize: 13,
-              color: "var(--w97-text-secondary)",
-            }}
-          >
-            Loading vendor summary…
+          <div className="u-text-center u-p-40 u-fs-13 u-color-secondary">
+            Loading vendor summary�
           </div>
         )}
 
@@ -4528,7 +4232,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     grandPending > 0 ? "ov-kv-orange" : "ov-kv-green"
                   }`}
                 >
-                  {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
+                  {grandPending > 0 ? fmtC(grandPending) : "? Settled"}
                 </span>
               </div>
               <div className="ov-kpi-div" />
@@ -4542,13 +4246,13 @@ const MarketerDashboard: React.FC<Props> = () => {
 
             {/* Table */}
             <DataTable<VendorRow>
-              title={`Vendors — ${vendorRows.length} total`}
-              titleIcon="🏢"
+              title={`Vendors � ${vendorRows.length} total`}
+              titleIcon="??"
               className="matchdb-auto-height"
               titleExtra={
                 <input
                   type="text"
-                  placeholder="🔍 Search vendor…"
+                  placeholder="?? Search vendor�"
                   value={vendorSearch}
                   onChange={(e) => setVendorSearch(e.target.value)}
                   style={{
@@ -4569,37 +4273,19 @@ const MarketerDashboard: React.FC<Props> = () => {
                     render: (r) => (
                       <button
                         type="button"
-                        style={{
-                          cursor: "pointer",
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          textAlign: "left",
-                          font: "inherit",
-                        }}
+                        className="u-cursor-pointer u-bg-none u-border-none u-p-0 u-text-left u-font-inherit"
                         onClick={() => {
                           openVendorDetail(r.vendor, "vendor-summary");
                         }}
                       >
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            color: "var(--w97-blue)",
-                            textDecoration: "underline",
-                          }}
-                        >
+                        <div className="u-fw-600 u-color-blue u-text-underline">
                           {r.companyName ||
                             (r.vendor.includes("@")
                               ? r.vendor.split("@")[1]?.split(".")[0] ||
                                 r.vendor
                               : r.vendor)}
                         </div>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            color: "var(--w97-text-secondary)",
-                          }}
-                        >
+                        <div className="u-fs-10 u-color-secondary">
                           {r.vendor}
                         </div>
                       </button>
@@ -4623,7 +4309,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     align: "center" as const,
                     render: (r) => (
                       <span
-                        style={{ fontWeight: 600, color: "var(--w97-blue)" }}
+                        className="u-fw-600 u-color-blue"
                         title={r.clients.join(", ")}
                       >
                         {r.clients.length}
@@ -4660,7 +4346,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           r.pending > 0 ? "ov-val-orange" : "ov-val-green"
                         }`}
                       >
-                        {r.pending > 0 ? fmtC(r.pending) : "✓ Settled"}
+                        {r.pending > 0 ? fmtC(r.pending) : "? Settled"}
                       </span>
                     ),
                   },
@@ -4683,33 +4369,23 @@ const MarketerDashboard: React.FC<Props> = () => {
                 vendorRows.length > 1 ? (
                   <tr className="ov-pt-foot">
                     <td className="ov-pt-tf" colSpan={3}>
-                      TOTAL — {vendorRows.length} vendors · {totalCandidates}{" "}
+                      TOTAL � {vendorRows.length} vendors � {totalCandidates}{" "}
                       candidates
                     </td>
-                    <td
-                      className="ov-pt-tf ov-mono ov-val-green"
-                      style={{ textAlign: "right" }}
-                    >
+                    <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                       {fmtC(grandRevenue)}
                     </td>
-                    <td
-                      className="ov-pt-tf ov-mono ov-val-green"
-                      style={{ textAlign: "right" }}
-                    >
+                    <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                       {fmtC(grandCredited)}
                     </td>
                     <td
                       className={`ov-pt-tf ov-mono ${
                         grandPending > 0 ? "ov-val-orange" : "ov-val-green"
-                      }`}
-                      style={{ textAlign: "right" }}
+                      } u-text-right`}
                     >
-                      {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
+                      {grandPending > 0 ? fmtC(grandPending) : "? Settled"}
                     </td>
-                    <td
-                      className="ov-pt-tf ov-mono"
-                      style={{ textAlign: "right" }}
-                    >
+                    <td className="ov-pt-tf ov-mono u-text-right">
                       {grandHours.toLocaleString()}
                     </td>
                   </tr>
@@ -4729,21 +4405,14 @@ const MarketerDashboard: React.FC<Props> = () => {
 
     if (!row) {
       return (
-        <div style={{ padding: 40, textAlign: "center", fontSize: 13 }}>
+        <div className="u-p-40 u-text-center u-fs-13">
           Vendor not found.{" "}
           <button
             type="button"
-            style={{
-              color: "var(--w97-blue)",
-              background: "none",
-              border: "none",
-              textDecoration: "underline",
-              cursor: "pointer",
-              font: "inherit",
-            }}
+            className="u-color-blue u-bg-none u-border-none u-text-underline u-cursor-pointer u-font-inherit"
             onClick={() => navigateTo("vendor-summary")}
           >
-            ← Back to Vendors
+            ? Back to Vendors
           </button>
         </div>
       );
@@ -4756,23 +4425,9 @@ const MarketerDashboard: React.FC<Props> = () => {
         : row.vendor);
 
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
+      <div className="u-flex u-flex-col-dir u-flex-1 u-min-h-0">
         {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 14,
-          }}
-        >
+        <div className="u-flex u-items-center u-gap-10 u-mb-14">
           <button
             type="button"
             style={{
@@ -4786,13 +4441,11 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
             onClick={() => navigateTo("vendor-summary")}
           >
-            ← Back
+            ? Back
           </button>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>{vendorLabel}</div>
-            <div style={{ fontSize: 11, color: "var(--w97-text-secondary)" }}>
-              {row.vendor}
-            </div>
+            <div className="u-fw-700 u-fs-15">{vendorLabel}</div>
+            <div className="u-fs-11 u-color-secondary">{row.vendor}</div>
           </div>
         </div>
 
@@ -4833,7 +4486,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 row.pending > 0 ? "ov-kv-orange" : "ov-kv-green"
               }`}
             >
-              {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+              {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
             </span>
           </div>
           <div className="ov-kpi-div" />
@@ -4847,8 +4500,8 @@ const MarketerDashboard: React.FC<Props> = () => {
 
         {/* Candidates table */}
         <DataTable<(typeof row.candidates)[number]>
-          title={`Candidates with ${vendorLabel} — ${row.candidateCount} total`}
-          titleIcon="👤"
+          title={`Candidates with ${vendorLabel} � ${row.candidateCount} total`}
+          titleIcon="??"
           className="matchdb-auto-height"
           columns={
             [
@@ -4859,14 +4512,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 render: (c) => (
                   <button
                     type="button"
-                    style={{
-                      cursor: "pointer",
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      textAlign: "left",
-                      font: "inherit",
-                    }}
+                    className="u-cursor-pointer u-bg-none u-border-none u-p-0 u-text-left u-font-inherit"
                     onClick={() => {
                       setPrevView("vendor-detail");
                       navParams({
@@ -4876,35 +4522,22 @@ const MarketerDashboard: React.FC<Props> = () => {
                       });
                     }}
                   >
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color: "var(--w97-blue)",
-                        textDecoration: "underline",
-                      }}
-                    >
+                    <div className="u-fw-600 u-color-blue u-text-underline">
                       {c.name}
                     </div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        color: "var(--w97-text-secondary)",
-                      }}
-                    >
-                      {c.role}
-                    </div>
+                    <div className="u-fs-10 u-color-secondary">{c.role}</div>
                   </button>
                 ),
               },
               {
                 key: "email",
                 header: "Email",
-                render: (c) => <span style={{ fontSize: 11 }}>{c.email}</span>,
+                render: (c) => <span className="u-fs-11">{c.email}</span>,
               },
               {
                 key: "client",
                 header: "Client",
-                render: (c) => <span style={{ fontSize: 11 }}>{c.client}</span>,
+                render: (c) => <span className="u-fs-11">{c.client}</span>,
               },
               {
                 key: "hours",
@@ -4946,7 +4579,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       c.amountPending > 0 ? "ov-val-orange" : "ov-val-green"
                     }`}
                   >
-                    {c.amountPending > 0 ? fmtC(c.amountPending) : "✓ Settled"}
+                    {c.amountPending > 0 ? fmtC(c.amountPending) : "? Settled"}
                   </span>
                 ),
               },
@@ -4960,30 +4593,23 @@ const MarketerDashboard: React.FC<Props> = () => {
             row.candidates.length > 1 ? (
               <tr className="ov-pt-foot">
                 <td className="ov-pt-tf" colSpan={3}>
-                  TOTAL — {row.candidateCount} candidates
+                  TOTAL � {row.candidateCount} candidates
                 </td>
-                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>
+                <td className="ov-pt-tf ov-mono u-text-right">
                   {row.hours.toLocaleString()}
                 </td>
-                <td
-                  className="ov-pt-tf ov-mono ov-val-green"
-                  style={{ textAlign: "right" }}
-                >
+                <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                   {fmtC(row.revenue)}
                 </td>
-                <td
-                  className="ov-pt-tf ov-mono ov-val-green"
-                  style={{ textAlign: "right" }}
-                >
+                <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                   {fmtC(row.credited)}
                 </td>
                 <td
                   className={`ov-pt-tf ov-mono ${
                     row.pending > 0 ? "ov-val-orange" : "ov-val-green"
-                  }`}
-                  style={{ textAlign: "right" }}
+                  } u-text-right`}
                 >
-                  {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+                  {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
                 </td>
               </tr>
             ) : undefined
@@ -4993,7 +4619,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // ── Client Summary & Detail Views ──────────────────────────────────────────
+  // -- Client Summary & Detail Views ------------------------------------------
 
   interface ClientRow {
     client: string;
@@ -5144,24 +4770,10 @@ const MarketerDashboard: React.FC<Props> = () => {
     };
 
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
+      <div className="u-flex u-flex-col-dir u-flex-1 u-min-h-0">
         {summaryLoading && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: 40,
-              fontSize: 13,
-              color: "var(--w97-text-secondary)",
-            }}
-          >
-            Loading client summary…
+          <div className="u-text-center u-p-40 u-fs-13 u-color-secondary">
+            Loading client summary�
           </div>
         )}
 
@@ -5204,7 +4816,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     grandPending > 0 ? "ov-kv-orange" : "ov-kv-green"
                   }`}
                 >
-                  {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
+                  {grandPending > 0 ? fmtC(grandPending) : "? Settled"}
                 </span>
               </div>
               <div className="ov-kpi-div" />
@@ -5218,12 +4830,12 @@ const MarketerDashboard: React.FC<Props> = () => {
 
             {/* Table */}
             <DataTable<ClientRow>
-              title={`Clients — ${clientRows.length} total`}
-              titleIcon="🏛️"
+              title={`Clients � ${clientRows.length} total`}
+              titleIcon="???"
               titleExtra={
                 <input
                   type="text"
-                  placeholder="🔍 Search client…"
+                  placeholder="?? Search client�"
                   value={clientSearch}
                   onChange={(e) => setClientSearch(e.target.value)}
                   style={{
@@ -5244,23 +4856,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                     render: (r) => (
                       <button
                         type="button"
-                        style={{
-                          cursor: "pointer",
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          textAlign: "left",
-                          font: "inherit",
-                        }}
+                        className="u-cursor-pointer u-bg-none u-border-none u-p-0 u-text-left u-font-inherit"
                         onClick={() => goClientTab(r.client, "candidates")}
                       >
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            color: "var(--w97-blue)",
-                            textDecoration: "underline",
-                          }}
-                        >
+                        <div className="u-fw-600 u-color-blue u-text-underline">
                           {r.client}
                         </div>
                       </button>
@@ -5290,16 +4889,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           navigateTo("vendor-summary");
                         }}
                         title={r.vendors.join(", ")}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          cursor: "pointer",
-                          font: "inherit",
-                          fontWeight: 600,
-                          color: "var(--w97-blue)",
-                          textDecoration: "underline dotted",
-                        }}
+                        className="u-bg-none u-border-none u-p-0 u-cursor-pointer u-font-inherit u-fw-600 u-color-blue u-text-underline-dotted"
                       >
                         {r.vendors.length}
                       </button>
@@ -5316,18 +4906,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                     header: "Location",
                     render: (r) =>
                       r.locations.length ? (
-                        <span style={{ fontSize: 11 }}>
+                        <span className="u-fs-11">
                           {r.locations.join(", ")}
                         </span>
                       ) : (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            color: "var(--w97-text-secondary)",
-                          }}
-                        >
-                          —
-                        </span>
+                        <span className="u-fs-11 u-color-secondary">�</span>
                       ),
                   },
                   {
@@ -5336,20 +4919,13 @@ const MarketerDashboard: React.FC<Props> = () => {
                     render: (r) => {
                       if (!r.pocContacts.length) {
                         return (
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: "var(--w97-text-secondary)",
-                            }}
-                          >
-                            —
-                          </span>
+                          <span className="u-fs-11 u-color-secondary">�</span>
                         );
                       }
                       if (r.pocContacts.length === 1) {
                         return (
                           <span
-                            style={{ fontSize: 11 }}
+                            className="u-fs-11"
                             title={r.pocContacts[0].name}
                           >
                             {r.pocContacts[0].email}
@@ -5362,16 +4938,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                             r.pocContacts.length - 1
                           }`}
                         >
-                          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                          <div className="u-fw-600 u-mb-4">
                             Points of Contact
                           </div>
                           {r.pocContacts.map((pc) => (
                             <div key={pc.email} style={{ padding: "2px 0" }}>
-                              <span style={{ fontWeight: 600 }}>{pc.name}</span>
+                              <span className="u-fw-600">{pc.name}</span>
                               <br />
-                              <span
-                                style={{ color: "var(--w97-text-secondary)" }}
-                              >
+                              <span className="u-color-secondary">
                                 {pc.email}
                               </span>
                             </div>
@@ -5391,24 +4965,13 @@ const MarketerDashboard: React.FC<Props> = () => {
                           setJobSearch(r.client);
                           navigateTo("vendor-posted");
                         }}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          cursor: "pointer",
-                          font: "inherit",
-                          fontSize: 11,
-                          textDecoration: "underline dotted",
-                          color: "inherit",
-                        }}
+                        className="u-bg-none u-border-none u-p-0 u-cursor-pointer u-font-inherit u-fs-11 u-text-underline-dotted u-color-inherit"
                       >
-                        <span
-                          style={{ color: "var(--w97-green)", fontWeight: 600 }}
-                        >
+                        <span className="u-color-green u-fw-600">
                           {r.activeOpenings}
                         </span>
-                        {" active · "}
-                        <span style={{ color: "var(--w97-text-secondary)" }}>
+                        {" active � "}
+                        <span className="u-color-secondary">
                           {r.closedOpenings}
                         </span>
                         {" closed"}
@@ -5422,15 +4985,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     render: (r) => (
                       <button
                         onClick={() => goClientTab(r.client, "financials")}
-                        className="ov-mono ov-val-green"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          cursor: "pointer",
-                          textDecoration: "underline dotted",
-                          color: "inherit",
-                        }}
+                        className="ov-mono ov-val-green u-bg-none u-border-none u-p-0 u-cursor-pointer u-text-underline-dotted u-color-inherit"
                       >
                         {fmtC(r.revenue)}
                       </button>
@@ -5443,15 +4998,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     render: (r) => (
                       <button
                         onClick={() => goClientTab(r.client, "financials")}
-                        className="ov-mono ov-val-green"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          cursor: "pointer",
-                          textDecoration: "underline dotted",
-                          color: "inherit",
-                        }}
+                        className="ov-mono ov-val-green u-bg-none u-border-none u-p-0 u-cursor-pointer u-text-underline-dotted u-color-inherit"
                       >
                         {fmtC(r.credited)}
                       </button>
@@ -5466,17 +5013,9 @@ const MarketerDashboard: React.FC<Props> = () => {
                         onClick={() => goClientTab(r.client, "financials")}
                         className={`ov-mono ${
                           r.pending > 0 ? "ov-val-orange" : "ov-val-green"
-                        }`}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          cursor: "pointer",
-                          textDecoration: "underline dotted",
-                          color: "inherit",
-                        }}
+                        } u-bg-none u-border-none u-p-0 u-cursor-pointer u-text-underline-dotted u-color-inherit`}
                       >
-                        {r.pending > 0 ? fmtC(r.pending) : "✓ Settled"}
+                        {r.pending > 0 ? fmtC(r.pending) : "? Settled"}
                       </button>
                     ),
                   },
@@ -5490,13 +5029,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         !r.implementationPartners.length;
                       if (isDirect) {
                         return (
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              color: "var(--w97-green)",
-                            }}
-                          >
+                          <span className="u-fs-11 u-fw-600 u-color-green">
                             Direct
                           </span>
                         );
@@ -5506,17 +5039,15 @@ const MarketerDashboard: React.FC<Props> = () => {
                         if (r.implementationPartners.length)
                           parts.push(r.implementationPartners[0]);
                         parts.push(r.client);
-                        return parts.join(" → ");
+                        return parts.join(" ? ");
                       });
                       const label =
                         chains.length === 1
-                          ? `${r.vendors[0]} → …`
+                          ? `${r.vendors[0]} ? �`
                           : `${r.vendors.length} vendors`;
                       return (
                         <ClickPopover label={label}>
-                          <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                            Vendor Pipeline
-                          </div>
+                          <div className="u-fw-600 u-mb-4">Vendor Pipeline</div>
                           {chains.map((c) => (
                             <div
                               key={c}
@@ -5541,28 +5072,21 @@ const MarketerDashboard: React.FC<Props> = () => {
                 clientRows.length > 1 ? (
                   <tr className="ov-pt-foot">
                     <td className="ov-pt-tf" colSpan={7}>
-                      TOTAL — {clientRows.length} clients · {totalCandidates}{" "}
+                      TOTAL � {clientRows.length} clients � {totalCandidates}{" "}
                       candidates
                     </td>
-                    <td
-                      className="ov-pt-tf ov-mono ov-val-green"
-                      style={{ textAlign: "right" }}
-                    >
+                    <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                       {fmtC(grandRevenue)}
                     </td>
-                    <td
-                      className="ov-pt-tf ov-mono ov-val-green"
-                      style={{ textAlign: "right" }}
-                    >
+                    <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                       {fmtC(grandCredited)}
                     </td>
                     <td
                       className={`ov-pt-tf ov-mono ${
                         grandPending > 0 ? "ov-val-orange" : "ov-val-green"
-                      }`}
-                      style={{ textAlign: "right" }}
+                      } u-text-right`}
                     >
-                      {grandPending > 0 ? fmtC(grandPending) : "✓ Settled"}
+                      {grandPending > 0 ? fmtC(grandPending) : "? Settled"}
                     </td>
                     <td className="ov-pt-tf" />
                   </tr>
@@ -5582,44 +5106,23 @@ const MarketerDashboard: React.FC<Props> = () => {
 
     if (!row) {
       return (
-        <div style={{ padding: 40, textAlign: "center", fontSize: 13 }}>
+        <div className="u-p-40 u-text-center u-fs-13">
           Client not found.{" "}
           <button
             type="button"
-            style={{
-              color: "var(--w97-blue)",
-              background: "none",
-              border: "none",
-              textDecoration: "underline",
-              cursor: "pointer",
-              font: "inherit",
-            }}
+            className="u-color-blue u-bg-none u-border-none u-text-underline u-cursor-pointer u-font-inherit"
             onClick={() => navigateTo("client-summary")}
           >
-            ← Back to Clients
+            ? Back to Clients
           </button>
         </div>
       );
     }
 
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
+      <div className="u-flex u-flex-col-dir u-flex-1 u-min-h-0">
         {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 14,
-          }}
-        >
+        <div className="u-flex u-items-center u-gap-10 u-mb-14">
           <button
             type="button"
             style={{
@@ -5633,24 +5136,24 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
             onClick={() => navigateTo("client-summary")}
           >
-            ← Back
+            ? Back
           </button>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>{row.client}</div>
-            <div style={{ fontSize: 11, color: "var(--w97-text-secondary)" }}>
+            <div className="u-fw-700 u-fs-15">{row.client}</div>
+            <div className="u-fs-11 u-color-secondary">
               {row.vendors.length} vendor{row.vendors.length === 1 ? "" : "s"}
-              {" · "}
+              {" � "}
               {row.vendors.join(", ")}
               {row.locations.length > 0 && (
                 <>
                   {" "}
-                  {" · 📍 "}
+                  {" � ?? "}
                   {row.locations.join(", ")}
                 </>
               )}
             </div>
             {row.pocContacts.length > 0 && (
-              <div style={{ fontSize: 11, color: "var(--w97-text-secondary)" }}>
+              <div className="u-fs-11 u-color-secondary">
                 POC:{" "}
                 {row.pocContacts.map((pc, i) => (
                   <span key={pc.email}>
@@ -5662,16 +5165,10 @@ const MarketerDashboard: React.FC<Props> = () => {
             )}
             {row.vendors.length > 0 &&
               !(row.vendors.length === 1 && row.vendors[0] === "Direct") && (
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: "var(--w97-text-secondary)",
-                    marginTop: 2,
-                  }}
-                >
-                  Pipeline: {row.vendors[0]} →{" "}
+                <div className="u-fs-10 u-color-secondary u-mt-2">
+                  Pipeline: {row.vendors[0]} ?{" "}
                   {row.implementationPartners.length
-                    ? `${row.implementationPartners.join(", ")} → `
+                    ? `${row.implementationPartners.join(", ")} ? `
                     : ""}
                   {row.client}
                 </div>
@@ -5698,13 +5195,9 @@ const MarketerDashboard: React.FC<Props> = () => {
           <div className="ov-kpi">
             <span className="ov-kpi-label">Openings</span>
             <span className="ov-kpi-value ov-kv-blue">
-              <span style={{ color: "var(--w97-green)" }}>
-                {row.activeOpenings}
-              </span>
+              <span className="u-color-green">{row.activeOpenings}</span>
               {" / "}
-              <span style={{ color: "var(--w97-text-secondary)" }}>
-                {row.closedOpenings}
-              </span>
+              <span className="u-color-secondary">{row.closedOpenings}</span>
             </span>
           </div>
           <div className="ov-kpi-div" />
@@ -5729,7 +5222,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 row.pending > 0 ? "ov-kv-orange" : "ov-kv-green"
               }`}
             >
-              {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+              {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
             </span>
           </div>
           <div className="ov-kpi-div" />
@@ -5746,18 +5239,18 @@ const MarketerDashboard: React.FC<Props> = () => {
           activeKey={clientDetailTab}
           onSelect={(key) => setClientDetailTab(key as typeof clientDetailTab)}
           tabs={[
-            { key: "candidates", label: "👤 Candidates" },
-            { key: "openings", label: "💼 Openings" },
-            { key: "vendors", label: "🏢 Vendors" },
-            { key: "financials", label: "💰 Financials" },
+            { key: "candidates", label: "?? Candidates" },
+            { key: "openings", label: "?? Openings" },
+            { key: "vendors", label: "?? Vendors" },
+            { key: "financials", label: "?? Financials" },
           ]}
         />
 
-        {/* ── Candidates Tab ── */}
+        {/* -- Candidates Tab -- */}
         {clientDetailTab === "candidates" && (
           <DataTable<(typeof row.candidates)[number]>
-            title={`Candidates with ${row.client} — ${row.candidateCount} total`}
-            titleIcon="👤"
+            title={`Candidates with ${row.client} � ${row.candidateCount} total`}
+            titleIcon="??"
             className="matchdb-auto-height"
             columns={
               [
@@ -5768,14 +5261,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   render: (c) => (
                     <button
                       type="button"
-                      style={{
-                        cursor: "pointer",
-                        background: "none",
-                        border: "none",
-                        padding: 0,
-                        textAlign: "left",
-                        font: "inherit",
-                      }}
+                      className="u-cursor-pointer u-bg-none u-border-none u-p-0 u-text-left u-font-inherit"
                       onClick={() => {
                         setPrevView("client-detail");
                         navParams({
@@ -5785,23 +5271,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                         });
                       }}
                     >
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          color: "var(--w97-blue)",
-                          textDecoration: "underline",
-                        }}
-                      >
+                      <div className="u-fw-600 u-color-blue u-text-underline">
                         {c.name}
                       </div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          color: "var(--w97-text-secondary)",
-                        }}
-                      >
-                        {c.role}
-                      </div>
+                      <div className="u-fs-10 u-color-secondary">{c.role}</div>
                     </button>
                   ),
                 },
@@ -5811,13 +5284,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   render: (c) => {
                     if (c.vendor === "Direct" && !c.implementationPartner) {
                       return (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: "var(--w97-green)",
-                          }}
-                        >
+                        <span className="u-fs-11 u-fw-600 u-color-green">
                           Direct
                         </span>
                       );
@@ -5826,13 +5293,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                     if (c.implementationPartner)
                       parts.push(c.implementationPartner);
                     parts.push(row.client);
-                    const chain = parts.join(" → ");
+                    const chain = parts.join(" ? ");
                     return (
-                      <ClickPopover label={`${c.vendor} → …`}>
-                        <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                          Pipeline
-                        </div>
-                        <div style={{ fontSize: 11 }}>{chain}</div>
+                      <ClickPopover label={`${c.vendor} ? �`}>
+                        <div className="u-fw-600 u-mb-4">Pipeline</div>
+                        <div className="u-fs-11">{chain}</div>
                       </ClickPopover>
                     );
                   },
@@ -5879,7 +5344,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     >
                       {c.amountPending > 0
                         ? fmtC(c.amountPending)
-                        : "✓ Settled"}
+                        : "? Settled"}
                     </span>
                   ),
                 },
@@ -5893,33 +5358,23 @@ const MarketerDashboard: React.FC<Props> = () => {
               row.candidates.length > 1 ? (
                 <tr className="ov-pt-foot">
                   <td className="ov-pt-tf" colSpan={2}>
-                    TOTAL — {row.candidateCount} candidates
+                    TOTAL � {row.candidateCount} candidates
                   </td>
-                  <td
-                    className="ov-pt-tf ov-mono"
-                    style={{ textAlign: "right" }}
-                  >
+                  <td className="ov-pt-tf ov-mono u-text-right">
                     {row.hours.toLocaleString()}
                   </td>
-                  <td
-                    className="ov-pt-tf ov-mono ov-val-green"
-                    style={{ textAlign: "right" }}
-                  >
+                  <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                     {fmtC(row.revenue)}
                   </td>
-                  <td
-                    className="ov-pt-tf ov-mono ov-val-green"
-                    style={{ textAlign: "right" }}
-                  >
+                  <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                     {fmtC(row.credited)}
                   </td>
                   <td
                     className={`ov-pt-tf ov-mono ${
                       row.pending > 0 ? "ov-val-orange" : "ov-val-green"
-                    }`}
-                    style={{ textAlign: "right" }}
+                    } u-text-right`}
                   >
-                    {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+                    {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
                   </td>
                 </tr>
               ) : undefined
@@ -5927,7 +5382,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           />
         )}
 
-        {/* ── Openings Tab ── */}
+        {/* -- Openings Tab -- */}
         {clientDetailTab === "openings" &&
           (() => {
             const projects = (companySummary?.projects ?? []).filter(
@@ -5935,8 +5390,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             );
             const openingRows = projects.map((p) => ({
               jobTitle: p.jobTitle,
-              location: p.location || "—",
-              type: p.jobType || "—",
+              location: p.location || "�",
+              type: p.jobType || "�",
               vendor: p.vendorCompanyName || p.vendorEmail || "Direct",
               candidate: p.candidateName,
               isActive: p.isActive,
@@ -5947,8 +5402,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             const closedCount = openingRows.length - activeCount;
             return (
               <DataTable<OpeningRow>
-                title={`Openings at ${row.client} — ${activeCount} active · ${closedCount} closed`}
-                titleIcon="💼"
+                title={`Openings at ${row.client} � ${activeCount} active � ${closedCount} closed`}
+                titleIcon="??"
                 className="matchdb-auto-height"
                 columns={
                   [
@@ -5957,7 +5412,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Job Title",
                       width: "22%",
                       render: (o) => (
-                        <span style={{ fontWeight: 600 }}>{o.jobTitle}</span>
+                        <span className="u-fw-600">{o.jobTitle}</span>
                       ),
                     },
                     { key: "candidate", header: "Candidate" },
@@ -5968,13 +5423,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Vendor",
                       render: (o) =>
                         o.vendor === "Direct" ? (
-                          <span
-                            style={{
-                              color: "var(--w97-green)",
-                              fontWeight: 600,
-                              fontSize: 11,
-                            }}
-                          >
+                          <span className="u-color-green u-fw-600 u-fs-11">
                             Direct
                           </span>
                         ) : (
@@ -5986,23 +5435,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Status",
                       render: (o) =>
                         o.isActive ? (
-                          <span
-                            style={{
-                              color: "var(--w97-green)",
-                              fontWeight: 600,
-                              fontSize: 11,
-                            }}
-                          >
-                            ● Active
+                          <span className="u-color-green u-fw-600 u-fs-11">
+                            ? Active
                           </span>
                         ) : (
-                          <span
-                            style={{
-                              color: "var(--w97-text-secondary)",
-                              fontSize: 11,
-                            }}
-                          >
-                            ○ Closed
+                          <span className="u-color-secondary u-fs-11">
+                            ? Closed
                           </span>
                         ),
                     },
@@ -6010,12 +5448,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       key: "appliedAt",
                       header: "Applied",
                       render: (o) => (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            color: "var(--w97-text-secondary)",
-                          }}
-                        >
+                        <span className="u-fs-11 u-color-secondary">
                           {new Date(o.appliedAt).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
@@ -6036,7 +5469,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             );
           })()}
 
-        {/* ── Vendors Tab ── */}
+        {/* -- Vendors Tab -- */}
         {clientDetailTab === "vendors" &&
           (() => {
             const projects = (companySummary?.projects ?? []).filter(
@@ -6059,7 +5492,7 @@ const MarketerDashboard: React.FC<Props> = () => {
               if (!vendorMap.has(v)) {
                 vendorMap.set(v, {
                   vendor: v,
-                  implementationPartner: p.implementationPartner || "—",
+                  implementationPartner: p.implementationPartner || "�",
                   candidateCount: 0,
                   revenue: 0,
                   credited: 0,
@@ -6084,8 +5517,8 @@ const MarketerDashboard: React.FC<Props> = () => {
             type ClientVendorRow = (typeof vendorRows)[number];
             return (
               <DataTable<ClientVendorRow>
-                title={`Vendors for ${row.client} — ${vendorRows.length} total`}
-                titleIcon="🏢"
+                title={`Vendors for ${row.client} � ${vendorRows.length} total`}
+                titleIcon="??"
                 className="matchdb-auto-height"
                 columns={
                   [
@@ -6095,24 +5528,18 @@ const MarketerDashboard: React.FC<Props> = () => {
                       width: "22%",
                       render: (v) =>
                         v.vendor === "Direct" ? (
-                          <span
-                            style={{
-                              color: "var(--w97-green)",
-                              fontWeight: 600,
-                              fontSize: 11,
-                            }}
-                          >
+                          <span className="u-color-green u-fw-600 u-fs-11">
                             Direct
                           </span>
                         ) : (
-                          <span style={{ fontWeight: 600 }}>{v.vendor}</span>
+                          <span className="u-fw-600">{v.vendor}</span>
                         ),
                     },
                     {
                       key: "implementationPartner",
                       header: "Impl. Partner",
                       render: (v) => (
-                        <span style={{ fontSize: 11 }}>
+                        <span className="u-fs-11">
                           {v.implementationPartner}
                         </span>
                       ),
@@ -6155,7 +5582,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                             v.pending > 0 ? "ov-val-orange" : "ov-val-green"
                           }`}
                         >
-                          {v.pending > 0 ? fmtC(v.pending) : "✓ Settled"}
+                          {v.pending > 0 ? fmtC(v.pending) : "? Settled"}
                         </span>
                       ),
                     },
@@ -6169,27 +5596,20 @@ const MarketerDashboard: React.FC<Props> = () => {
                   vendorRows.length > 1 ? (
                     <tr className="ov-pt-foot">
                       <td className="ov-pt-tf" colSpan={3}>
-                        TOTAL — {vendorRows.length} vendors
+                        TOTAL � {vendorRows.length} vendors
                       </td>
-                      <td
-                        className="ov-pt-tf ov-mono ov-val-green"
-                        style={{ textAlign: "right" }}
-                      >
+                      <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                         {fmtC(row.revenue)}
                       </td>
-                      <td
-                        className="ov-pt-tf ov-mono ov-val-green"
-                        style={{ textAlign: "right" }}
-                      >
+                      <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                         {fmtC(row.credited)}
                       </td>
                       <td
                         className={`ov-pt-tf ov-mono ${
                           row.pending > 0 ? "ov-val-orange" : "ov-val-green"
-                        }`}
-                        style={{ textAlign: "right" }}
+                        } u-text-right`}
                       >
-                        {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+                        {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
                       </td>
                     </tr>
                   ) : undefined
@@ -6198,7 +5618,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             );
           })()}
 
-        {/* ── Financials Tab ── */}
+        {/* -- Financials Tab -- */}
         {clientDetailTab === "financials" &&
           (() => {
             const projects = (companySummary?.projects ?? []).filter(
@@ -6228,11 +5648,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                     month: "short",
                     year: "numeric",
                   })
-                : "—";
+                : "�";
             return (
               <DataTable<FinRow>
-                title={`Financial Summary — ${row.client}`}
-                titleIcon="💰"
+                title={`Financial Summary � ${row.client}`}
+                titleIcon="??"
                 className="matchdb-auto-height"
                 columns={
                   [
@@ -6242,13 +5662,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                       width: "16%",
                       render: (f) => (
                         <div>
-                          <div style={{ fontWeight: 600 }}>{f.candidate}</div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              color: "var(--w97-text-secondary)",
-                            }}
-                          >
+                          <div className="u-fw-600">{f.candidate}</div>
+                          <div className="u-fs-10 u-color-secondary">
                             {f.role}
                           </div>
                         </div>
@@ -6259,17 +5674,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Vendor",
                       render: (f) =>
                         f.vendor === "Direct" ? (
-                          <span
-                            style={{
-                              color: "var(--w97-green)",
-                              fontWeight: 600,
-                              fontSize: 11,
-                            }}
-                          >
+                          <span className="u-color-green u-fw-600 u-fs-11">
                             Direct
                           </span>
                         ) : (
-                          <span style={{ fontSize: 11 }}>{f.vendor}</span>
+                          <span className="u-fs-11">{f.vendor}</span>
                         ),
                     },
                     {
@@ -6328,7 +5737,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                             f.pending > 0 ? "ov-val-orange" : "ov-val-green"
                           }`}
                         >
-                          {f.pending > 0 ? fmtC(f.pending) : "✓ Settled"}
+                          {f.pending > 0 ? fmtC(f.pending) : "? Settled"}
                         </span>
                       ),
                     },
@@ -6336,13 +5745,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                       key: "period",
                       header: "Period",
                       render: (f) => (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            color: "var(--w97-text-secondary)",
-                          }}
-                        >
-                          {fmtD(f.projectStart)} – {fmtD(f.projectEnd)}
+                        <span className="u-fs-11 u-color-secondary">
+                          {fmtD(f.projectStart)} � {fmtD(f.projectEnd)}
                         </span>
                       ),
                     },
@@ -6351,23 +5755,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Status",
                       render: (f) =>
                         f.isActive ? (
-                          <span
-                            style={{
-                              color: "var(--w97-green)",
-                              fontWeight: 600,
-                              fontSize: 11,
-                            }}
-                          >
-                            ● Active
+                          <span className="u-color-green u-fw-600 u-fs-11">
+                            ? Active
                           </span>
                         ) : (
-                          <span
-                            style={{
-                              color: "var(--w97-text-secondary)",
-                              fontSize: 11,
-                            }}
-                          >
-                            ○ Closed
+                          <span className="u-color-secondary u-fs-11">
+                            ? Closed
                           </span>
                         ),
                     },
@@ -6382,33 +5775,23 @@ const MarketerDashboard: React.FC<Props> = () => {
                   finRows.length > 1 ? (
                     <tr className="ov-pt-foot">
                       <td className="ov-pt-tf" colSpan={4}>
-                        TOTAL — {finRows.length} projects
+                        TOTAL � {finRows.length} projects
                       </td>
-                      <td
-                        className="ov-pt-tf ov-mono"
-                        style={{ textAlign: "right" }}
-                      >
+                      <td className="ov-pt-tf ov-mono u-text-right">
                         {row.hours.toLocaleString()}
                       </td>
-                      <td
-                        className="ov-pt-tf ov-mono ov-val-green"
-                        style={{ textAlign: "right" }}
-                      >
+                      <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                         {fmtC(row.revenue)}
                       </td>
-                      <td
-                        className="ov-pt-tf ov-mono ov-val-green"
-                        style={{ textAlign: "right" }}
-                      >
+                      <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                         {fmtC(row.credited)}
                       </td>
                       <td
                         className={`ov-pt-tf ov-mono ${
                           row.pending > 0 ? "ov-val-orange" : "ov-val-green"
-                        }`}
-                        style={{ textAlign: "right" }}
+                        } u-text-right`}
                       >
-                        {row.pending > 0 ? fmtC(row.pending) : "✓ Settled"}
+                        {row.pending > 0 ? fmtC(row.pending) : "? Settled"}
                       </td>
                       <td className="ov-pt-tf" colSpan={2} />
                     </tr>
@@ -6421,7 +5804,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     );
   }
 
-  // ── Timesheets View ────────────────────────────────────────────────────────
+  // -- Timesheets View --------------------------------------------------------
 
   function renderTimesheetsView() {
     const fmtWeek = (iso: string) => {
@@ -6439,7 +5822,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             month: "short",
             day: "numeric",
           })
-        : "—";
+        : "�";
 
     const columns: DataTableColumn<Timesheet>[] = [
       {
@@ -6466,7 +5849,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Company",
         width: "12%",
         skeletonWidth: 90,
-        render: (r) => <>{r.companyName || "—"}</>,
+        render: (r) => <>{r.companyName || "�"}</>,
       },
       {
         key: "hours",
@@ -6519,7 +5902,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         header: "Remarks",
         width: "13%",
         skeletonWidth: 90,
-        render: (r) => <>{r.approverNotes || "—"}</>,
+        render: (r) => <>{r.approverNotes || "�"}</>,
         tooltip: (r) => r.approverNotes || "",
       },
       {
@@ -6529,9 +5912,9 @@ const MarketerDashboard: React.FC<Props> = () => {
         skeletonWidth: 100,
         render: (r) => {
           if (r.status !== "submitted")
-            return <span style={{ color: "#aaa", fontSize: 11 }}>—</span>;
+            return <span style={{ color: "#aaa", fontSize: 11 }}>�</span>;
           return (
-            <div style={{ display: "flex", gap: 4 }}>
+            <div className="u-flex u-gap-4">
               <Button
                 size="sm"
                 variant="primary"
@@ -6578,7 +5961,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     };
 
     return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div className="u-flex u-flex-col-dir u-h-full">
         {/* Confirm dialog */}
         {isConfirmOpen && (
           <dialog open className="matchdb-modal-overlay">
@@ -6596,27 +5979,21 @@ const MarketerDashboard: React.FC<Props> = () => {
             >
               <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>
                 {tsActionType === "approve"
-                  ? "✅ Approve Timesheet"
-                  : "❌ Reject Timesheet"}
+                  ? "? Approve Timesheet"
+                  : "? Reject Timesheet"}
               </h3>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--w97-text-secondary)",
-                  marginBottom: 10,
-                }}
-              >
+              <div className="u-fs-12 u-color-secondary u-mb-10">
                 {tsActionType === "approve"
                   ? "Optionally add a note, then confirm approval."
                   : "Provide a reason for rejection (required for the candidate)."}
               </div>
               <textarea
-                className="matchdb-input"
+                className="matchdb-input u-w-full u-resize-v u-fs-12"
                 rows={3}
                 placeholder={
                   tsActionType === "approve"
-                    ? "Optional note…"
-                    : "Reason for rejection…"
+                    ? "Optional note�"
+                    : "Reason for rejection�"
                 }
                 value={tsActionType === "approve" ? approveNotes : rejectNotes}
                 onChange={(e) =>
@@ -6624,16 +6001,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                     ? setApproveNotes(e.target.value)
                     : setRejectNotes(e.target.value)
                 }
-                style={{ width: "100%", resize: "vertical", fontSize: 12 }}
               />
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  justifyContent: "flex-end",
-                  marginTop: 12,
-                }}
-              >
+              <div className="u-flex u-gap-8 u-justify-end u-mt-12">
                 <Button
                   size="sm"
                   onClick={() => {
@@ -6650,7 +6019,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   onClick={handleConfirm}
                   disabled={approvingTs || rejectingTs}
                 >
-                  {approvingTs || rejectingTs ? "Saving…" : "Confirm"}
+                  {approvingTs || rejectingTs ? "Saving�" : "Confirm"}
                 </Button>
               </div>
             </div>
@@ -6666,7 +6035,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             padding: "8px 0 4px",
           }}
         >
-          <span style={{ fontSize: 12, fontWeight: 600 }}>Status:</span>
+          <span className="u-fs-12 u-fw-600">Status:</span>
           {(["submitted", "approved", "rejected", "all"] as const).map((s) => (
             <Button
               key={s}
@@ -6687,7 +6056,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           paginated
           emptyMessage="No timesheets found for the selected status."
           title="Candidate Timesheets"
-          titleIcon="🗂️"
+          titleIcon="???"
         />
       </div>
     );
@@ -6695,12 +6064,12 @@ const MarketerDashboard: React.FC<Props> = () => {
 
   function renderCandidateDetailView() {
     return (
-      /* ── Candidate Detail — Tabbed Center Content ── */
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        {/* ── Top Bar: Back + Name + Print ── */}
+      /* -- Candidate Detail � Tabbed Center Content -- */
+      <div className="u-flex u-flex-col-dir u-h-full">
+        {/* -- Top Bar: Back + Name + Print -- */}
         <Toolbar
           left={
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="u-flex u-items-center u-gap-10">
               <Button
                 size="sm"
                 onClick={() =>
@@ -6711,7 +6080,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   })
                 }
               >
-                ← Back
+                ? Back
               </Button>
               {candidateDetail?.roster && (
                 <h2
@@ -6728,7 +6097,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             </div>
           }
           right={
-            <div style={{ display: "flex", gap: 6 }}>
+            <div className="u-flex u-gap-6">
               {candidateDetail?.roster &&
                 (candidateDetail.roster.invite_status || "none") !==
                   "accepted" && (
@@ -6746,14 +6115,13 @@ const MarketerDashboard: React.FC<Props> = () => {
                       } as MarketerCandidateItem)
                     }
                   >
-                    ✉ Invite
+                    ? Invite
                   </Button>
                 )}
               {candidateDetail?.roster && (
                 <Button
                   variant="email"
                   size="xs"
-                  style={{ color: "var(--w97-teal)" }}
                   onClick={() =>
                     openSendJobModal(
                       candidateDetail.roster.candidate_email,
@@ -6761,7 +6129,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     )
                   }
                 >
-                  📧 Send Job
+                  ?? Send Job
                 </Button>
               )}
               {candidateDetail?.profile && (
@@ -6787,30 +6155,23 @@ const MarketerDashboard: React.FC<Props> = () => {
                     } as MarketerProfile);
                   }}
                 >
-                  📥 Resume
+                  ?? Resume
                 </Button>
               )}
             </div>
           }
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
         />
 
         {detailLoading && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: 60,
-              color: "var(--w97-text-secondary)",
-              fontSize: 13,
-            }}
-          >
-            Loading candidate details…
+          <div className="u-text-center u-p-60 u-color-secondary u-fs-13">
+            Loading candidate details�
           </div>
         )}
 
         {!detailLoading && candidateDetail && (
           <>
-            {/* ── Horizontal Tab Bar ── */}
+            {/* -- Horizontal Tab Bar -- */}
             <Tabs
               activeKey={detailTab}
               onSelect={(key) => {
@@ -6818,12 +6179,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                 if (key !== "projects") setSelectedProjectId(null);
               }}
               tabs={[
-                { key: "overview", label: "👤 Overview" },
+                { key: "overview", label: "?? Overview" },
                 {
                   key: "projects",
                   label: (
                     <>
-                      📋 Projects{" "}
+                      ?? Projects{" "}
                       <span className="matchdb-tab-badge">
                         {candidateDetail.projects.length}
                       </span>
@@ -6834,7 +6195,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   key: "vendor-activity",
                   label: (
                     <>
-                      📊 Employer Activity{" "}
+                      ?? Employer Activity{" "}
                       <span className="matchdb-tab-badge">
                         {candidateDetail.vendor_activity.length}
                       </span>
@@ -6845,7 +6206,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   key: "forwarded",
                   label: (
                     <>
-                      📤 Forwarded Openings{" "}
+                      ?? Forwarded Openings{" "}
                       <span className="matchdb-tab-badge">
                         {candidateDetail.forwarded_openings.length}
                       </span>
@@ -6855,33 +6216,26 @@ const MarketerDashboard: React.FC<Props> = () => {
               ]}
             />
 
-            {/* ════════════ TAB: Overview ════════════ */}
+            {/* ------------ TAB: Overview ------------ */}
             {detailTab === "overview" && renderOverviewTab()}
 
-            {/* ════════════ TAB: Projects ════════════ */}
+            {/* ------------ TAB: Projects ------------ */}
             {detailTab === "projects" && renderProjectsTab()}
 
-            {/* ════════════ TAB: Employer Activity ════════════ */}
+            {/* ------------ TAB: Employer Activity ------------ */}
             {detailTab === "vendor-activity" && renderVendorActivityTab()}
 
-            {/* ════════════ TAB: Forwarded Openings ════════════ */}
+            {/* ------------ TAB: Forwarded Openings ------------ */}
             {detailTab === "forwarded" && renderForwardedTab()}
           </>
         )}
 
         {!detailLoading && !candidateDetail && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: 60,
-              color: "var(--w97-text-secondary)",
-              fontSize: 13,
-            }}
-          >
+          <div className="u-text-center u-p-60 u-color-secondary u-fs-13">
             {detailError
               ? "Error loading candidate details. Please try again."
               : "Candidate not found."}
-            <div style={{ marginTop: 12 }}>
+            <div className="u-mt-12">
               <Button
                 size="sm"
                 onClick={() =>
@@ -6892,7 +6246,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   })
                 }
               >
-                ← Go Back
+                ? Go Back
               </Button>
             </div>
           </div>
@@ -6925,7 +6279,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     const inviteAccepted = candidateDetail.roster.invite_status === "accepted";
     const inviteBadgeBg = inviteAccepted ? "#e8f5e9" : "#fff3e0";
     const inviteBadgeColor = inviteAccepted ? "#2e7d32" : "#b8860b";
-    const inviteBadgeText = inviteAccepted ? "✓ Accepted" : "⏳ Pending";
+    const inviteBadgeText = inviteAccepted ? "? Accepted" : "? Pending";
     const pendingClass = totalPending > 0 ? "ov-kv-orange" : "ov-kv-green";
     const payPct =
       totalNet > 0 ? ((totalPaid / totalNet) * 100).toFixed(0) : "0";
@@ -6991,12 +6345,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                         fontWeight: 300,
                       }}
                     >
-                      ·
+                      �
                     </span>
                   )}
                 </React.Fragment>
               ))}
-            {/* Stats badges — right side */}
+            {/* Stats badges � right side */}
             <div
               style={{
                 marginLeft: "auto",
@@ -7020,23 +6374,14 @@ const MarketerDashboard: React.FC<Props> = () => {
               >
                 {inviteBadgeText}
               </span>
-              <span
-                className="matchdb-type-pill"
-                style={{ whiteSpace: "nowrap" }}
-              >
+              <span className="matchdb-type-pill u-nowrap">
                 {candidateDetail.projects.filter((p) => p.is_active).length}{" "}
                 active
               </span>
-              <span
-                className="matchdb-type-pill"
-                style={{ whiteSpace: "nowrap" }}
-              >
+              <span className="matchdb-type-pill u-nowrap">
                 {candidateDetail.vendor_activity.length} interactions
               </span>
-              <span
-                className="matchdb-type-pill"
-                style={{ whiteSpace: "nowrap" }}
-              >
+              <span className="matchdb-type-pill u-nowrap">
                 {candidateDetail.forwarded_openings.length} forwarded
               </span>
               <span
@@ -7098,18 +6443,12 @@ const MarketerDashboard: React.FC<Props> = () => {
       <div className="ov-root">
         {renderProfileStrip()}
 
-        {/* ══ ROW 2 — Modern financial KPI strip (only when financials exist) ══ */}
+        {/* -- ROW 2 � Modern financial KPI strip (only when financials exist) -- */}
         {allFins.length > 0 && (
           <div className="ov-kpi-strip" style={{ margin: "14px 16px 0" }}>
             <button
               type="button"
-              className="ov-kpi"
-              style={{
-                cursor: "pointer",
-                background: "none",
-                border: "none",
-                textAlign: "left",
-              }}
+              className="ov-kpi u-cursor-pointer u-bg-none u-border-none u-text-left"
               title="View company financials"
               onClick={() => {
                 setPrevView("candidate-detail");
@@ -7124,13 +6463,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             <div className="ov-kpi-div" />
             <button
               type="button"
-              className="ov-kpi"
-              style={{
-                cursor: "pointer",
-                background: "none",
-                border: "none",
-                textAlign: "left",
-              }}
+              className="ov-kpi u-cursor-pointer u-bg-none u-border-none u-text-left"
               title="View company financials"
               onClick={() => {
                 setPrevView("candidate-detail");
@@ -7145,13 +6478,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             <div className="ov-kpi-div" />
             <button
               type="button"
-              className="ov-kpi"
-              style={{
-                cursor: "pointer",
-                background: "none",
-                border: "none",
-                textAlign: "left",
-              }}
+              className="ov-kpi u-cursor-pointer u-bg-none u-border-none u-text-left"
               title="View company financials"
               onClick={() => {
                 setPrevView("candidate-detail");
@@ -7193,7 +6520,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             {/* Inline progress bar in the KPI strip */}
             <div className="ov-kpi" style={{ flex: 1, minWidth: 120 }}>
               <span className="ov-kpi-label">
-                Payment Progress — {payPct}% paid
+                Payment Progress � {payPct}% paid
               </span>
               <div
                 style={{
@@ -7219,7 +6546,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           </div>
         )}
 
-        {/* ══ ROW 3 — Subtabs: Financial Summary / Monthly Pay ══ */}
+        {/* -- ROW 3 � Subtabs: Financial Summary / Monthly Pay -- */}
         {(candidateDetail.projects.length > 0 || monthRows.length > 0) && (
           <div style={{ margin: "14px 16px 16px" }}>
             {/* Subtab bar */}
@@ -7229,14 +6556,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                 onClick={() => setOverviewSubTab("financial")}
                 style={subtabStyle(overviewSubTab === "financial")}
               >
-                💼 Financial Summary
+                ?? Financial Summary
               </button>
               <button
                 type="button"
                 onClick={() => setOverviewSubTab("monthly")}
                 style={subtabStyle(overviewSubTab === "monthly", false)}
               >
-                📅 Monthly Pay Summary
+                ?? Monthly Pay Summary
               </button>
             </div>
 
@@ -7244,12 +6571,12 @@ const MarketerDashboard: React.FC<Props> = () => {
             {overviewSubTab === "financial" &&
               candidateDetail.projects.length > 0 && (
                 <DataTable
-                  title="Projects — Financial Summary"
-                  titleIcon="💼"
-                  className="matchdb-auto-height"
+                  title="Projects � Financial Summary"
+                  titleIcon="??"
+                  variant="summary"
                   titleExtra={
-                    <span style={{ fontSize: 10, opacity: 0.7 }}>
-                      {candidateDetail.projects.length} total ·{" "}
+                    <span>
+                      {candidateDetail.projects.length} total �{" "}
                       {
                         candidateDetail.projects.filter((p) => p.is_active)
                           .length
@@ -7266,7 +6593,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         width: "22%",
                         render: (p) => (
                           <>
-                            <div style={{ fontWeight: 600 }}>
+                            <div className="u-fw-600">
                               {p.job_title || "Untitled"}
                             </div>
                             <div
@@ -7278,10 +6605,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                             >
                               {p.job_type}
                               {p.job_sub_type
-                                ? ` · ${p.job_sub_type.toUpperCase()}`
+                                ? ` � ${p.job_sub_type.toUpperCase()}`
                                 : ""}
                               {p.vendor_email
-                                ? ` · ${
+                                ? ` � ${
                                     p.vendor_email
                                       .split("@")[1]
                                       ?.split(".")[0] || p.vendor_email
@@ -7301,7 +6628,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                               p.is_active ? "ov-proj-active" : "ov-proj-closed"
                             }`}
                           >
-                            {p.is_active ? "● Active" : "✓ Closed"}
+                            {p.is_active ? "? Active" : "? Closed"}
                           </span>
                         ),
                       },
@@ -7312,21 +6639,17 @@ const MarketerDashboard: React.FC<Props> = () => {
                         render: (p) => {
                           const f = p.financials;
                           return f ? (
-                            <span
-                              style={{ fontFamily: "monospace", fontSize: 11 }}
-                            >
-                              <span style={{ color: "var(--pf-green)" }}>
+                            <span className="u-font-mono u-fs-11">
+                              <span className="u-color-pf-green">
                                 ${f.billRate}
                               </span>
                               {" / "}
-                              <span style={{ color: "var(--pf-blue)" }}>
+                              <span className="u-color-pf-blue">
                                 ${f.payRate}
                               </span>
                             </span>
                           ) : (
-                            <span style={{ color: "var(--w97-border-dark)" }}>
-                              Not set
-                            </span>
+                            <span className="u-color-border-dark">Not set</span>
                           );
                         },
                       },
@@ -7356,7 +6679,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           >
                             {p.financials
                               ? p.financials.hoursWorked.toLocaleString()
-                              : "—"}
+                              : "�"}
                           </button>
                         ),
                       },
@@ -7386,7 +6709,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           >
                             {p.financials
                               ? fmtC(p.financials.totalBilled)
-                              : "—"}
+                              : "�"}
                           </button>
                         ),
                       },
@@ -7396,29 +6719,20 @@ const MarketerDashboard: React.FC<Props> = () => {
                         align: "right",
                         render: (p) => {
                           const f = p.financials;
-                          if (!f) return "—";
+                          if (!f) return "�";
                           const m = f.totalBilled - f.totalPay;
                           return (
                             <button
                               type="button"
                               title="View company financials"
-                              className="ov-mono ov-val-teal"
-                              style={{
-                                cursor: "pointer",
-                                background: "none",
-                                border: "none",
-                                padding: 0,
-                                textAlign: "right",
-                                width: "100%",
-                                font: "inherit",
-                              }}
+                              className="ov-mono ov-val-teal u-cursor-pointer u-bg-none u-border-none u-p-0 u-text-right u-w-full u-font-inherit"
                               onClick={() => {
                                 setPrevView("candidate-detail");
                                 navParams({ view: "financial-summary" });
                               }}
                             >
                               {fmtC(m)}{" "}
-                              <span style={{ fontSize: 10, opacity: 0.7 }}>
+                              <span className="u-fs-10 u-opacity-70">
                                 {f.totalBilled > 0
                                   ? `(${((m / f.totalBilled) * 100).toFixed(
                                       1,
@@ -7435,7 +6749,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         align: "right",
                         render: (p) => (
                           <span className="ov-mono ov-val-blue">
-                            {p.financials ? fmtC(p.financials.netPayable) : "—"}
+                            {p.financials ? fmtC(p.financials.netPayable) : "�"}
                           </span>
                         ),
                       },
@@ -7445,7 +6759,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         align: "right",
                         render: (p) => (
                           <span className="ov-mono ov-val-green">
-                            {p.financials ? fmtC(p.financials.amountPaid) : "—"}
+                            {p.financials ? fmtC(p.financials.amountPaid) : "�"}
                           </span>
                         ),
                       },
@@ -7455,7 +6769,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         align: "right",
                         render: (p) => {
                           if (!p.financials)
-                            return <span className="ov-mono">—</span>;
+                            return <span className="ov-mono">�</span>;
                           const bal = Math.max(0, p.financials.amountPending);
                           return (
                             <span
@@ -7463,7 +6777,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                                 bal > 0 ? "ov-val-orange" : "ov-val-green"
                               }`}
                             >
-                              {bal <= 0 ? "✓ Settled" : fmtC(bal)}
+                              {bal <= 0 ? "? Settled" : fmtC(bal)}
                             </span>
                           );
                         },
@@ -7485,49 +6799,30 @@ const MarketerDashboard: React.FC<Props> = () => {
                         className={`ov-pt-foot ${footerRowClass(totalMargin)}`}
                       >
                         <td className="ov-pt-tf" colSpan={2}>
-                          TOTAL — {allFins.length} projects with financials
+                          TOTAL � {allFins.length} projects with financials
                         </td>
-                        <td
-                          className="ov-pt-tf"
-                          style={{ textAlign: "right" }}
-                        />
-                        <td
-                          className="ov-pt-tf ov-mono"
-                          style={{ textAlign: "right" }}
-                        >
+                        <td className="ov-pt-tf u-text-right" />
+                        <td className="ov-pt-tf ov-mono u-text-right">
                           {totalHours.toLocaleString()}
                         </td>
-                        <td
-                          className="ov-pt-tf ov-mono ov-val-green"
-                          style={{ textAlign: "right" }}
-                        >
+                        <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                           {fmtC(totalBilled)}
                         </td>
-                        <td
-                          className="ov-pt-tf ov-mono ov-val-teal"
-                          style={{ textAlign: "right" }}
-                        >
+                        <td className="ov-pt-tf ov-mono ov-val-teal u-text-right">
                           {fmtC(totalMargin)}
                         </td>
-                        <td
-                          className="ov-pt-tf ov-mono ov-val-blue"
-                          style={{ textAlign: "right" }}
-                        >
+                        <td className="ov-pt-tf ov-mono ov-val-blue u-text-right">
                           {fmtC(totalNet)}
                         </td>
-                        <td
-                          className="ov-pt-tf ov-mono ov-val-green"
-                          style={{ textAlign: "right" }}
-                        >
+                        <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                           {fmtC(totalPaid)}
                         </td>
                         <td
                           className={`ov-pt-tf ov-mono ${
                             totalPending > 0 ? "ov-val-orange" : "ov-val-green"
-                          }`}
-                          style={{ textAlign: "right" }}
+                          } u-text-right`}
                         >
-                          {totalPending > 0 ? fmtC(totalPending) : "✓ Settled"}
+                          {totalPending > 0 ? fmtC(totalPending) : "? Settled"}
                         </td>
                       </tr>
                     ) : undefined
@@ -7538,14 +6833,10 @@ const MarketerDashboard: React.FC<Props> = () => {
             {/* Monthly Pay Summary subtab */}
             {overviewSubTab === "monthly" && monthRows.length > 0 && (
               <DataTable
-                title="Monthly Pay Summary — All Projects Combined"
-                titleIcon="📅"
-                className="matchdb-auto-height"
-                titleExtra={
-                  <span style={{ fontSize: 10, opacity: 0.7 }}>
-                    {monthRows.length} months
-                  </span>
-                }
+                title="Monthly Pay Summary � All Projects Combined"
+                titleIcon="??"
+                variant="summary"
+                titleExtra={<span>{monthRows.length} months</span>}
                 showSerialNumber={false}
                 columns={
                   [
@@ -7554,7 +6845,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Month",
                       width: "14%",
                       render: (row) => (
-                        <span style={{ fontWeight: 600 }}>{row.label}</span>
+                        <span className="u-fw-600">{row.label}</span>
                       ),
                     },
                     {
@@ -7562,7 +6853,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Hours",
                       align: "right",
                       render: (row) => (
-                        <span style={{ fontFamily: "monospace" }}>
+                        <span className="u-font-mono">
                           {row.hours.toLocaleString(undefined, {
                             maximumFractionDigits: 1,
                           })}
@@ -7584,9 +6875,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       header: "Gross Pay",
                       align: "right",
                       render: (row) => (
-                        <span style={{ fontFamily: "monospace" }}>
-                          {fmtF(row.gross)}
-                        </span>
+                        <span className="u-font-mono">{fmtF(row.gross)}</span>
                       ),
                     },
                     {
@@ -7605,7 +6894,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       align: "right",
                       render: (row) => (
                         <span className="ov-mono ov-val-green">
-                          {row.paid > 0 ? fmtF(row.paid) : "—"}
+                          {row.paid > 0 ? fmtF(row.paid) : "�"}
                         </span>
                       ),
                     },
@@ -7662,47 +6951,31 @@ const MarketerDashboard: React.FC<Props> = () => {
                 footerRow={
                   <tr className={`ov-mt-foot ${footerRowClass(totalMargin)}`}>
                     <td className="ov-mt-tf">TOTAL</td>
-                    <td
-                      className="ov-mt-tf ov-mono"
-                      style={{ textAlign: "right" }}
-                    >
+                    <td className="ov-mt-tf ov-mono u-text-right">
                       {monthRows
                         .reduce((a, r) => a + r.hours, 0)
                         .toLocaleString(undefined, {
                           maximumFractionDigits: 1,
                         })}
                     </td>
-                    <td
-                      className="ov-mt-tf ov-mono ov-val-green"
-                      style={{ textAlign: "right" }}
-                    >
+                    <td className="ov-mt-tf ov-mono ov-val-green u-text-right">
                       {fmtF(monthRows.reduce((a, r) => a + r.billed, 0))}
                     </td>
-                    <td
-                      className="ov-mt-tf ov-mono"
-                      style={{ textAlign: "right" }}
-                    >
+                    <td className="ov-mt-tf ov-mono u-text-right">
                       {fmtF(monthRows.reduce((a, r) => a + r.gross, 0))}
                     </td>
-                    <td
-                      className="ov-mt-tf ov-mono ov-val-blue"
-                      style={{ textAlign: "right" }}
-                    >
+                    <td className="ov-mt-tf ov-mono ov-val-blue u-text-right">
                       {fmtF(monthRows.reduce((a, r) => a + r.net, 0))}
                     </td>
-                    <td
-                      className="ov-mt-tf ov-mono ov-val-green"
-                      style={{ textAlign: "right" }}
-                    >
+                    <td className="ov-mt-tf ov-mono ov-val-green u-text-right">
                       {fmtF(monthRows.reduce((a, r) => a + r.paid, 0))}
                     </td>
                     <td
                       className={`ov-mt-tf ov-mono ${
                         totalPending > 0 ? "ov-val-orange" : "ov-val-green"
-                      }`}
-                      style={{ textAlign: "right" }}
+                      } u-text-right`}
                     >
-                      {totalPending > 0.01 ? fmtF(totalPending) : "✓"}
+                      {totalPending > 0.01 ? fmtF(totalPending) : "?"}
                     </td>
                     <td className="ov-mt-tf" />
                   </tr>
@@ -7721,7 +6994,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     if (allProjects.length === 0) {
       return (
         <div className="pf-empty">
-          <div className="pf-empty-icon">📋</div>
+          <div className="pf-empty-icon">??</div>
           <div className="pf-empty-text">
             No projects on record for this candidate
           </div>
@@ -7891,15 +7164,15 @@ const MarketerDashboard: React.FC<Props> = () => {
       },
     );
 
-    const taxDisplay = totals.stateTax > 0 ? `−${fmtF(totals.stateTax)}` : "—";
+    const taxDisplay = totals.stateTax > 0 ? `-${fmtF(totals.stateTax)}` : "�";
     const withholdDisplay =
-      totals.withholding > 0 ? `−${fmtF(totals.withholding)}` : "—";
+      totals.withholding > 0 ? `-${fmtF(totals.withholding)}` : "�";
     const balanceDisplayCls =
       totals.balance > 0.01 ? "ov-val-orange" : "ov-val-green";
 
     return (
       <div>
-        {/* ── Candidate + Project Info Line ── */}
+        {/* -- Candidate + Project Info Line -- */}
         {activeProject && (
           <div
             style={{
@@ -7916,26 +7189,26 @@ const MarketerDashboard: React.FC<Props> = () => {
             }}
           >
             <span>
-              👤{" "}
-              <strong style={{ color: "var(--w97-text)" }}>
+              ??{" "}
+              <strong className="u-color-text">
                 {candidateDetail.roster.candidate_name}
               </strong>
-              {" · "}
+              {" � "}
               {candidateDetail.roster.candidate_email}
             </span>
             <span style={{ opacity: 0.4 }}>|</span>
             <span>
-              💼{" "}
-              <strong style={{ color: "var(--w97-titlebar-from)" }}>
+              ??{" "}
+              <strong className="u-color-titlebar">
                 {activeProject.job_title || "Untitled"}
               </strong>
-              {" · "}
+              {" � "}
               {activeProject.job_type}
               {activeProject.job_sub_type
-                ? ` · ${activeProject.job_sub_type.toUpperCase()}`
+                ? ` � ${activeProject.job_sub_type.toUpperCase()}`
                 : ""}
               {activeProject.vendor_email
-                ? ` · ${
+                ? ` � ${
                     activeProject.vendor_email.split("@")[1]?.split(".")[0] ||
                     activeProject.vendor_email
                   }`
@@ -7953,18 +7226,18 @@ const MarketerDashboard: React.FC<Props> = () => {
                 fontWeight: 600,
               }}
             >
-              {activeProject.is_active ? "● Active" : "✓ Closed"}
+              {activeProject.is_active ? "? Active" : "? Closed"}
             </span>
             {activeProject.financials && (
               <>
                 <span style={{ opacity: 0.4 }}>|</span>
-                <span style={{ fontFamily: "monospace", fontSize: 11 }}>
+                <span className="u-font-mono u-fs-11">
                   Bill{" "}
-                  <span style={{ color: "var(--pf-green)" }}>
+                  <span className="u-color-pf-green">
                     ${activeProject.financials.billRate}
                   </span>
                   {" / "}Pay{" "}
-                  <span style={{ color: "var(--pf-blue)" }}>
+                  <span className="u-color-pf-blue">
                     ${activeProject.financials.payRate}
                   </span>
                 </span>
@@ -7973,7 +7246,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           </div>
         )}
 
-        {/* ── Project Tabs ── */}
+        {/* -- Project Tabs -- */}
         <div style={{ display: "flex", gap: 0, margin: "0 14px" }}>
           {sorted.map((proj) => (
             <button
@@ -7989,22 +7262,18 @@ const MarketerDashboard: React.FC<Props> = () => {
                 whiteSpace: "nowrap",
               }}
             >
-              {proj.is_active ? "● " : ""}
+              {proj.is_active ? "? " : ""}
               {proj.job_title || "Untitled"}
             </button>
           ))}
         </div>
 
-        {/* ── Pay Periods DataTable for selected project ── */}
+        {/* -- Pay Periods DataTable for selected project -- */}
         <DataTable
-          title={`${activeProject?.job_title || "Project"} — Pay Periods`}
-          titleIcon="💼"
-          className="matchdb-auto-height"
-          titleExtra={
-            <span style={{ fontSize: 10, opacity: 0.7 }}>
-              {combinedRows.length} periods
-            </span>
-          }
+          title={`${activeProject?.job_title || "Project"} � Pay Periods`}
+          titleIcon="??"
+          variant="summary"
+          titleExtra={<span>{combinedRows.length} periods</span>}
           showSerialNumber={false}
           columns={
             [
@@ -8012,17 +7281,13 @@ const MarketerDashboard: React.FC<Props> = () => {
                 key: "payPeriod",
                 header: "Pay Period",
                 width: "14%",
-                render: (r) => (
-                  <span style={{ fontWeight: 600 }}>{r.payPeriod}</span>
-                ),
+                render: (r) => <span className="u-fw-600">{r.payPeriod}</span>,
               },
               {
                 key: "hours",
                 header: "Hours",
                 align: "right" as const,
-                render: (r) => (
-                  <span style={{ fontFamily: "monospace" }}>{r.hours}</span>
-                ),
+                render: (r) => <span className="u-font-mono">{r.hours}</span>,
               },
               {
                 key: "billed",
@@ -8037,9 +7302,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                 header: "Gross Pay",
                 align: "right" as const,
                 render: (r) => (
-                  <span style={{ fontFamily: "monospace" }}>
-                    {fmtF(r.grossPay)}
-                  </span>
+                  <span className="u-font-mono">{fmtF(r.grossPay)}</span>
                 ),
               },
               {
@@ -8047,8 +7310,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                 header: "State Tax",
                 align: "right" as const,
                 render: (r) => (
-                  <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
-                    {r.stateTax > 0 ? `−${fmtF(r.stateTax)}` : "—"}
+                  <span className="ov-mono u-color-red">
+                    {r.stateTax > 0 ? `-${fmtF(r.stateTax)}` : "�"}
                   </span>
                 ),
               },
@@ -8057,8 +7320,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                 header: "Withholding",
                 align: "right" as const,
                 render: (r) => (
-                  <span className="ov-mono" style={{ color: "var(--w97-red)" }}>
-                    {r.withholding > 0 ? `−${fmtF(r.withholding)}` : "—"}
+                  <span className="ov-mono u-color-red">
+                    {r.withholding > 0 ? `-${fmtF(r.withholding)}` : "�"}
                   </span>
                 ),
               },
@@ -8078,7 +7341,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   <span
                     className={`ov-mono ${r.paid > 0 ? "ov-val-green" : ""}`}
                   >
-                    {r.paid > 0 ? fmtF(r.paid) : "—"}
+                    {r.paid > 0 ? fmtF(r.paid) : "�"}
                   </span>
                 ),
               },
@@ -8104,48 +7367,30 @@ const MarketerDashboard: React.FC<Props> = () => {
                   totals.billed - totals.grossPay,
                 )}`}
               >
-                <td className="ov-pt-tf" style={{ fontWeight: 700 }}>
-                  TOTAL
-                </td>
-                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>
+                <td className="ov-pt-tf u-fw-700">TOTAL</td>
+                <td className="ov-pt-tf ov-mono u-text-right">
                   {totals.hours.toLocaleString()}
                 </td>
-                <td
-                  className="ov-pt-tf ov-mono ov-val-green"
-                  style={{ textAlign: "right" }}
-                >
+                <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                   {fmtF(totals.billed)}
                 </td>
-                <td className="ov-pt-tf ov-mono" style={{ textAlign: "right" }}>
+                <td className="ov-pt-tf ov-mono u-text-right">
                   {fmtF(totals.grossPay)}
                 </td>
-                <td
-                  className="ov-pt-tf ov-mono"
-                  style={{ textAlign: "right", color: "var(--w97-red)" }}
-                >
+                <td className="ov-pt-tf ov-mono u-text-right u-color-red">
                   {taxDisplay}
                 </td>
-                <td
-                  className="ov-pt-tf ov-mono"
-                  style={{ textAlign: "right", color: "var(--w97-red)" }}
-                >
+                <td className="ov-pt-tf ov-mono u-text-right u-color-red">
                   {withholdDisplay}
                 </td>
-                <td
-                  className="ov-pt-tf ov-mono ov-val-blue"
-                  style={{ textAlign: "right" }}
-                >
+                <td className="ov-pt-tf ov-mono ov-val-blue u-text-right">
                   {fmtF(totals.netPay)}
                 </td>
-                <td
-                  className="ov-pt-tf ov-mono ov-val-green"
-                  style={{ textAlign: "right" }}
-                >
+                <td className="ov-pt-tf ov-mono ov-val-green u-text-right">
                   {fmtF(totals.paid)}
                 </td>
                 <td
-                  className={`ov-pt-tf ov-mono ${balanceDisplayCls}`}
-                  style={{ textAlign: "right" }}
+                  className={`ov-pt-tf ov-mono ${balanceDisplayCls} u-text-right`}
                 >
                   {settledOrAmount(totals.balance, fmtF)}
                 </td>
@@ -8210,54 +7455,34 @@ const MarketerDashboard: React.FC<Props> = () => {
       <div>
         <Toolbar
           left={
-            <h3
-              style={{
-                margin: 0,
-                fontSize: 14,
-                fontWeight: 700,
-                color: "var(--w97-titlebar-from)",
-              }}
-            >
-              📊 Employer Activity
+            <h3 className="u-m-0 u-fs-14 u-fw-700 u-color-titlebar">
+              ?? Employer Activity
             </h3>
           }
           right={
-            <span
-              style={{
-                fontSize: 11,
-                color: "var(--w97-text-secondary)",
-              }}
-            >
+            <span className="u-fs-11 u-color-secondary">
               {total} interactions
             </span>
           }
-          style={{ marginBottom: 8 }}
+          className="u-mb-8"
         />
 
         {total === 0 && (
-          <div
-            className="matchdb-card"
-            style={{
-              padding: 40,
-              textAlign: "center",
-              color: "var(--w97-border-dark)",
-              fontSize: 13,
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
+          <div className="matchdb-card u-p-40 u-text-center u-color-border-dark u-fs-13">
+            <div className="u-fs-32 u-mb-8">??</div>
             No employer interactions recorded yet
           </div>
         )}
         {total > 0 && (
           <>
-            {/* ── Subtab Bar ── */}
+            {/* -- Subtab Bar -- */}
             <div style={{ display: "flex", gap: 0, margin: "0 0 0 14px" }}>
               <button
                 type="button"
                 onClick={() => setVendorActivitySubTab("summary")}
                 style={subtabStyle(vendorActivitySubTab === "summary")}
               >
-                📊 Summary
+                ?? Summary
               </button>
               {yearTabs.map((yr) => (
                 <button
@@ -8266,12 +7491,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                   onClick={() => setVendorActivitySubTab(yr)}
                   style={subtabStyle(vendorActivitySubTab === yr, false)}
                 >
-                  📅 {yr}
+                  ?? {yr}
                 </button>
               ))}
             </div>
 
-            {/* ── Summary subtab: Charts ── */}
+            {/* -- Summary subtab: Charts -- */}
             {vendorActivitySubTab === "summary" && (
               <div
                 style={{
@@ -8293,14 +7518,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     alignItems: "center",
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "var(--w97-text-secondary)",
-                      marginBottom: 12,
-                    }}
-                  >
+                  <div className="u-fs-11 u-fw-600 u-color-secondary u-mb-12">
                     Pokes vs Emails
                   </div>
                   <svg width="120" height="120" viewBox="0 0 120 120">
@@ -8354,21 +7572,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                       total
                     </text>
                   </svg>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 16,
-                      marginTop: 12,
-                      fontSize: 10,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
+                  <div className="u-flex u-gap-16 u-mt-12 u-fs-10">
+                    <div className="u-flex u-items-center u-gap-4">
                       <span
                         style={{
                           width: 8,
@@ -8380,13 +7585,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                       />
                       Pokes ({pokeCount})
                     </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
+                    <div className="u-flex u-items-center u-gap-4">
                       <span
                         style={{
                           width: 8,
@@ -8406,23 +7605,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                   className="matchdb-card"
                   style={{ flex: 1, padding: 20, minWidth: 280 }}
                 >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "var(--w97-text-secondary)",
-                      marginBottom: 12,
-                    }}
-                  >
+                  <div className="u-fs-11 u-fw-600 u-color-secondary u-mb-12">
                     Interactions by Vendor
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 8,
-                    }}
-                  >
+                  <div className="u-flex u-flex-col-dir u-gap-8">
                     {vendorEntries.slice(0, 8).map(([vendor, counts]) => (
                       <div key={vendor}>
                         <div
@@ -8467,13 +7653,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                               transition: "width 0.3s ease",
                             }}
                           />
-                          <span
-                            style={{
-                              fontSize: 10,
-                              color: "var(--w97-text-secondary)",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
+                          <span className="u-fs-10 u-color-secondary u-nowrap">
                             {counts.pokes + counts.emails}
                           </span>
                         </div>
@@ -8484,17 +7664,17 @@ const MarketerDashboard: React.FC<Props> = () => {
               </div>
             )}
 
-            {/* ── Activity List (shown for both summary and year tabs) ── */}
+            {/* -- Activity List (shown for both summary and year tabs) -- */}
             <DataTable
               title={
                 vendorActivitySubTab === "summary"
                   ? "All Employer Activity"
-                  : `Employer Activity — ${vendorActivitySubTab}`
+                  : `Employer Activity � ${vendorActivitySubTab}`
               }
-              titleIcon="📋"
+              titleIcon="??"
               showSerialNumber={false}
               titleExtra={
-                <span style={{ fontSize: 10, opacity: 0.7 }}>
+                <span className="u-fs-10 u-opacity-70">
                   {filteredActivities.length} interaction
                   {filteredActivities.length === 1 ? "" : "s"}
                 </span>
@@ -8533,8 +7713,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                     key: "subject",
                     header: "Subject / Job",
                     render: (v) => (
-                      <span style={{ color: "var(--w97-text-secondary)" }}>
-                        {v.subject || v.job_title || "—"}
+                      <span className="u-color-secondary">
+                        {v.subject || v.job_title || "�"}
                       </span>
                     ),
                   },
@@ -8542,7 +7722,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     key: "date",
                     header: "Date",
                     render: (v) => (
-                      <span style={{ color: "var(--w97-text-secondary)" }}>
+                      <span className="u-color-secondary">
                         {fmtDate(v.created_at)}
                       </span>
                     ),
@@ -8572,31 +7752,13 @@ const MarketerDashboard: React.FC<Props> = () => {
       <div>
         <Toolbar
           left={
-            <h3
-              style={{
-                margin: 0,
-                fontSize: 14,
-                fontWeight: 700,
-                color: "var(--w97-titlebar-from)",
-              }}
-            >
-              📤 Forwarded Openings
+            <h3 className="u-m-0 u-fs-14 u-fw-700 u-color-titlebar">
+              ?? Forwarded Openings
             </h3>
           }
           right={
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 11,
-                  color: "var(--w97-text-secondary)",
-                }}
-              >
+            <div className="u-flex u-items-center u-gap-8">
+              <span className="u-fs-11 u-color-secondary">
                 {fwd.length} sent
               </span>
               <Button
@@ -8612,25 +7774,17 @@ const MarketerDashboard: React.FC<Props> = () => {
               </Button>
             </div>
           }
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
         />
         {fwd.length === 0 ? (
-          <div
-            className="matchdb-card"
-            style={{
-              padding: 40,
-              textAlign: "center",
-              color: "var(--w97-border-dark)",
-              fontSize: 13,
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>📤</div>
+          <div className="matchdb-card u-p-40 u-text-center u-color-border-dark u-fs-13">
+            <div className="u-fs-32 u-mb-8">??</div>
             No openings forwarded to this candidate yet
           </div>
         ) : (
           <DataTable
             title="Forwarded Openings"
-            titleIcon="📤"
+            titleIcon="??"
             showSerialNumber={false}
             columns={
               [
@@ -8639,12 +7793,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   header: "Job Title",
                   width: "20%",
                   render: (f) => (
-                    <span
-                      style={{
-                        fontWeight: 600,
-                        color: "var(--w97-titlebar-from)",
-                      }}
-                    >
+                    <span className="u-fw-600 u-color-titlebar">
                       {f.job_title}
                     </span>
                   ),
@@ -8654,8 +7803,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                   header: "Location",
                   width: "14%",
                   render: (f) => (
-                    <span style={{ color: "var(--w97-text-secondary)" }}>
-                      {f.job_location || "—"}
+                    <span className="u-color-secondary">
+                      {f.job_location || "�"}
                     </span>
                   ),
                 },
@@ -8663,8 +7812,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                   key: "type",
                   header: "Type",
                   render: (f) => (
-                    <span style={{ color: "var(--w97-text-secondary)" }}>
-                      {f.job_type || "—"}
+                    <span className="u-color-secondary">
+                      {f.job_type || "�"}
                     </span>
                   ),
                 },
@@ -8672,8 +7821,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                   key: "subType",
                   header: "Sub Type",
                   render: (f) => (
-                    <span style={{ color: "var(--w97-text-secondary)" }}>
-                      {f.job_sub_type || "—"}
+                    <span className="u-color-secondary">
+                      {f.job_sub_type || "�"}
                     </span>
                   ),
                 },
@@ -8681,8 +7830,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                   key: "vendor",
                   header: "Vendor",
                   render: (f) => (
-                    <span style={{ color: "var(--w97-text-secondary)" }}>
-                      {f.vendor_email || "—"}
+                    <span className="u-color-secondary">
+                      {f.vendor_email || "�"}
                     </span>
                   ),
                 },
@@ -8716,7 +7865,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   key: "sent",
                   header: "Sent",
                   render: (f) => (
-                    <span style={{ color: "var(--w97-text-secondary)" }}>
+                    <span className="u-color-secondary">
                       {fmtDate(f.created_at)}
                     </span>
                   ),
@@ -8733,13 +7882,13 @@ const MarketerDashboard: React.FC<Props> = () => {
       </div>
     );
   }
-  // ── Admin views ────────────────────────────────────────────────────────────
+  // -- Admin views ------------------------------------------------------------
 
   function renderCandidateDashboardView() {
     return (
       <div>
         <h2 style={{ fontSize: 16, margin: "0 0 14px", color: "#1d4479" }}>
-          🎯 Candidate Dashboard
+          ?? Candidate Dashboard
         </h2>
         <div
           style={{
@@ -8749,45 +7898,21 @@ const MarketerDashboard: React.FC<Props> = () => {
             marginBottom: 20,
           }}
         >
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #e0e0e0",
-              borderRadius: 8,
-              padding: 16,
-              textAlign: "center",
-            }}
-          >
+          <div className="u-bg-white u-border-light u-rounded-8 u-p-16 u-text-center">
             <div style={{ fontSize: 28, fontWeight: 700, color: "#1d4479" }}>
               {companyCandidates.length}
             </div>
             <div style={{ fontSize: 12, color: "#888" }}>My Candidates</div>
           </div>
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #e0e0e0",
-              borderRadius: 8,
-              padding: 16,
-              textAlign: "center",
-            }}
-          >
+          <div className="u-bg-white u-border-light u-rounded-8 u-p-16 u-text-center">
             <div style={{ fontSize: 28, fontWeight: 700, color: "#2e7d32" }}>
-              {adminDashboard?.pendingInvites ?? "—"}
+              {adminDashboard?.pendingInvites ?? "�"}
             </div>
             <div style={{ fontSize: 12, color: "#888" }}>
               Pending Invitations
             </div>
           </div>
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #e0e0e0",
-              borderRadius: 8,
-              padding: 16,
-              textAlign: "center",
-            }}
-          >
+          <div className="u-bg-white u-border-light u-rounded-8 u-p-16 u-text-center">
             <div style={{ fontSize: 28, fontWeight: 700, color: "#b8860b" }}>
               {profilesTotal}
             </div>
@@ -8796,7 +7921,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div className="u-flex u-gap-10 u-flex-wrap">
           <Button
             variant="primary"
             onClick={() => setInviteCandidateOpen(true)}
@@ -8807,10 +7932,10 @@ const MarketerDashboard: React.FC<Props> = () => {
             + Add Candidate
           </Button>
           <Button onClick={() => navigateTo("admin-candidate-tracking")}>
-            📋 Candidate Tracking
+            ?? Candidate Tracking
           </Button>
           <Button onClick={() => navigateTo("company-candidates")}>
-            👤 My Candidates
+            ?? My Candidates
           </Button>
         </div>
       </div>
@@ -8821,7 +7946,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     return (
       <div>
         <h2 style={{ fontSize: 16, margin: "0 0 14px", color: "#1d4479" }}>
-          👷 Workers Dashboard
+          ?? Workers Dashboard
         </h2>
         <div
           style={{
@@ -8831,62 +7956,38 @@ const MarketerDashboard: React.FC<Props> = () => {
             marginBottom: 20,
           }}
         >
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #e0e0e0",
-              borderRadius: 8,
-              padding: 16,
-              textAlign: "center",
-            }}
-          >
+          <div className="u-bg-white u-border-light u-rounded-8 u-p-16 u-text-center">
             <div style={{ fontSize: 28, fontWeight: 700, color: "#1d4479" }}>
-              {adminDashboard?.seatsUsed ?? "—"}
+              {adminDashboard?.seatsUsed ?? "�"}
             </div>
             <div style={{ fontSize: 12, color: "#888" }}>Total Employees</div>
           </div>
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #e0e0e0",
-              borderRadius: 8,
-              padding: 16,
-              textAlign: "center",
-            }}
-          >
+          <div className="u-bg-white u-border-light u-rounded-8 u-p-16 u-text-center">
             <div style={{ fontSize: 28, fontWeight: 700, color: "#2e7d32" }}>
-              {adminDashboard?.activeUsers ?? "—"}
+              {adminDashboard?.activeUsers ?? "�"}
             </div>
             <div style={{ fontSize: 12, color: "#888" }}>Active Now</div>
           </div>
-          <div
-            style={{
-              background: "#fff",
-              border: "1px solid #e0e0e0",
-              borderRadius: 8,
-              padding: 16,
-              textAlign: "center",
-            }}
-          >
+          <div className="u-bg-white u-border-light u-rounded-8 u-p-16 u-text-center">
             <div style={{ fontSize: 28, fontWeight: 700, color: "#555" }}>
-              {adminDashboard?.seatsUsed ?? "—"}/
-              {adminDashboard?.seatLimit ?? "—"}
+              {adminDashboard?.seatsUsed ?? "�"}/
+              {adminDashboard?.seatLimit ?? "�"}
             </div>
             <div style={{ fontSize: 12, color: "#888" }}>Seats Used</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div className="u-flex u-gap-10 u-flex-wrap">
           <Button variant="primary" onClick={() => setInviteEmployeeOpen(true)}>
             + Invite Employee
           </Button>
           <Button onClick={() => navigateTo("admin-users")}>
-            👥 Manage Users
+            ?? Manage Users
           </Button>
           <Button onClick={() => navigateTo("admin-active-users")}>
-            🟢 Active Users
+            ?? Active Users
           </Button>
           <Button onClick={() => navigateTo("admin-invitations")}>
-            ✉ Employee Invites
+            ? Employee Invites
           </Button>
         </div>
       </div>
@@ -8896,16 +7997,9 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderAdminUsersView() {
     return (
       <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 14,
-          }}
-        >
+        <div className="u-flex u-justify-between u-items-center u-mb-14">
           <h2 style={{ fontSize: 16, margin: 0, color: "#1d4479" }}>
-            👥 User Management
+            ?? User Management
           </h2>
           <Button variant="primary" onClick={() => setInviteEmployeeOpen(true)}>
             + Invite Employee
@@ -8919,16 +8013,9 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderAdminInvitationsView() {
     return (
       <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 14,
-          }}
-        >
+        <div className="u-flex u-justify-between u-items-center u-mb-14">
           <h2 style={{ fontSize: 16, margin: 0, color: "#1d4479" }}>
-            ✉ Employee Invitations
+            ? Employee Invitations
           </h2>
           <Button variant="primary" onClick={() => setInviteEmployeeOpen(true)}>
             + Send Invite
@@ -8943,7 +8030,7 @@ const MarketerDashboard: React.FC<Props> = () => {
     return (
       <div>
         <h2 style={{ fontSize: 16, margin: "0 0 14px", color: "#1d4479" }}>
-          🟢 Active Users
+          ?? Active Users
         </h2>
         <ActiveUsersPanel />
       </div>
@@ -8953,16 +8040,9 @@ const MarketerDashboard: React.FC<Props> = () => {
   function renderAdminCandidateTrackingView() {
     return (
       <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 14,
-          }}
-        >
+        <div className="u-flex u-justify-between u-items-center u-mb-14">
           <h2 style={{ fontSize: 16, margin: 0, color: "#1d4479" }}>
-            🎯 Candidate Tracking
+            ?? Candidate Tracking
           </h2>
           <Button
             variant="primary"
@@ -8983,7 +8063,7 @@ const MarketerDashboard: React.FC<Props> = () => {
       breadcrumb={breadcrumb}
     >
       <div className="matchdb-page">
-        {/* ── Dashboard stat chips (same as vendor / candidate) ── */}
+        {/* -- Dashboard stat chips (same as vendor / candidate) -- */}
         <div className="matchdb-stat-bar">
           {statChips.map((chip) => (
             <button
@@ -9017,7 +8097,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         {renderActiveView()}
       </div>
 
-      {/* ── Detail modal for job / candidate ── */}
+      {/* -- Detail modal for job / candidate -- */}
       <DetailModal
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
@@ -9033,7 +8113,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         forwardLoading={forwardLoading}
       />
 
-      {/* ── Invite Candidate Modal ── */}
+      {/* -- Invite Candidate Modal -- */}
       {inviteModalOpen && inviteTarget && (
         <dialog open className="matchdb-modal-overlay">
           <div
@@ -9046,46 +8126,28 @@ const MarketerDashboard: React.FC<Props> = () => {
             style={{ maxWidth: 420, padding: 20 }}
           >
             <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>
-              ✉ Invite Candidate
+              ? Invite Candidate
             </h3>
-            <div
-              style={{
-                fontSize: 12,
-                marginBottom: 8,
-                color: "var(--w97-text-secondary)",
-              }}
-            >
+            <div className="u-fs-12 u-mb-8 u-color-secondary">
               Send an invite to <strong>{inviteTarget.candidate_name}</strong> (
-              {inviteTarget.candidate_email}) to join your company on MatchDB.
+              {inviteTarget.candidate_email}) to join your company on
+              MatchingDB.
             </div>
             <label
               htmlFor="invite-offer-note"
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                display: "block",
-                marginBottom: 4,
-              }}
+              className="u-fs-11 u-fw-600 u-block u-mb-4"
             >
               Offer Note (optional):
             </label>
             <textarea
               id="invite-offer-note"
-              className="matchdb-input"
+              className="matchdb-input u-w-full u-resize-v u-fs-11"
               rows={4}
               value={inviteOfferNote}
               onChange={(e) => setInviteOfferNote(e.target.value)}
-              placeholder="Add a personal message or offer details…"
-              style={{ width: "100%", resize: "vertical", fontSize: 11 }}
+              placeholder="Add a personal message or offer details�"
             />
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                justifyContent: "flex-end",
-                marginTop: 12,
-              }}
-            >
+            <div className="u-flex u-gap-8 u-justify-end u-mt-12">
               <Button size="sm" onClick={() => setInviteModalOpen(false)}>
                 Cancel
               </Button>
@@ -9093,18 +8155,15 @@ const MarketerDashboard: React.FC<Props> = () => {
                 variant="primary"
                 onClick={handleSendInvite}
                 disabled={inviteLoading}
-                style={{
-                  cursor: inviteLoading ? "wait" : "pointer",
-                }}
               >
-                {inviteLoading ? "Sending…" : "Send Invite"}
+                {inviteLoading ? "Sending�" : "Send Invite"}
               </Button>
             </div>
           </div>
         </dialog>
       )}
 
-      {/* ── Add Candidate Modal (opened from left nav) ── */}
+      {/* -- Add Candidate Modal (opened from left nav) -- */}
       {addCandModalOpen && (
         <dialog open className="matchdb-modal-overlay">
           <div
@@ -9121,23 +8180,16 @@ const MarketerDashboard: React.FC<Props> = () => {
               overflow: "auto",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
-              <h3 style={{ margin: 0, fontSize: 14 }}>
-                🏢 {myCompany?.name ?? "Company"} — Add Candidate
+            <div className="u-flex u-justify-between u-items-center u-mb-12">
+              <h3 className="u-m-0 u-fs-14">
+                ?? {myCompany?.name ?? "Company"} � Add Candidate
               </h3>
               <Button
                 variant="close"
                 size="xs"
                 onClick={() => setAddCandModalOpen(false)}
               >
-                ✕
+                ?
               </Button>
             </div>
 
@@ -9154,13 +8206,8 @@ const MarketerDashboard: React.FC<Props> = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 2 }}
-                >
-                  <label
-                    htmlFor="add-cand-name"
-                    style={{ fontSize: 10, fontWeight: 600 }}
-                  >
+                <div className="u-flex u-flex-col-dir u-gap-2">
+                  <label htmlFor="add-cand-name" className="u-fs-10 u-fw-600">
                     Name *
                   </label>
                   <Input
@@ -9168,16 +8215,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                     placeholder="Candidate name"
                     value={newCandName}
                     onChange={(e) => setNewCandName(e.target.value)}
-                    inputWidth={160}
                   />
                 </div>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 2 }}
-                >
-                  <label
-                    htmlFor="add-cand-email"
-                    style={{ fontSize: 10, fontWeight: 600 }}
-                  >
+                <div className="u-flex u-flex-col-dir u-gap-2">
+                  <label htmlFor="add-cand-email" className="u-fs-10 u-fw-600">
                     Email *
                   </label>
                   <Input
@@ -9185,16 +8226,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                     placeholder="Candidate email"
                     value={newCandEmail}
                     onChange={(e) => setNewCandEmail(e.target.value)}
-                    inputWidth={200}
                   />
                 </div>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 2 }}
-                >
-                  <label
-                    htmlFor="add-cand-id"
-                    style={{ fontSize: 10, fontWeight: 600 }}
-                  >
+                <div className="u-flex u-flex-col-dir u-gap-2">
+                  <label htmlFor="add-cand-id" className="u-fs-10 u-fw-600">
                     Candidate ID
                   </label>
                   <Input
@@ -9202,7 +8237,6 @@ const MarketerDashboard: React.FC<Props> = () => {
                     placeholder="Optional"
                     value={newCandId}
                     onChange={(e) => setNewCandId(e.target.value)}
-                    inputWidth={140}
                   />
                 </div>
                 <Button
@@ -9224,22 +8258,20 @@ const MarketerDashboard: React.FC<Props> = () => {
             {/* Current candidate list */}
             <DataTable
               title={`Current Roster`}
-              titleIcon="👥"
+              titleIcon="??"
               showSerialNumber
               columns={
                 [
                   {
                     key: "name",
                     header: "Name",
-                    render: (c) => <>{c.candidate_name || "—"}</>,
+                    render: (c) => <>{c.candidate_name || "�"}</>,
                   },
                   {
                     key: "email",
                     header: "Email",
                     render: (c) => (
-                      <span style={{ color: "var(--w97-blue)" }}>
-                        {c.candidate_email}
-                      </span>
+                      <span className="u-color-blue">{c.candidate_email}</span>
                     ),
                   },
                   {
@@ -9252,11 +8284,11 @@ const MarketerDashboard: React.FC<Props> = () => {
                       > = {
                         accepted: {
                           color: "var(--w97-green)",
-                          label: "✓ Accepted",
+                          label: "? Accepted",
                         },
                         invited: {
                           color: "var(--w97-yellow)",
-                          label: "⏳ Invited",
+                          label: "? Invited",
                         },
                       };
                       const m = cfg[c.invite_status ?? ""];
@@ -9264,7 +8296,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                         <span
                           style={{
                             color: m.color,
-                            fontWeight: m.label.startsWith("✓")
+                            fontWeight: m.label.startsWith("?")
                               ? 600
                               : undefined,
                           }}
@@ -9272,9 +8304,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                           {m.label}
                         </span>
                       ) : (
-                        <span style={{ color: "var(--w97-text-secondary)" }}>
-                          —
-                        </span>
+                        <span className="u-color-secondary">�</span>
                       );
                     },
                   },
@@ -9282,7 +8312,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                     key: "added",
                     header: "Added",
                     render: (c) => (
-                      <span style={{ color: "var(--w97-text-secondary)" }}>
+                      <span className="u-color-secondary">
                         {fmtDate(c.created_at)}
                       </span>
                     ),
@@ -9297,7 +8327,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         </dialog>
       )}
 
-      {/* ── Send Job Opening via Email Modal ── */}
+      {/* -- Send Job Opening via Email Modal -- */}
       {sendJobModalOpen && sendJobCandidate && (
         <dialog open className="matchdb-modal-overlay">
           <div
@@ -9310,27 +8340,16 @@ const MarketerDashboard: React.FC<Props> = () => {
             style={{ maxWidth: 460, padding: 20 }}
           >
             <h3 style={{ margin: "0 0 10px", fontSize: 14 }}>
-              📧 Send Job Opening to Candidate
+              ?? Send Job Opening to Candidate
             </h3>
-            <div
-              style={{
-                fontSize: 12,
-                marginBottom: 10,
-                color: "var(--w97-text-secondary)",
-              }}
-            >
+            <div className="u-fs-12 u-mb-10 u-color-secondary">
               Send a job opening to{" "}
               <strong>{sendJobCandidate.name || sendJobCandidate.email}</strong>{" "}
               via email.
             </div>
             <label
               htmlFor="send-job-select"
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                display: "block",
-                marginBottom: 4,
-              }}
+              className="u-fs-11 u-fw-600 u-block u-mb-4"
             >
               Select Job Opening:
             </label>
@@ -9338,15 +8357,17 @@ const MarketerDashboard: React.FC<Props> = () => {
               id="send-job-select"
               value={sendJobId}
               onChange={(e) => setSendJobId(e.target.value)}
-              style={{ width: "100%", fontSize: 11, marginBottom: 10 }}
+              fullWidth
+              size="xs"
+              className="u-mb-10"
             >
-              <option value="">— Select a job —</option>
+              <option value="">� Select a job �</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.title} — {j.location} (
+                  {j.title} � {j.location} (
                   {TYPE_LABELS[j.job_type] || j.job_type}
                   {j.job_sub_type
-                    ? ` › ${SUB_LABELS[j.job_sub_type] || j.job_sub_type}`
+                    ? ` � ${SUB_LABELS[j.job_sub_type] || j.job_sub_type}`
                     : ""}
                   )
                 </option>
@@ -9354,32 +8375,19 @@ const MarketerDashboard: React.FC<Props> = () => {
             </Select>
             <label
               htmlFor="send-job-note"
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                display: "block",
-                marginBottom: 4,
-              }}
+              className="u-fs-11 u-fw-600 u-block u-mb-4"
             >
               Note (optional):
             </label>
             <textarea
               id="send-job-note"
-              className="matchdb-input"
+              className="matchdb-input u-w-full u-resize-v u-fs-11"
               rows={3}
               value={sendJobNote}
               onChange={(e) => setSendJobNote(e.target.value)}
-              placeholder="Add a note (e.g., 'Great match for your skills!')…"
-              style={{ width: "100%", resize: "vertical", fontSize: 11 }}
+              placeholder="Add a note (e.g., 'Great match for your skills!')�"
             />
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                justifyContent: "flex-end",
-                marginTop: 12,
-              }}
-            >
+            <div className="u-flex u-gap-8 u-justify-end u-mt-12">
               <Button size="sm" onClick={() => setSendJobModalOpen(false)}>
                 Cancel
               </Button>
@@ -9395,14 +8403,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                   opacity: sendJobId ? 1 : 0.5,
                 }}
               >
-                {forwardEmailLoading ? "Sending…" : "Send via Email"}
+                {forwardEmailLoading ? "Sending�" : "Send via Email"}
               </Button>
             </div>
           </div>
         </dialog>
       )}
 
-      {/* ── Email Report Modal ── */}
+      {/* -- Email Report Modal -- */}
       {emailModalOpen && emailModalTarget && (
         <dialog open className="matchdb-modal-overlay">
           <button
@@ -9421,7 +8429,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           >
             <div className="matchdb-modal-header">
               <span>
-                📧 Email {contextLabel(emailModalTarget.context)} Report
+                ?? Email {contextLabel(emailModalTarget.context)} Report
               </span>
               <button
                 type="button"
@@ -9431,13 +8439,10 @@ const MarketerDashboard: React.FC<Props> = () => {
                   setEmailModalTarget(null);
                 }}
               >
-                ✕
+                ?
               </button>
             </div>
-            <div
-              className="matchdb-modal-body"
-              style={{ display: "flex", flexDirection: "column", gap: 14 }}
-            >
+            <div className="matchdb-modal-body u-flex u-flex-col-dir u-gap-14">
               {/* Target info */}
               <div
                 style={{
@@ -9447,17 +8452,9 @@ const MarketerDashboard: React.FC<Props> = () => {
                   padding: "10px 14px",
                 }}
               >
-                <div style={{ fontSize: 12, fontWeight: 600 }}>
-                  {emailModalTarget.name}
-                </div>
+                <div className="u-fs-12 u-fw-600">{emailModalTarget.name}</div>
                 {emailModalTarget.email && (
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "var(--w97-text-secondary)",
-                      marginTop: 2,
-                    }}
-                  >
+                  <div className="u-fs-11 u-color-secondary u-mt-2">
                     {emailModalTarget.email}
                   </div>
                 )}
@@ -9472,14 +8469,7 @@ const MarketerDashboard: React.FC<Props> = () => {
                   padding: "10px 14px",
                 }}
               >
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: "var(--w97-text-secondary)",
-                    marginBottom: 6,
-                  }}
-                >
+                <div className="u-fs-10 u-fw-600 u-color-secondary u-mb-6">
                   Report Data Preview
                 </div>
                 {Object.entries(emailModalTarget.data).map(([k, v]) => (
@@ -9493,25 +8483,17 @@ const MarketerDashboard: React.FC<Props> = () => {
                       borderBottom: "1px dotted var(--w97-border-light)",
                     }}
                   >
-                    <span style={{ color: "var(--w97-text-secondary)" }}>
-                      {k}
-                    </span>
-                    <span style={{ fontWeight: 600, fontFamily: "monospace" }}>
-                      {v}
-                    </span>
+                    <span className="u-color-secondary">{k}</span>
+                    <span className="u-fw-600 u-font-mono">{v}</span>
                   </div>
                 ))}
               </div>
 
               {/* Format dropdown */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="u-flex u-items-center u-gap-10">
                 <label
                   htmlFor="email-format-select"
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                  }}
+                  className="u-fs-11 u-fw-600 u-nowrap"
                 >
                   Attachment Format:
                 </label>
@@ -9530,15 +8512,12 @@ const MarketerDashboard: React.FC<Props> = () => {
                     background: "var(--w97-window)",
                   }}
                 >
-                  <option value="pdf">📄 PDF / CSV</option>
-                  <option value="excel">📊 Excel</option>
+                  <option value="pdf">?? PDF / CSV</option>
+                  <option value="excel">?? Excel</option>
                 </select>
               </div>
             </div>
-            <div
-              className="matchdb-modal-footer"
-              style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}
-            >
+            <div className="matchdb-modal-footer u-flex u-justify-end u-gap-8">
               <Button
                 size="sm"
                 onClick={() => {
@@ -9549,14 +8528,14 @@ const MarketerDashboard: React.FC<Props> = () => {
                 Cancel
               </Button>
               <Button variant="primary" size="sm" onClick={handleEmailSend}>
-                📧 Email Candidate
+                ?? Email Candidate
               </Button>
             </div>
           </div>
         </dialog>
       )}
 
-      {/* ── Download Report Modal ── */}
+      {/* -- Download Report Modal -- */}
       {downloadModalOpen && downloadModalTarget && (
         <dialog open className="matchdb-modal-overlay">
           <button
@@ -9574,7 +8553,7 @@ const MarketerDashboard: React.FC<Props> = () => {
             style={{ maxWidth: 340, width: "90%" }}
           >
             <div className="matchdb-modal-header">
-              <span>⬇ Download Report</span>
+              <span>? Download Report</span>
               <button
                 type="button"
                 className="matchdb-modal-close"
@@ -9583,40 +8562,34 @@ const MarketerDashboard: React.FC<Props> = () => {
                   setDownloadModalTarget(null);
                 }}
               >
-                ✕
+                ?
               </button>
             </div>
-            <div
-              className="matchdb-modal-body"
-              style={{ display: "flex", flexDirection: "column", gap: 14 }}
-            >
-              <div style={{ fontSize: 12 }}>
+            <div className="matchdb-modal-body u-flex u-flex-col-dir u-gap-14">
+              <div className="u-fs-12">
                 Download <strong>{downloadModalTarget.name}</strong>{" "}
                 {downloadModalTarget.context} report as:
               </div>
-              <div style={{ display: "flex", gap: 10 }}>
+              <div className="u-flex u-gap-10">
                 <Button
                   variant="primary"
                   size="sm"
-                  style={{ flex: 1 }}
+                  fill
                   onClick={() => handleDownloadSingle("pdf")}
                 >
-                  📄 PDF / CSV
+                  ?? PDF / CSV
                 </Button>
                 <Button
                   variant="primary"
                   size="sm"
-                  style={{ flex: 1 }}
+                  fill
                   onClick={() => handleDownloadSingle("excel")}
                 >
-                  📊 Excel
+                  ?? Excel
                 </Button>
               </div>
             </div>
-            <div
-              className="matchdb-modal-footer"
-              style={{ display: "flex", justifyContent: "flex-end" }}
-            >
+            <div className="matchdb-modal-footer u-flex u-justify-end">
               <Button
                 size="sm"
                 onClick={() => {
@@ -9630,7 +8603,7 @@ const MarketerDashboard: React.FC<Props> = () => {
           </div>
         </dialog>
       )}
-      {/* ── Admin: Invite Employee Modal ── */}
+      {/* -- Admin: Invite Employee Modal -- */}
       {inviteEmployeeOpen && (
         <InviteEmployeeModal
           open={inviteEmployeeOpen}
@@ -9638,7 +8611,7 @@ const MarketerDashboard: React.FC<Props> = () => {
         />
       )}
 
-      {/* ── Admin: Invite Candidate Modal ── */}
+      {/* -- Admin: Invite Candidate Modal -- */}
       {inviteCandidateOpen && (
         <InviteCandidateModal
           open={inviteCandidateOpen}

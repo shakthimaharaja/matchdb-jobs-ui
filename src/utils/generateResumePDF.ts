@@ -138,7 +138,7 @@ export async function generateResumePDF(
       doc.setFont("helvetica", "normal");
       doc.setTextColor("#aaaaaa");
       doc.text(
-        `Generated via MatchDB — Page ${i} of ${totalPages}`,
+        `Generated via MatchingDB — Page ${i} of ${totalPages}`,
         margin,
         doc.internal.pageSize.getHeight() - 24,
       );

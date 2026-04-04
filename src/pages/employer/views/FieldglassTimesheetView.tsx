@@ -136,7 +136,7 @@ const FieldglassTimesheetView: React.FC<Props> = () => {
         header: "Actions",
         render: (t) =>
           t.status === "submitted" ? (
-            <div style={{ display: "flex", gap: 4 }}>
+            <div className="u-flex u-gap-4">
               <Button
                 size="sm"
                 onClick={() => handleApprove(t.id)}
@@ -215,7 +215,7 @@ const FieldglassTimesheetView: React.FC<Props> = () => {
               value={rejectNotes}
               onChange={(e) => setRejectNotes(e.target.value)}
               rows={3}
-              style={{ width: "100%" }}
+              className="u-w-full"
             />
             <div
               style={{

@@ -6,7 +6,7 @@
 
 /* Active / Closed status badges in titlebar */
 .jpm-badge {
-  font-size: 10px;
+  font-size: calc(10px * var(--fs-scale, 1));
   font-weight: bold;
   padding: 1px 7px;
   margin-left: 6px;
@@ -33,7 +33,7 @@
   padding: 5px 8px;
   background: #fff8e1;
   border-bottom: 1px solid #e0a000;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   flex-shrink: 0;
 }
 .jpm-confirm-bar span {
@@ -76,5 +76,5 @@
   overflow-y: auto;
   line-height: 1.55;
   font-family: inherit;
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
 }

@@ -4,6 +4,8 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .employer-mode-bar {
@@ -24,7 +26,7 @@
   border-bottom: none;
   background: var(--w97-btn-face, #d4d0c8);
   cursor: pointer;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   font-weight: 600;
   color: var(--w97-text, #222);
   border-radius: 3px 3px 0 0;
@@ -44,7 +46,7 @@
 }
 
 .employer-mode-icon {
-  font-size: 14px;
+  font-size: calc(14px * var(--fs-scale, 1));
 }
 
 .employer-mode-label {

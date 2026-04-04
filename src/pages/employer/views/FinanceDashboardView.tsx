@@ -176,7 +176,7 @@ const FinanceDashboardView: React.FC<Props> = () => {
 
   return (
     <>
-      <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+      <div className="u-mb-12 u-flex u-gap-8">
         {tabs.map((t) => (
           <Button
             key={t.id}

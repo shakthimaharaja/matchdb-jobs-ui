@@ -169,7 +169,7 @@ export function CandidateRegisterPage({
             <strong>Your Plan:</strong> {tokenData.planName}
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="u-flex u-flex-col-dir u-gap-12">
             <div>
               <label htmlFor="reg-fullname" style={labelStyle}>
                 Full Name *
@@ -180,7 +180,7 @@ export function CandidateRegisterPage({
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFullName(e.target.value)
                 }
-                style={{ width: "100%" }}
+                fullWidth
               />
             </div>
 
@@ -188,12 +188,7 @@ export function CandidateRegisterPage({
               <label htmlFor="reg-email" style={labelStyle}>
                 Email *
               </label>
-              <Input
-                id="reg-email"
-                value={email}
-                disabled
-                style={{ width: "100%", background: "#f5f5f5" }}
-              />
+              <Input id="reg-email" value={email} disabled fullWidth />
             </div>
 
             <div>
@@ -207,7 +202,7 @@ export function CandidateRegisterPage({
                   setPhone(e.target.value)
                 }
                 placeholder="+1-555-000-0000"
-                style={{ width: "100%" }}
+                fullWidth
               />
             </div>
 
@@ -223,7 +218,7 @@ export function CandidateRegisterPage({
                   setPassword(e.target.value)
                 }
                 placeholder="Min 8 characters"
-                style={{ width: "100%" }}
+                fullWidth
               />
             </div>
 
@@ -238,19 +233,13 @@ export function CandidateRegisterPage({
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setConfirmPassword(e.target.value)
                 }
-                style={{ width: "100%" }}
+                fullWidth
               />
             </div>
 
             <label
               htmlFor="reg-terms"
-              style={{
-                display: "flex",
-                gap: 8,
-                alignItems: "center",
-                fontSize: 12,
-                cursor: "pointer",
-              }}
+              className="u-flex u-gap-8 u-items-center u-fs-12 u-cursor-pointer"
             >
               <input
                 id="reg-terms"
@@ -273,7 +262,7 @@ export function CandidateRegisterPage({
               variant="primary"
               onClick={handleSubmit}
               disabled={registering || !isValid}
-              style={{ width: "100%" }}
+              fullWidth
             >
               {registering
                 ? "Creating Account…"

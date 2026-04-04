@@ -71,7 +71,7 @@ export function CandidatePaymentFailed({
           </p>
 
           <div style={infoBoxStyle}>
-            <strong style={{ fontSize: 12 }}>What happened?</strong>
+            <strong className="u-fs-12">What happened?</strong>
             <ul
               style={{
                 margin: "8px 0 0",
@@ -97,7 +97,7 @@ export function CandidatePaymentFailed({
             variant="primary"
             onClick={handleRetry}
             disabled={isLoading}
-            style={{ width: "100%", marginTop: 20 }}
+            fullWidth
           >
             {isLoading ? "Preparing Checkout…" : "Retry Payment →"}
           </Button>

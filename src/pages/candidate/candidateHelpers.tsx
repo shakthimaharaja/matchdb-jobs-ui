@@ -39,8 +39,10 @@ export interface CandidateDashboardProps {
 
 export type ActiveView =
   | "matches"
+  | "pokes"
   | "pokes-sent"
   | "pokes-received"
+  | "mails"
   | "mails-sent"
   | "mails-received"
   | "forwarded"

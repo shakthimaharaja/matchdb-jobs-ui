@@ -468,7 +468,7 @@ const CandidateProfile: React.FC<Props> = ({
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                 <MDBButton
                   variant="primary"
-                  style={{ whiteSpace: "nowrap" }}
+                  className="u-nowrap"
                   onClick={() => setEditIntent(true)}
                 >
                   OK, Let Me Edit
@@ -586,7 +586,7 @@ const CandidateProfile: React.FC<Props> = ({
               )}
             </legend>
             <div className="legacy-grid two-col">
-              <div className="legacy-row" style={{ position: "relative" }}>
+              <div className="legacy-row u-relative">
                 <label htmlFor="profile-company">Current Company</label>
                 <InputText
                   id="profile-company"
@@ -731,7 +731,7 @@ const CandidateProfile: React.FC<Props> = ({
               };
 
               return (
-                <div key={vt.key} style={{ marginBottom: 6 }}>
+                <div key={vt.key} className="u-mb-6">
                   <label
                     style={{
                       display: "flex",
@@ -876,7 +876,7 @@ const CandidateProfile: React.FC<Props> = ({
               )}
             </div>
 
-            <div className="legacy-row" style={{ marginTop: 10 }}>
+            <div className="legacy-row u-mt-10">
               <label htmlFor="profile-experience">Work Experience</label>
               {effectivelyLocked ? (
                 <div className="legacy-readonly-text">
@@ -896,7 +896,7 @@ const CandidateProfile: React.FC<Props> = ({
               )}
             </div>
 
-            <div className="legacy-row" style={{ marginTop: 10 }}>
+            <div className="legacy-row u-mt-10">
               <label htmlFor="profile-education">Education</label>
               {effectivelyLocked ? (
                 <div className="legacy-readonly-text">
@@ -914,7 +914,7 @@ const CandidateProfile: React.FC<Props> = ({
               )}
             </div>
 
-            <div className="legacy-row" style={{ marginTop: 10 }}>
+            <div className="legacy-row u-mt-10">
               <label htmlFor="profile-achievements">
                 Certifications &amp; Achievements
               </label>
@@ -936,7 +936,7 @@ const CandidateProfile: React.FC<Props> = ({
               )}
             </div>
 
-            <div className="legacy-row" style={{ marginTop: 10 }}>
+            <div className="legacy-row u-mt-10">
               <label htmlFor="profile-bio">Brief Introduction</label>
               {effectivelyLocked ? (
                 <div className="legacy-readonly-text">{form.bio || "—"}</div>
@@ -1014,7 +1014,7 @@ const CandidateProfile: React.FC<Props> = ({
                 You will need to <strong>
                   register again and pay again
                 </strong>{" "}
-                to use MatchDB.
+                to use MatchingDB.
               </div>
               <Button
                 type="button"
@@ -1096,7 +1096,7 @@ const CandidateProfile: React.FC<Props> = ({
               All fields will be updated and skills re-extracted.
             </span>
           )}
-          <span style={{ flex: 1 }} />
+          <span className="u-flex-1" />
           {profile && (
             <MDBButton
               style={{ color: "#880000" }}
@@ -1153,7 +1153,7 @@ const CandidateProfile: React.FC<Props> = ({
             </div>
 
             {/* Body */}
-            <div className="rm-body" style={{ gap: 10 }}>
+            <div className="rm-body u-gap-10">
               <fieldset
                 className="rm-fieldset"
                 style={{ borderColor: "#cc3333" }}
@@ -1188,7 +1188,7 @@ const CandidateProfile: React.FC<Props> = ({
                 style={{ borderColor: "#e0a000" }}
               >
                 <legend style={{ color: "#7a4a00" }}>
-                  To use MatchDB again, you must:
+                  To use MatchingDB again, you must:
                 </legend>
                 <div style={{ fontSize: 11, lineHeight: 1.8, color: "#555" }}>
                   <div>
@@ -1214,11 +1214,7 @@ const CandidateProfile: React.FC<Props> = ({
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}
                   placeholder='Type "DELETE" to confirm'
-                  style={{
-                    width: "100%",
-                    fontFamily: "monospace",
-                    fontSize: 13,
-                  }}
+                  className="u-w-full u-font-mono u-fs-13"
                 />
               </fieldset>
 
@@ -1244,7 +1240,7 @@ const CandidateProfile: React.FC<Props> = ({
               </MDBButton>
               <MDBButton
                 onClick={() => setShowDeleteAccountModal(false)}
-                style={{ marginLeft: "auto" }}
+                className="u-ml-auto"
               >
                 Cancel
               </MDBButton>
@@ -1292,7 +1288,7 @@ const CandidateProfile: React.FC<Props> = ({
             </div>
 
             {/* Body */}
-            <div className="rm-body" style={{ gap: 10 }}>
+            <div className="rm-body u-gap-10">
               <fieldset className="rm-fieldset" style={{ borderColor: "#c88" }}>
                 <legend style={{ color: "#880000" }}>
                   What will be deleted
@@ -1352,7 +1348,7 @@ const CandidateProfile: React.FC<Props> = ({
               </MDBButton>
               <MDBButton
                 onClick={() => setShowDeleteModal(false)}
-                style={{ marginLeft: "auto" }}
+                className="u-ml-auto"
               >
                 Cancel
               </MDBButton>

@@ -107,8 +107,8 @@ const buildColumns = (
         : p.sender_type || defaults.received;
       return (
         <span
-          className="matchdb-type-pill"
-          style={{ textTransform: "capitalize" }}
+          className="matchdb-type-pill u-capitalize"
+          
         >
           {personType}
         </span>
@@ -136,7 +136,7 @@ const buildColumns = (
     width: "9%",
     skeletonWidth: 60,
     render: (p: PokeRecord) => (
-      <span style={{ fontSize: 11 }}>
+      <span className="u-fs-11">
         {new Date(p.created_at).toLocaleDateString()}
       </span>
     ),

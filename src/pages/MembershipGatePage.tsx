@@ -36,7 +36,7 @@ const CandidateGate: React.FC = () => (
 
       {/* Address-bar style breadcrumb */}
       <div className="mg-addressbar">
-        MatchDB &rsaquo; Jobs Portal &rsaquo;{" "}
+        MatchingDB &rsaquo; Jobs Portal &rsaquo;{" "}
         <strong>Candidate Membership</strong>
       </div>
 
@@ -150,7 +150,7 @@ const CandidateGate: React.FC = () => (
         <span className="mg-sb-cell">
           Profile not visible — purchase a package to continue
         </span>
-        <span className="mg-sb-cell mg-sb-right">MatchDB v97.2026</span>
+        <span className="mg-sb-cell mg-sb-right">MatchingDB v97.2026</span>
       </div>
     </div>
   </div>
@@ -169,7 +169,7 @@ const EmployerGate: React.FC = () => (
       </div>
 
       <div className="mg-addressbar">
-        MatchDB &rsaquo; Jobs Portal &rsaquo;{" "}
+        MatchingDB &rsaquo; Jobs Portal &rsaquo;{" "}
         <strong>Employer Membership</strong>
       </div>
 
@@ -249,7 +249,7 @@ const EmployerGate: React.FC = () => (
         <span className="mg-sb-cell">
           Access restricted — subscribe to continue
         </span>
-        <span className="mg-sb-cell mg-sb-right">MatchDB v97.2026</span>
+        <span className="mg-sb-cell mg-sb-right">MatchingDB v97.2026</span>
       </div>
     </div>
   </div>

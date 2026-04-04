@@ -394,8 +394,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
       <div className="detail-modal-footer">
         {isCandidate && (
           <Button
-            variant="download"
-            className="detail-btn detail-btn-pdf"
+            variant="detail-pdf"
             onClick={() => openPdfPreview(type, detailData, matchPercentage)}
           >
             ⬇ Download PDF
@@ -405,8 +404,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
         {/* ── Job modal: "Forward Candidate to Vendor" ── */}
         {canForwardCandidate && !showSendPanel && (
           <Button
-            variant="primary"
-            className="detail-btn detail-btn-send"
+            variant="detail-send"
             onClick={() => setShowSendPanel(true)}
             title="Select one of your company candidates to forward to this job's vendor"
           >
@@ -419,7 +417,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
             {hasCandidates ? (
               <>
                 <Select
-                  className="detail-send-select"
+                  variant="detail"
                   value={selectedCandidate}
                   onChange={(e) => setSelectedCandidate(e.target.value)}
                 >
@@ -433,14 +431,13 @@ const DetailModal: React.FC<DetailModalProps> = ({
                   ))}
                 </Select>
                 <Input
-                  className="detail-send-note"
+                  variant="note"
                   placeholder="Note to vendor…"
                   value={forwardNote}
                   onChange={(e) => setForwardNote(e.target.value)}
                 />
                 <Button
-                  variant="primary"
-                  className="detail-btn detail-btn-pdf"
+                  variant="detail-pdf"
                   disabled={!selectedCandidate || forwardLoading}
                   onClick={handleForwardCandidate}
                 >
@@ -453,11 +450,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
                 Candidates&quot; first.
               </span>
             )}
-            <Button
-              variant="close"
-              className="detail-btn detail-btn-close"
-              onClick={closeSendPanel}
-            >
+            <Button variant="detail" onClick={closeSendPanel}>
               Cancel
             </Button>
           </div>
@@ -466,8 +459,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
         {/* ── Candidate modal: "Forward to Job Opening" ── */}
         {canForwardToJob && !showSendPanel && (
           <Button
-            variant="primary"
-            className="detail-btn detail-btn-send"
+            variant="detail-send"
             onClick={() => setShowSendPanel(true)}
             title="Forward this candidate to a job opening's vendor"
           >
@@ -480,10 +472,9 @@ const DetailModal: React.FC<DetailModalProps> = ({
             {hasJobs ? (
               <>
                 <Select
-                  className="detail-send-select"
+                  variant="detail"
                   value={selectedJob}
                   onChange={(e) => setSelectedJob(e.target.value)}
-                  style={{ minWidth: 260 }}
                 >
                   <option value="">— Pick a job opening —</option>
                   {jobOptions.map((j) => (
@@ -493,14 +484,13 @@ const DetailModal: React.FC<DetailModalProps> = ({
                   ))}
                 </Select>
                 <Input
-                  className="detail-send-note"
+                  variant="note"
                   placeholder="Note to vendor…"
                   value={forwardNote}
                   onChange={(e) => setForwardNote(e.target.value)}
                 />
                 <Button
-                  variant="primary"
-                  className="detail-btn detail-btn-pdf"
+                  variant="detail-pdf"
                   disabled={!selectedJob || forwardLoading}
                   onClick={handleForwardToJob}
                 >
@@ -512,17 +502,13 @@ const DetailModal: React.FC<DetailModalProps> = ({
                 No job openings loaded to forward to.
               </span>
             )}
-            <Button
-              variant="close"
-              className="detail-btn detail-btn-close"
-              onClick={closeSendPanel}
-            >
+            <Button variant="detail" onClick={closeSendPanel}>
               Cancel
             </Button>
           </div>
         )}
 
-        <Button className="detail-btn detail-btn-close" onClick={onClose}>
+        <Button variant="detail" onClick={onClose}>
           Close
         </Button>
       </div>
@@ -542,12 +528,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
               Match: {matchPercentage}%
             </span>
           )}
-          <Button
-            variant="close"
-            size="xs"
-            className="detail-modal-close"
-            onClick={onClose}
-          >
+          <Button variant="modal-close" onClick={onClose}>
             ✕
           </Button>
         </div>
@@ -574,7 +555,7 @@ const Block: React.FC<{ label: string; value: string }> = ({
   label,
   value,
 }) => (
-  <div style={{ marginBottom: 8 }}>
+  <div className="u-mb-8">
     <div className="detail-label" style={{ marginBottom: 3 }}>
       {label}
     </div>

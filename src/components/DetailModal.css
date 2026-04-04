@@ -40,7 +40,7 @@ dialog[open].detail-modal-overlay {
   display: flex;
   flex-direction: column;
   font-family: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
 }
 
 /* Title bar */
@@ -60,13 +60,13 @@ dialog[open].detail-modal-overlay {
 
 .detail-modal-title {
   font-weight: 700;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   flex: 1;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 .detail-modal-match {
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 2px;
@@ -91,7 +91,7 @@ dialog[open].detail-modal-overlay {
   border-right: 1px solid var(--w97-btn-dark, #404040);
   border-bottom: 1px solid var(--w97-btn-dark, #404040);
   color: var(--w97-text, #000);
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   font-weight: 700;
   width: 18px;
   height: 18px;
@@ -119,7 +119,7 @@ dialog[open].detail-modal-overlay {
 }
 
 .detail-section h3 {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   font-weight: 700;
   color: var(--w97-navy, #235a81);
   text-transform: uppercase;
@@ -142,7 +142,7 @@ dialog[open].detail-modal-overlay {
 }
 
 .detail-label {
-  font-size: 11px;
+  font-size: calc(11px * var(--fs-scale, 1));
   font-weight: 700;
   color: var(--w97-text-secondary, #5a7a99);
   text-transform: uppercase;
@@ -150,7 +150,7 @@ dialog[open].detail-modal-overlay {
 }
 
 .detail-value {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   color: var(--w97-text, #1a1a1a);
   word-break: break-word;
 }
@@ -165,13 +165,13 @@ dialog[open].detail-modal-overlay {
   background: #e6eef8;
   border: 1px solid #9ab0c9;
   color: var(--w97-navy, #213f62);
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   font-weight: 600;
   padding: 1px 6px;
 }
 
 .detail-text {
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   color: var(--w97-text, #1a1a1a);
   line-height: 1.5;
   white-space: pre-wrap;
@@ -180,7 +180,7 @@ dialog[open].detail-modal-overlay {
 
 .detail-pre {
   font-family: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--fs-scale, 1));
   color: var(--w97-text, #1a1a1a);
   line-height: 1.5;
   white-space: pre-wrap;
@@ -202,7 +202,7 @@ dialog[open].detail-modal-overlay {
 
 .detail-btn {
   min-height: 28px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   font-weight: 700;
   border-top: 1px solid var(--w97-btn-highlight, #fff);
   border-left: 1px solid var(--w97-btn-highlight, #fff);
@@ -246,14 +246,14 @@ dialog[open].detail-modal-overlay {
 }
 .detail-send-select {
   height: 24px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   font-family: inherit;
   min-width: 180px;
   border: 1px inset var(--w97-btn-shadow, #aaa);
 }
 .detail-send-note {
   height: 22px;
-  font-size: 12px;
+  font-size: calc(12px * var(--fs-scale, 1));
   font-family: inherit;
   min-width: 120px;
   flex: 1;

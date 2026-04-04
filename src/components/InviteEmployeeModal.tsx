@@ -108,7 +108,7 @@ export function InviteEmployeeModal({
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="u-flex u-flex-col-dir u-gap-10">
           <div>
             <label
               htmlFor="invite-employee-email"
@@ -129,7 +129,7 @@ export function InviteEmployeeModal({
               }
               placeholder="employee@company.com"
               disabled={isLoading || seatsFull}
-              style={{ width: "100%" }}
+              fullWidth
             />
           </div>
 
@@ -153,7 +153,7 @@ export function InviteEmployeeModal({
               }
               placeholder="John Doe"
               disabled={isLoading || seatsFull}
-              style={{ width: "100%" }}
+              fullWidth
             />
           </div>
 

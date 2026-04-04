@@ -640,7 +640,7 @@ const PostingsDashboard: React.FC<Props> = ({
       {
         key: "title",
         header: "Title",
-        width: "14%",
+        width: "15%",
         skeletonWidth: 100,
         render: (job: Job) => (
           <button
@@ -673,7 +673,7 @@ const PostingsDashboard: React.FC<Props> = ({
       {
         key: "loc",
         header: "Location",
-        width: "9%",
+        width: "10%",
         skeletonWidth: 70,
         thProps: { title: "Job location" },
         render: (job: Job) => (
@@ -692,7 +692,7 @@ const PostingsDashboard: React.FC<Props> = ({
       {
         key: "type",
         header: "Type",
-        width: "10%",
+        width: "11%",
         skeletonWidth: 80,
         thProps: { title: "Employment type and sub-type" },
         render: (job: Job) => {
@@ -1273,14 +1273,7 @@ const PostingsDashboard: React.FC<Props> = ({
   function renderFinancialSummaryView() {
     if (vendorFinLoading)
       return (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 60,
-            fontSize: 13,
-            color: "var(--w97-text-secondary)",
-          }}
-        >
+        <div className="u-text-center u-p-60 u-fs-13 u-color-secondary">
           Loading financial data…
         </div>
       );
@@ -1288,14 +1281,7 @@ const PostingsDashboard: React.FC<Props> = ({
     const data = vendorFinData;
     if (!data || data.candidates.length === 0)
       return (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 60,
-            fontSize: 13,
-            color: "var(--w97-text-secondary)",
-          }}
-        >
+        <div className="u-text-center u-p-60 u-fs-13 u-color-secondary">
           No financial data available. Financial details will appear here when
           marketers add project financials for candidates matched to your jobs.
         </div>
@@ -1386,7 +1372,7 @@ const PostingsDashboard: React.FC<Props> = ({
           >
             🏢 Client Pipeline
           </button>
-          <div style={{ flex: 1 }} />
+          <div className="u-flex-1" />
           <Button size="xs" onClick={() => refetchVendorFin()}>
             ↻ Refresh
           </Button>
@@ -1399,14 +1385,14 @@ const PostingsDashboard: React.FC<Props> = ({
             <div className="vfin-toolbar">
               <Input
                 id="vfin-search"
-                className="vfin-search"
+                variant="finance-search"
                 value={finSearch}
                 onChange={(e) => setFinSearch(e.target.value)}
                 placeholder="Search candidate, client, job…"
               />
               <Select
                 id="vfin-status"
-                className="vfin-select"
+                variant="finance"
                 value={finStatusFilter}
                 onChange={(e) =>
                   setFinStatusFilter(
@@ -1460,11 +1446,7 @@ const PostingsDashboard: React.FC<Props> = ({
                     <tr>
                       <td
                         colSpan={12}
-                        style={{
-                          textAlign: "center",
-                          padding: 24,
-                          color: "var(--w97-text-secondary)",
-                        }}
+                        className="u-text-center u-p-24 u-color-secondary"
                       >
                         No matching records.
                       </td>
@@ -1539,14 +1521,7 @@ const PostingsDashboard: React.FC<Props> = ({
           <div className="vfin-section">
             <div className="vfin-pipeline">
               {clientPipeline.length === 0 ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: 40,
-                    color: "var(--w97-text-secondary)",
-                    fontSize: 13,
-                  }}
-                >
+                <div className="u-text-center u-p-40 u-color-secondary u-fs-13">
                   No client pipeline data yet.
                 </div>
               ) : (
@@ -1782,7 +1757,7 @@ const PostingsDashboard: React.FC<Props> = ({
           <div className="matchdb-title-toolbar">
             <Select
               id="vendor-job-filter"
-              className="matchdb-title-select"
+              variant="toolbar"
               value={selectedJobId}
               onChange={(e) => setSelectedJobId(e.target.value)}
             >
@@ -1795,7 +1770,7 @@ const PostingsDashboard: React.FC<Props> = ({
             </Select>
             <Input
               id="vendor-search"
-              className="matchdb-title-search"
+              variant="search"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder="Search..."
@@ -2145,7 +2120,7 @@ const PostingsDashboard: React.FC<Props> = ({
                   <div className="matchdb-title-toolbar">
                     <Input
                       id="posting-search"
-                      className="matchdb-title-search"
+                      variant="search"
                       value={postingSearch}
                       onChange={(e) => setPostingSearch(e.target.value)}
                       placeholder="Search..."
